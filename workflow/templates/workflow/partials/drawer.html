@@ -344,16 +344,18 @@
         width: 100vw;
         height: 100vh;
         background: rgba(0, 0, 0, 0.5);
-        z-index: 10000;
-        /* Higher z-index to ensure it's on top */
+        z-index: 10500;
+        /* Higher z-index to ensure it's on top of Bootstrap modals (1050-1060) */
         display: none;
         opacity: 0;
         transition: opacity 0.3s ease;
+        pointer-events: none;
     }
 
     .drawer-overlay.active {
         display: flex;
         opacity: 1;
+        pointer-events: all;
     }
 
     .drawer-container {
@@ -1000,14 +1002,22 @@
 
     // Initialize when page loads
     document.addEventListener('DOMContentLoaded', function () {
+        console.log('🚀 Drawer initialization started');
         setupSessionMonitoring();
 
         // Close drawer when clicking outside
-        document.getElementById('solicitudDrawer').addEventListener('click', function (e) {
-            if (e.target === this) {
-                closeSolicitudDrawer();
-            }
-        });
+        const drawerElement = document.getElementById('solicitudDrawer');
+        if (drawerElement) {
+            drawerElement.addEventListener('click', function (e) {
+                if (e.target === this) {
+                    if (typeof window.closeSolicitudDrawer === 'function') {
+                        window.closeSolicitudDrawer();
+                    }
+                }
+            });
+            console.log('✅ Drawer overlay click handler set up');
+        }
+        console.log('✅ Drawer initialized successfully');
     });
 
     // Session monitoring for drawer

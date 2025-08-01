@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Resultado de Consulta - {{ solicitud.codigo }}</title>
+    <style>
+        /* Estilos simples compatibles con xhtml2pdf - Optimizado para una página */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 15px;
+            font-size: 10px;
+            line-height: 1.2;
+        }
+        
+        .header {
+            text-align: center;
+            background: #1e40af;
+            color: white;
+            padding: 10px;
+            
+        }
+        
+        .header .logo {
+            width: 40px;
+            height: auto;
+            margin-bottom: 5px;
+            filter: brightness(0) invert(1);
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 16px;
+        }
+        
+        .header .subtitle {
+            margin: 2px 0 0 0;
+            font-size: 10px;
+        }
+        
+        .header .code {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 6px;
+            border-radius: 6px;
+            display: inline-block;
+            margin-top: 4px;
+            font-size: 9px;
+        }
+        
+        .section {
+            margin-bottom: 8px;
+            padding: 6px;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+        }
+        
+        .section-title {
+            font-size: 11px;
+            font-weight: bold;
+            color: #1e40af;
+            margin-bottom: 4px;
+            border-bottom: 1px solid #3b82f6;
+            padding-bottom: 1px;
+        }
+        
+        .info-grid {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 8px;
+            font-size: 9px;
+        }
+        
+        .info-grid td {
+            padding: 3px 6px;
+            border: 1px solid #d1d5db;
+            vertical-align: top;
+        }
+        
+        .info-grid .label {
+            background: #f3f4f6;
+            font-weight: bold;
+            width: 35%;
+        }
+        
+        .info-grid .value {
+            background: white;
+        }
+        
+        /* Layout compacto en tabla para máximo aprovechamiento */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9px;
+            line-height: 1.2;
+        }
+        
+        .info-table td {
+            padding: 2px 4px;
+            border: none;
+            vertical-align: top;
+            width: 25%; /* 4 columnas */
+        }
+        
+        .info-table .label {
+            font-weight: bold;
+            color: #1e40af;
+            white-space: nowrap;
+        }
+        
+        .info-table .value {
+            color: #374151;
+        }
+        
+        /* Layout compacto para evaluaciones */
+        .eval-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8px;
+            line-height: 1.2;
+            margin-bottom: 6px;
+        }
+        
+        .eval-table td {
+            padding: 2px 3px;
+            border: 1px solid #e5e7eb;
+            vertical-align: top;
+        }
+        
+        .eval-table .eval-field {
+            font-weight: bold;
+            color: #1e40af;
+            background: #f8fafc;
+            width: 20%;
+            font-size: 7px;
+        }
+        
+        .eval-table .eval-status {
+            text-align: center;
+            width: 8%;
+            font-weight: bold;
+        }
+        
+        .eval-table .eval-comment {
+            color: #4b5563;
+            font-style: italic;
+            font-size: 7px;
+            width: 22%;
+        }
+        
+        .eval-table .status-good {
+            color: #22c55e;
+            background: #f0fdf4;
+        }
+        
+        .eval-table .status-bad {
+            color: #ef4444;
+            background: #fef2f2;
+        }
+        
+        /* Análisis compacto */
+        .analysis-compact {
+            background: #f8fafc;
+            border-left: 3px solid #10b981;
+            padding: 4px 6px;
+            font-size: 8px;
+            line-height: 1.3;
+            margin-bottom: 4px;
+        }
+        
+        /* Comentarios en tabla compacta */
+        .comments-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 7px;
+            margin-top: 4px;
+        }
+        
+        .comments-table td {
+            padding: 2px 4px;
+            border: 1px solid #e5e7eb;
+            vertical-align: top;
+        }
+        
+        .comments-table .comment-author {
+            font-weight: bold;
+            color: #1e40af;
+            width: 25%;
+            background: #f8fafc;
+        }
+        
+        .comments-table .comment-date {
+            color: #6b7280;
+            width: 15%;
+            font-size: 6px;
+        }
+        
+        .comments-table .comment-text {
+            color: #374151;
+        }
+        
+        .bullet-item {
+            margin-bottom: 3px;
+            padding: 2px 0;
+        }
+        
+        .bullet-item strong {
+            color: #1e40af;
+            font-weight: bold;
+        }
+        
+        .calificacion {
+            border: 1px solid #d1d5db;
+            border-radius: 3px;
+            padding: 4px;
+            margin-bottom: 4px;
+            font-size: 9px;
+        }
+        
+        .calificacion.bueno {
+            border-color: #22c55e;
+            background: #f0fdf4;
+        }
+        
+        .calificacion.malo {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+        
+        .calificacion-header {
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+        
+        .estado-bueno {
+            color: #22c55e;
+            font-weight: bold;
+        }
+        
+        .estado-malo {
+            color: #ef4444;
+            font-weight: bold;
+        }
+        
+        .comentario {
+            font-style: italic;
+            color: #4b5563;
+            margin-top: 3px;
+            padding: 3px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 2px;
+            font-size: 8px;
+        }
+        
+        .analisis {
+            background: #f8fafc;
+            padding: 6px;
+            border-radius: 4px;
+            border-left: 2px solid #10b981;
+            font-size: 9px;
+        }
+        
+        .comentario-historico {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 3px;
+            padding: 4px;
+            margin-bottom: 4px;
+            font-size: 8px;
+        }
+        
+        .comentario-meta {
+            font-size: 7px;
+            color: #6b7280;
+            margin-bottom: 3px;
+        }
+        
+        .footer {
+            background: #111827;
+            color: white;
+            padding: 8px;
+            text-align: center;
+            margin-top: 15px;
+            border-radius: 4px;
+            font-size: 8px;
+        }
+        
+        .footer-info {
+            margin-bottom: 5px;
+        }
+        
+        /* Dos columnas para optimizar espacio */
+        .two-columns {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+        
+        .column {
+            display: table-cell;
+            width: 50%;
+            vertical-align: top;
+            padding-right: 8px;
+        }
+        
+        .column:last-child {
+            padding-right: 0;
+            padding-left: 8px;
+        }
+        
+        /* Estilos para participaciones del comité */
+        .comite-section {
+            margin-bottom: 8px;
+            padding: 6px;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            background: #f8fafc;
+        }
+        
+        .comite-title {
+            font-size: 11px;
+            font-weight: bold;
+            color: #1e40af;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #3b82f6;
+            padding-bottom: 2px;
+        }
+        
+        .participacion-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8px;
+            margin-bottom: 4px;
+        }
+        
+        .participacion-table td {
+            padding: 3px 4px;
+            border: 1px solid #e5e7eb;
+            vertical-align: top;
+        }
+        
+        .participacion-table .header {
+            background: #1e40af;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .participacion-table .nivel-header {
+            background: #3b82f6;
+            color: white;
+            font-weight: bold;
+            text-align: left;
+            font-size: 9px;
+        }
+        
+        .participacion-table .participante {
+            font-weight: bold;
+            color: #374151;
+            width: 25%;
+        }
+        
+        .participacion-table .resultado {
+            text-align: center;
+            width: 15%;
+            font-weight: bold;
+        }
+        
+        .participacion-table .resultado-aprobado {
+            color: #22c55e;
+            background: #f0fdf4;
+        }
+        
+        .participacion-table .resultado-rechazado {
+            color: #ef4444;
+            background: #fef2f2;
+        }
+        
+        .participacion-table .resultado-observaciones {
+            color: #f59e0b;
+            background: #fef3c7;
+        }
+        
+        .participacion-table .comentario {
+            color: #4b5563;
+            font-style: italic;
+            width: 40%;
+        }
+        
+        .participacion-table .fecha {
+            color: #6b7280;
+            font-size: 7px;
+            width: 20%;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Compacto -->
+    <div class="header">
+        <h1>Resultado de Consulta - {{ solicitud.codigo }} - {{ fecha_generacion|date:"d/m/Y H:i" }}</h1>
+        
+      </div>
+
+    <!-- Información General - Layout ultra compacto en tabla -->
+    <div class="section">
+        <div class="section-title">Información General</div>
+        
+        <table class="info-table">
+            <!-- Fila 1: Cliente -->
+            <tr>
+                <td class="label">Nombre negocio:</td>
+                <td class="value">{{ solicitud.cliente.nombreCliente|default:"-" }}</td>
+                <td class="label">Cédula:</td>
+                <td class="value">{{ solicitud.cliente.cedulaCliente|default:"-" }}</td>
+            </tr>
+            
+            <!-- Fila 2: Proceso -->
+            <tr>
+                <td class="label">Oficial:</td>
+                <td class="value">
+                    {% if solicitud.asignada_a %}
+                        {{ solicitud.asignada_a.first_name }} {{ solicitud.asignada_a.last_name }}
+                    {% else %}
+                        Sin asignar
+                    {% endif %}
+                </td>
+                <td class="label">Pipeline:</td>
+                <td class="value">{{ solicitud.pipeline.nombre|default:"-" }}</td>
+            </tr>
+            
+            <!-- Fila 3: Etapa y Fecha -->
+            <tr>
+                <td class="label">Etapa:</td>
+                <td class="value">{{ solicitud.etapa_actual.nombre|default:"-" }}</td>
+                <td class="label">Fecha Consulta:</td>
+                <td class="value">{{ solicitud.fecha_creacion|date:"d/m/Y"|default:"-" }}</td>
+            </tr>
+            
+            <!-- Separador visual -->
+            <tr><td colspan="4"><div class="section-separator"></div></td></tr>
+            
+            <!-- Fila 4: Vehículo -->
+            {% if solicitud.cotizacion %}
+            <tr>
+                <td class="label">Marca:</td>
+                <td class="value">{{ solicitud.cotizacion.marca|default:"-" }}</td>
+                <td class="label">Modelo:</td>
+                <td class="value">{{ solicitud.cotizacion.modelo|default:"-" }}</td>
+            </tr>
+            <tr>
+                <td class="label">Año:</td>
+                <td class="value">{{ solicitud.cotizacion.ano|default:"-" }}</td>
+                <td class="label">Valor:</td>
+                <td class="value">
+                    {% if solicitud.cotizacion.valorAuto %}
+                        {{ solicitud.cotizacion.valorAuto|floatformat:0 }} $
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <!-- Separador visual -->
+            <tr><td colspan="4"><div class="section-separator"></div></td></tr>
+            
+            <!-- Fila 5: Financiamiento -->
+            <tr>
+                <td class="label">Abono:</td>
+                <td class="value">
+                    {% if solicitud.cotizacion.abono %}
+                        {{ solicitud.cotizacion.abono|floatformat:0 }} $
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td class="label">% Abono:</td>
+                <td class="value">{{ solicitud.cotizacion.porcentajeAbono|default:"-" }}%</td>
+            </tr>
+            <tr>
+                <td class="label">A financiar:</td>
+                <td class="value">
+                    {% if solicitud.cotizacion.montoPrestamo %}
+                        {{ solicitud.cotizacion.montoPrestamo|floatformat:0 }} $
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td colspan="2"></td> <!-- Celda vacía para completar la fila -->
+            </tr>
+            {% else %}
+            <!-- Si no hay cotización -->
+            <tr>
+                <td class="label">Marca:</td>
+                <td class="value">-</td>
+                <td class="label">Modelo:</td>
+                <td class="value">-</td>
+            </tr>
+            <tr>
+                <td class="label">Año:</td>
+                <td class="value">-</td>
+                <td class="label">Valor:</td>
+                <td class="value">-</td>
+            </tr>
+            <tr><td colspan="4"><div class="section-separator"></div></td></tr>
+            <tr>
+                <td class="label">Abono:</td>
+                <td class="value">-</td>
+                <td class="label">A financiar:</td>
+                <td class="value">-</td>
+            </tr>
+            {% endif %}
+        </table>
+        
+        {% if solicitud.motivo_consulta %}
+        <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #e5e7eb; font-size: 9px;">
+            <span style="font-weight: bold; color: #1e40af;">Motivo:</span> {{ solicitud.motivo_consulta|truncatewords:30 }}
+        </div>
+        {% endif %}
+    </div>
+
+    {% if calificaciones %}
+    <!-- Evaluación y Análisis - Layout ultra compacto -->
+    <div class="section">
+        <div class="section-title">Evaluación y Análisis</div>
+        
+        <!-- Análisis del analista como párrafo principal -->
+        {% if analyst_comment %}
+        <div class="analysis-compact" style="margin-bottom: 6px; padding: 6px 8px; font-size: 9px; line-height: 1.4;">
+            <strong style="color: #1e40af; font-size: 9px;">Análisis del Analista:</strong> {{ analyst_comment|truncatewords:40 }}
+        </div>
+        {% endif %}
+        
+        <!-- Resultado de análisis -->
+        {% if resultado_analisis %}
+        <div class="analysis-compact" style="margin-bottom: 8px; padding: 4px 8px; font-size: 9px; line-height: 1.4; background: #f0f9ff; border-left: 3px solid #0ea5e9;">
+            <strong style="color: #0ea5e9; font-size: 9px;">Resultado:</strong> 
+            <span style="font-weight: bold; 
+                {% if resultado_analisis == 'Aprobado' %}color: #22c55e;
+                {% elif resultado_analisis == 'Rechazado' %}color: #ef4444;
+                {% else %}color: #f59e0b;{% endif %}">{{ resultado_analisis }}</span>
+        </div>
+        {% endif %}
+        
+        <!-- Tabla compacta de evaluaciones - Mostrar todos los campos excepto comentario_analista_credito -->
+        <table class="eval-table">
+            {% for cal in calificaciones %}
+                {% if 'comentario_analista_credito' not in cal.campo %}
+                    {% if forloop.counter0|divisibleby:4 %}
+                        <tr>
+                    {% endif %}
+                    <td class="eval-field">
+                        <strong>{{ cal.campo_legible|default:cal.campo|truncatewords:1 }}</strong>
+                        {% if cal.field_value %}
+                            <br><span style="font-weight: normal; color: #6b7280; font-size: 6px;">{{ cal.field_value|truncatewords:3 }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="eval-status {% if cal.estado == 'bueno' %}status-good{% else %}status-bad{% endif %}">
+                        {% if cal.estado == 'bueno' %}✓{% else %}✗{% endif %}
+                    </td>
+                    {% if forloop.counter|divisibleby:4 or forloop.last %}
+                        </tr>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+        </table>
+        
+        <!-- Comentarios de evaluaciones en tabla horizontal - Mostrar todos los campos con comentarios -->
+        <table class="eval-table">
+            <tr style="background: #f1f5f9;">
+                <td style="font-weight: bold; color: #1e40af; font-size: 8px; padding: 3px; width: 15%;">Campo</td>
+                <td style="font-weight: bold; color: #1e40af; font-size: 8px; padding: 3px;">Comentario Específico</td>
+            </tr>
+            {% for cal in calificaciones %}
+                {% if cal.comentario and 'comentario_analista_credito' not in cal.campo %}
+                <tr>
+                    <td class="eval-field">
+                        <strong>{{ cal.campo_legible|default:cal.campo|truncatewords:1 }}</strong>
+                        {% if cal.field_value %}
+                            <br><span style="font-weight: normal; color: #6b7280; font-size: 6px;">{{ cal.field_value|truncatewords:3 }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="eval-comment">{{ cal.comentario|truncatewords:15 }}</td>
+                </tr>
+                {% endif %}
+            {% endfor %}
+        </table>
+        
+        <!-- Comentarios recientes en tabla centrada -->
+        {% if comentarios_analista %}
+        <table class="comments-table" style="margin-top: 6px;">
+            <tr style="background: #f1f5f9;">
+                <td colspan="2" style="font-weight: bold; color: #1e40af; font-size: 8px; padding: 3px; text-align: center;">Comentarios Recientes</td>
+            </tr>
+            {% for comentario in comentarios_analista|slice:":3" %}
+            <tr>
+                <td class="comment-author" style="width: 30%;">{{ comentario.usuario.first_name }} {{ comentario.usuario.last_name }}</td>
+                <td class="comment-text">{{ comentario.contenido|truncatewords:12 }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+    </div>
+    {% else %}
+    <!-- Solo análisis si no hay calificaciones -->
+    <div class="section">
+        <div class="section-title">Análisis del Analista</div>
+        
+        {% if analyst_comment %}
+        <div class="analisis">{{ analyst_comment }}</div>
+        {% endif %}
+        
+        <!-- Resultado de análisis -->
+        {% if resultado_analisis %}
+        <div class="analisis" style="margin-top: 6px; background: #f0f9ff; border-left: 3px solid #0ea5e9; font-size: 9px;">
+            <strong style="color: #0ea5e9;">Resultado:</strong> 
+            <span style="font-weight: bold; 
+                {% if resultado_analisis == 'Aprobado' %}color: #22c55e;
+                {% elif resultado_analisis == 'Rechazado' %}color: #ef4444;
+                {% else %}color: #f59e0b;{% endif %}">{{ resultado_analisis }}</span>
+        </div>
+        {% endif %}
+
+        {% if comentarios_analista %}
+        <div style="margin-top: 8px;">
+            <strong style="font-size: 9px; margin-bottom: 4px; display: block;">Comentarios Históricos</strong>
+            {% for comentario in comentarios_analista|slice:":3" %}
+            <div class="comentario-historico">
+                <div class="comentario-meta">
+                    <strong>{{ comentario.usuario.first_name }} {{ comentario.usuario.last_name }}</strong> - 
+                    {{ comentario.fecha_creacion|date:"d/m/Y H:i" }}
+                </div>
+                <div>{{ comentario.contenido|truncatewords:15 }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Participaciones del Comité - Solo mostrar si hay al menos 1 participación -->
+    {% if participaciones_comite %}
+    <div class="comite-section">
+        <div class="comite-title">Participaciones del Comité de Crédito</div>
+        
+        <table class="participacion-table">
+            <!-- Header de la tabla -->
+            <tr>
+                <td class="header">Participante</td>
+                <td class="header">Resultado</td>
+                <td class="header">Comentario</td>
+                <td class="header">Fecha</td>
+            </tr>
+            
+            <!-- Agrupar por nivel y mostrar participaciones -->
+            {% regroup participaciones_comite by nivel.nombre as participaciones_por_nivel %}
+            {% for nivel in participaciones_por_nivel %}
+                <!-- Separador de nivel -->
+                <tr>
+                    <td colspan="4" class="nivel-header">{{ nivel.grouper }}</td>
+                </tr>
+                
+                <!-- Participaciones del nivel -->
+                {% for participacion in nivel.list %}
+                <tr>
+                    <td class="participante">
+                        {{ participacion.usuario.first_name }} {{ participacion.usuario.last_name }}
+                    </td>
+                    <td class="resultado 
+                        {% if participacion.resultado == 'APROBADO' %}resultado-aprobado
+                        {% elif participacion.resultado == 'RECHAZADO' %}resultado-rechazado
+                        {% elif participacion.resultado == 'OBSERVACIONES' %}resultado-observaciones
+                        {% endif %}">
+                        {{ participacion.resultado|default:"Sin resultado" }}
+                    </td>
+                    <td class="comentario">
+                        {% if participacion.comentario %}
+                            {{ participacion.comentario|truncatewords:10 }}
+                        {% else %}
+                            Sin comentario
+                        {% endif %}
+                    </td>
+                    <td class="fecha">
+                        {% if participacion.fecha_modificacion %}
+                            {{ participacion.fecha_modificacion|date:"d/m/Y H:i" }}
+                        {% else %}
+                            Sin fecha
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            {% endfor %}
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Footer Compacto -->
+    <div class="footer">
+        <div class="footer-info">
+            {% if logo_base64 %}
+                <img src="data:image/png;base64,{{ logo_base64 }}" alt="Logo Financiera Pacífico" style="width: 60px; height: auto; filter: brightness(0) invert(1);">
+            {% else %}
+                <div style="font-size: 14px; font-weight: bold; color: white;">FINANCIERA PACÍFICO</div>
+            {% endif %}
+        </div>
+    </div>
+
+   
+</body>
+</html>

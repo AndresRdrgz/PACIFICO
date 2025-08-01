@@ -355,12 +355,25 @@ def api_comentario_analista_credito(request, solicitud_id):
         # Parsear datos JSON
         data = json.loads(request.body)
         comentario_texto = data.get('comentario', '').strip()
+        resultado_analisis = data.get('resultado_analisis', '').strip()
         
         # Validar datos
         if not comentario_texto:
             return JsonResponse({
                 'success': False,
                 'error': 'Comentario es requerido'
+            })
+            
+        if not resultado_analisis:
+            return JsonResponse({
+                'success': False,
+                'error': 'Resultado de análisis es requerido'
+            })
+            
+        if resultado_analisis not in ['Aprobado', 'Rechazado', 'Alternativa']:
+            return JsonResponse({
+                'success': False,
+                'error': 'Resultado de análisis inválido'
             })
         
         if len(comentario_texto) > 2000:
@@ -369,26 +382,33 @@ def api_comentario_analista_credito(request, solicitud_id):
                 'error': 'Comentario no puede exceder 2000 caracteres'
             })
         
-        # Crear nuevo comentario usando CalificacionCampo con campo especial
-        # Usar un identificador único que incluya timestamp para permitir múltiples comentarios
-        from datetime import datetime
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        campo_comentario = f"comentario_analista_credito_{timestamp}"
+        # Use a consistent field name for analyst credit comments
+        campo_comentario = "comentario_analista_credito"
         
         with transaction.atomic():
-            calificacion = CalificacionCampo.objects.create(
+            # Update or create CalificacionCampo record for analyst comment
+            calificacion, created = CalificacionCampo.objects.update_or_create(
                 solicitud=solicitud,
                 campo=campo_comentario,
-                estado='sin_calificar',  # No aplicable para comentarios
-                comentario=comentario_texto,
-                usuario=request.user
+                defaults={
+                    'estado': 'sin_calificar',  # No aplicable para comentarios
+                    'comentario': comentario_texto,
+                    'resultado_analisis': resultado_analisis,
+                    'usuario': request.user,
+                    'fecha_modificacion': timezone.now()
+                }
             )
+            
+            # Also update the solicitud.resultado_consulta field for PDF generation
+            solicitud.resultado_consulta = resultado_analisis
+            solicitud.save()
         
         return JsonResponse({
             'success': True,
             'comentario': {
                 'id': calificacion.id,
                 'comentario': calificacion.comentario,
+                'resultado_analisis': calificacion.resultado_analisis,
                 'usuario_nombre': calificacion.usuario.get_full_name() or calificacion.usuario.username,
                 'fecha_creacion': calificacion.fecha_creacion.isoformat(),
                 'fecha_modificacion': calificacion.fecha_modificacion.isoformat()
@@ -422,10 +442,10 @@ def api_obtener_comentarios_analista_credito(request, solicitud_id):
         # Obtener solicitud
         solicitud = Solicitud.objects.get(id=solicitud_id)
         
-        # Obtener comentarios de analista (filtrar por campo que comience con "comentario_analista_credito_")
+        # Obtener comentarios de analista (usar el campo estándar y cualquier campo legacy con timestamp)
         comentarios = CalificacionCampo.objects.filter(
             solicitud=solicitud,
-            campo__startswith='comentario_analista_credito_'
+            campo__startswith='comentario_analista_credito'
         ).order_by('-fecha_creacion')  # Ordenar por fecha descendente (más reciente primero)
         
         # Formatear respuesta
@@ -434,6 +454,7 @@ def api_obtener_comentarios_analista_credito(request, solicitud_id):
             data.append({
                 'id': comentario.id,
                 'comentario': comentario.comentario,
+                'resultado_analisis': comentario.resultado_analisis,
                 'usuario_nombre': comentario.usuario.get_full_name() or comentario.usuario.username,
                 'usuario_username': comentario.usuario.username,
                 'fecha_creacion': comentario.fecha_creacion.isoformat(),

@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultado de Consulta - {{ solicitud.codigo }}</title>
+    <style>
+        /* Importar fuentes de Google */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        /* Variables CSS */
+        :root {
+            --primary-color: #1e40af;
+            --secondary-color: #3b82f6;
+            --accent-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-600: #4b5563;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --success-color: #22c55e;
+            --error-color: #f87171;
+        }
+
+        /* Reset y base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: var(--gray-800);
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0;
+            padding: 10px;
+        }
+
+        /* Header con gradiente - Compacto */
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="25" r="0.5" fill="white" opacity="0.15"/><circle cx="25" cy="75" r="0.5" fill="white" opacity="0.15"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            z-index: 1;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .logo {
+            width: 60px;
+            height: auto;
+            margin-bottom: 8px;
+            filter: brightness(0) invert(1);
+        }
+
+        .document-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            letter-spacing: -0.3px;
+        }
+
+        .document-subtitle {
+            font-size: 12px;
+            font-weight: 400;
+            opacity: 0.9;
+            margin-bottom: 2px;
+        }
+
+        .solicitud-code {
+            font-size: 11px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 8px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-top: 4px;
+            font-weight: 500;
+        }
+
+        /* Card principal */
+        .main-card {
+            background: white;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        /* Secciones - Compactas */
+        .section {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .section-icon {
+            width: 16px;
+            height: 16px;
+            background: var(--secondary-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 8px;
+            font-weight: bold;
+        }
+
+        /* Grid de información - Más compacto */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .info-item {
+            background: var(--gray-100);
+            padding: 6px 10px;
+            border-radius: 6px;
+            border-left: 2px solid var(--secondary-color);
+            transition: all 0.2s ease;
+        }
+
+        .info-label {
+            font-size: 9px;
+            font-weight: 600;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 2px;
+        }
+
+        .info-value {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--gray-900);
+            line-height: 1.2;
+        }
+
+        /* Estados de calificación - Compactos */
+        .calificaciones {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 6px;
+        }
+
+        .calificacion-item {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 6px;
+            padding: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .calificacion-item.bueno {
+            border-color: var(--success-color);
+            background: #f0fdf4;
+        }
+
+        .calificacion-item.malo {
+            border-color: var(--error-color);
+            background: #fef2f2;
+        }
+
+        .calificacion-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        .calificacion-campo {
+            font-weight: 600;
+            color: var(--gray-900);
+            font-size: 10px;
+        }
+
+        .calificacion-estado {
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .estado-bueno {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .estado-malo {
+            background: var(--error-color);
+            color: white;
+        }
+
+        .calificacion-comentario {
+            color: var(--gray-600);
+            font-style: italic;
+            margin-top: 4px;
+            padding: 4px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 4px;
+            font-size: 9px;
+            line-height: 1.2;
+        }
+
+        /* Análisis del analista - Compacto */
+        .analisis-content {
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            padding: 10px;
+            border-radius: 6px;
+            border-left: 3px solid var(--accent-color);
+            margin-top: 6px;
+        }
+
+        .analisis-text {
+            font-size: 11px;
+            line-height: 1.4;
+            color: var(--gray-800);
+        }
+
+        /* Comentarios históricos - Compactos */
+        .comentario-historico {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 6px;
+        }
+
+        .comentario-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+            font-size: 9px;
+            color: var(--gray-600);
+        }
+
+        .comentario-usuario {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .comentario-fecha {
+            color: var(--gray-500);
+        }
+
+        .comentario-contenido {
+            color: var(--gray-800);
+            line-height: 1.3;
+            font-size: 10px;
+        }
+
+        /* Footer - Compacto */
+        .footer {
+            background: var(--gray-900);
+            color: white;
+            padding: 12px;
+            text-align: center;
+            margin-top: 15px;
+            border-radius: 6px;
+        }
+
+        .footer-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .footer-item {
+            text-align: center;
+        }
+
+        .footer-label {
+            font-size: 8px;
+            opacity: 0.7;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .footer-value {
+            font-size: 10px;
+            font-weight: 500;
+        }
+
+        .footer-branding {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 8px;
+            opacity: 0.8;
+        }
+
+        /* Estilos para impresión */
+        @media print {
+            body {
+                background: white;
+            }
+            
+            .container {
+                max-width: none;
+                padding: 0;
+            }
+            
+            .header::before {
+                display: none;
+            }
+            
+            .main-card {
+                box-shadow: none;
+            }
+        }
+
+        /* Elementos visuales adicionales */
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .status-success {
+            background: var(--success-color);
+        }
+
+        .status-error {
+            background: var(--error-color);
+        }
+
+        .status-warning {
+            background: var(--warning-color);
+        }
+
+        /* Separadores visuales */
+        .divider {
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            border-radius: 1px;
+            margin: 30px 0;
+        }
+
+        /* Highlight boxes - Compactos */
+        .highlight-box {
+            background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+            border: 1px solid var(--secondary-color);
+            border-radius: 6px;
+            padding: 8px;
+            margin: 8px 0;
+        }
+
+        .highlight-title {
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 11px;
+        }
+
+        /* Estilos para impresión mejorados */
+        @media print {
+            @page {
+                size: A4;
+                margin: 1cm;
+            }
+            
+            body {
+                background: white;
+                font-size: 10px;
+            }
+            
+            .container {
+                max-width: none;
+                padding: 0;
+            }
+            
+            .header::before {
+                display: none;
+            }
+            
+            .main-card {
+                box-shadow: none;
+            }
+            
+            .section {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            
+            /* Evitar saltos de página innecesarios */
+            .calificacion-item,
+            .comentario-historico,
+            .info-item {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+        }
+
+        <!-- Contenido principal -->
+            </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Compacto -->
+        <div class="header">
+            <div class="header-content">
+                {% if logo_url %}
+                    <img src="{{ logo_url }}" alt="Logo Financiera Pacífico" class="logo">
+                {% endif %}
+                <h1 class="document-title">Resultado de Consulta - {{ solicitud.codigo }}</h1>
+                <p class="document-subtitle">Análisis Completo • {{ fecha_generacion|date:"d/m/Y H:i" }}</p>
+            </div>
+        </div>
+
+        <!-- Contenido principal -->
+        <div class="main-card">
+            <!-- Información General y Financiera en una sola sección -->
+            <div class="section">
+                <h2 class="section-title">
+                    <div class="section-icon">ℹ</div>
+                    Información General
+                </h2>
+                
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Cliente</div>
+                        <div class="info-value">{{ solicitud.cliente.nombreCliente|default:"-" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Documento</div>
+                        <div class="info-value">{{ solicitud.cliente.cedulaCliente|default:"-" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Pipeline</div>
+                        <div class="info-value">{{ solicitud.pipeline.nombre|default:"-" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Etapa</div>
+                        <div class="info-value">{{ solicitud.etapa_actual.nombre|default:"-" }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Asignado a</div>
+                        <div class="info-value">
+                            {% if solicitud.asignada_a %}
+                                {{ solicitud.asignada_a.first_name }} {{ solicitud.asignada_a.last_name }}
+                            {% else %}
+                                Sin asignar
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Fecha Creación</div>
+                        <div class="info-value">{{ solicitud.fecha_creacion|date:"d/m/Y"|default:"-" }}</div>
+                    </div>
+                    {% if solicitud.cotizacion %}
+                    <div class="info-item">
+                        <div class="info-label">Monto</div>
+                        <div class="info-value">
+                            {% if solicitud.cotizacion.montoPrestamo %}
+                                B/. {{ solicitud.cotizacion.montoPrestamo|floatformat:0 }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Plazo</div>
+                        <div class="info-value">
+                            {% if solicitud.cotizacion.plazoPago %}
+                                {{ solicitud.cotizacion.plazoPago }}m
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Tasa</div>
+                        <div class="info-value">
+                            {% if solicitud.cotizacion.tasaInteres %}
+                                {{ solicitud.cotizacion.tasaInteres }}%
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if solicitud.motivo_consulta %}
+                <div class="highlight-box">
+                    <div class="highlight-title">Motivo de Consulta</div>
+                    <div style="font-size: 10px; line-height: 1.3;">{{ solicitud.motivo_consulta|truncatewords:30 }}</div>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if calificaciones %}
+            <!-- Evaluación de Campos y Análisis en dos columnas -->
+            <div class="section">
+                <h2 class="section-title">
+                    <div class="section-icon">✓</div>
+                    Evaluación y Análisis
+                </h2>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <!-- Columna izquierda: Calificaciones -->
+                    <div>
+                        <h3 style="font-size: 11px; font-weight: 600; margin-bottom: 6px; color: var(--gray-700);">Campos Evaluados</h3>
+                        <div class="calificaciones">
+                            {% for cal in calificaciones|slice:":6" %}
+                            <div class="calificacion-item {% if cal.estado == 'bueno' %}bueno{% else %}malo{% endif %}">
+                                <div class="calificacion-header">
+                                    <div class="calificacion-campo">
+                                        <span class="status-indicator {% if cal.estado == 'bueno' %}status-success{% else %}status-error{% endif %}"></span>
+                                        {{ cal.campo_legible|default:cal.campo|truncatewords:3 }}
+                                    </div>
+                                    <div class="calificacion-estado {% if cal.estado == 'bueno' %}estado-bueno{% else %}estado-malo{% endif %}">
+                                        {% if cal.estado == 'bueno' %}✓{% else %}✗{% endif %}
+                                    </div>
+                                </div>
+                                {% if cal.comentario %}
+                                <div class="calificacion-comentario">
+                                    {{ cal.comentario|truncatewords:8 }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Columna derecha: Análisis -->
+                    <div>
+                        <h3 style="font-size: 11px; font-weight: 600; margin-bottom: 6px; color: var(--gray-700);">Análisis del Analista</h3>
+                        {% if analyst_comment %}
+                        <div class="analisis-content">
+                            <div class="analisis-text">{{ analyst_comment|truncatewords:50 }}</div>
+                        </div>
+                        {% endif %}
+
+                        {% if comentarios_analista %}
+                        <div style="margin-top: 8px;">
+                            <h4 style="font-size: 9px; font-weight: 600; margin-bottom: 4px; color: var(--gray-600);">Comentarios Recientes</h4>
+                            {% for comentario in comentarios_analista|slice:":2" %}
+                            <div class="comentario-historico">
+                                <div class="comentario-meta">
+                                    <span class="comentario-usuario">
+                                        {{ comentario.usuario.first_name }} {{ comentario.usuario.last_name }}
+                                    </span>
+                                    <span class="comentario-fecha">
+                                        {{ comentario.fecha_creacion|date:"d/m/Y" }}
+                                    </span>
+                                </div>
+                                <div class="comentario-contenido">{{ comentario.contenido|truncatewords:15 }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <!-- Solo análisis si no hay calificaciones -->
+            <div class="section">
+                <h2 class="section-title">
+                    <div class="section-icon">📋</div>
+                    Análisis del Analista
+                </h2>
+                
+                {% if analyst_comment %}
+                <div class="analisis-content">
+                    <div class="analisis-text">{{ analyst_comment }}</div>
+                </div>
+                {% endif %}
+
+                {% if comentarios_analista %}
+                <div style="margin-top: 8px;">
+                    <h3 style="font-size: 10px; font-weight: 600; margin-bottom: 4px; color: var(--gray-600);">Comentarios Históricos</h3>
+                    {% for comentario in comentarios_analista|slice:":3" %}
+                    <div class="comentario-historico">
+                        <div class="comentario-meta">
+                            <span class="comentario-usuario">
+                                {{ comentario.usuario.first_name }} {{ comentario.usuario.last_name }}
+                            </span>
+                            <span class="comentario-fecha">
+                                {{ comentario.fecha_creacion|date:"d/m/Y H:i" }}
+                            </span>
+                        </div>
+                        <div class="comentario-contenido">{{ comentario.contenido|truncatewords:20 }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+       
+    </div>
+</body>
+</html>

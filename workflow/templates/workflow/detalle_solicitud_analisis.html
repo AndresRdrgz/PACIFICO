@@ -1778,6 +1778,19 @@
                                                 required></textarea>
                                     </div>
                                     
+                                    <!-- Sección de resultado de análisis -->
+                                    <div class="analisis-seccion-resultado mt-3">
+                                        <label for="resultado-analisis" class="form-label">
+                                            <i class="fas fa-decision me-2"></i>Resultado de Análisis
+                                        </label>
+                                        <select class="form-select" id="resultado-analisis" name="resultado_analisis" required>
+                                            <option value="">Seleccione el resultado...</option>
+                                            <option value="Aprobado">Aprobado</option>
+                                            <option value="Rechazado">Rechazado</option>
+                                            <option value="Alternativa">Alternativa</option>
+                                        </select>
+                                    </div>
+                                    
                                     <!-- Sección de bullet points auto-generados -->
                                     <div class="analisis-seccion-bullets">
                                         <div class="bullets-header">
@@ -2873,6 +2886,7 @@
     const collectAnalysisData = () => {
         const data = {
             analyst_comment: '',
+            resultado_analisis: '',
             compliance_ratings: [],
             compliance_comments: [],
             field_values: {}
@@ -2882,6 +2896,12 @@
         const analystTextarea = document.getElementById('comentario-analista-credito-text');
         if (analystTextarea) {
             data.analyst_comment = analystTextarea.value.trim();
+        }
+        
+        // Get resultado de análisis
+        const resultadoSelect = document.getElementById('resultado-analisis');
+        if (resultadoSelect) {
+            data.resultado_analisis = resultadoSelect.value;
         }
         
         // Collect compliance ratings and comments
@@ -3465,6 +3485,113 @@
                 }
             }
         });
+
+        // Synchronization between Resultado de Análisis and Subestado Selector
+        const setupResultadoSubestadoSync = () => {
+            const resultadoAnalisisSelect = document.getElementById('resultado-analisis');
+            const subestadoSelect = document.getElementById('subestadoSelect');
+            
+            if (!resultadoAnalisisSelect || !subestadoSelect) {
+                return; // One or both selects not found
+            }
+
+            // Create mapping between resultado values and subestado text
+            const createMapping = () => {
+                const mapping = {};
+                const subestadoOptions = Array.from(subestadoSelect.options);
+                
+                subestadoOptions.forEach(option => {
+                    if (option.value && option.text) {
+                        const optionText = option.text.trim().toLowerCase();
+                        if (optionText === 'aprobado') {
+                            mapping['Aprobado'] = option.value;
+                        } else if (optionText === 'rechazado') {
+                            mapping['Rechazado'] = option.value;
+                        } else if (optionText === 'alternativa') {
+                            mapping['Alternativa'] = option.value;
+                        }
+                    }
+                });
+                
+                return mapping;
+            };
+
+            const mapping = createMapping();
+            console.log('Resultado-Subestado mapping:', mapping);
+
+            // Function to sync from resultado to subestado
+            const syncResultadoToSubestado = () => {
+                const resultadoValue = resultadoAnalisisSelect.value;
+                if (resultadoValue && mapping[resultadoValue]) {
+                    const targetSubestadoValue = mapping[resultadoValue];
+                    if (subestadoSelect.value !== targetSubestadoValue) {
+                        subestadoSelect.value = targetSubestadoValue;
+                        console.log(`Synced resultado "${resultadoValue}" to subestado "${targetSubestadoValue}"`);
+                        
+                        // Trigger change event on subestado select
+                        const changeEvent = new Event('change', { bubbles: true });
+                        subestadoSelect.dispatchEvent(changeEvent);
+                    }
+                }
+            };
+
+            // Function to sync from subestado to resultado
+            const syncSubestadoToResultado = () => {
+                const subestadoValue = subestadoSelect.value;
+                const subestadoText = subestadoSelect.options[subestadoSelect.selectedIndex]?.text?.trim();
+                
+                if (subestadoText) {
+                    let targetResultadoValue = '';
+                    const lowerSubestadoText = subestadoText.toLowerCase();
+                    
+                    if (lowerSubestadoText === 'aprobado') {
+                        targetResultadoValue = 'Aprobado';
+                    } else if (lowerSubestadoText === 'rechazado') {
+                        targetResultadoValue = 'Rechazado';
+                    } else if (lowerSubestadoText === 'alternativa') {
+                        targetResultadoValue = 'Alternativa';
+                    }
+                    
+                    if (targetResultadoValue && resultadoAnalisisSelect.value !== targetResultadoValue) {
+                        resultadoAnalisisSelect.value = targetResultadoValue;
+                        console.log(`Synced subestado "${subestadoText}" to resultado "${targetResultadoValue}"`);
+                        
+                        // Update the data attribute for change tracking
+                        if (targetResultadoValue === resultadoAnalisisSelect.getAttribute('data-original-resultado')) {
+                            resultadoAnalisisSelect.removeAttribute('data-has-changes');
+                        } else {
+                            resultadoAnalisisSelect.setAttribute('data-has-changes', 'true');
+                        }
+                    }
+                }
+            };
+
+            // Add event listeners for synchronization
+            resultadoAnalisisSelect.addEventListener('change', (event) => {
+                console.log('Resultado de análisis changed to:', event.target.value);
+                syncResultadoToSubestado();
+            });
+
+            subestadoSelect.addEventListener('change', (event) => {
+                console.log('Subestado changed to:', event.target.value, 'Text:', event.target.options[event.target.selectedIndex]?.text);
+                syncSubestadoToResultado();
+            });
+
+            // Initial sync on page load if both have values
+            setTimeout(() => {
+                if (resultadoAnalisisSelect.value && !subestadoSelect.value) {
+                    syncResultadoToSubestado();
+                } else if (subestadoSelect.value && !resultadoAnalisisSelect.value) {
+                    syncSubestadoToResultado();
+                } else if (resultadoAnalisisSelect.value && subestadoSelect.value) {
+                    // Both have values, sync resultado to subestado as it's the primary field
+                    syncResultadoToSubestado();
+                }
+            }, 500); // Small delay to ensure DOM is fully loaded
+        };
+
+        // Initialize synchronization
+        setupResultadoSubestadoSync();
     });
 
 
@@ -4192,19 +4319,27 @@
         }
         
         const textarea = document.getElementById('comentario-analista-credito-text');
+        const resultadoSelect = document.getElementById('resultado-analisis');
         const submitButton = event.target;
         
-        if (!textarea || !submitButton) {
+        if (!textarea || !resultadoSelect || !submitButton) {
             console.error('Required elements not found');
             return;
         }
         
         const comentario = textarea.value.trim();
+        const resultadoAnalisis = resultadoSelect.value;
         
         // Frontend validation
         if (!comentario) {
             showNotification('Por favor ingrese un análisis general', 'error');
             textarea.focus();
+            return;
+        }
+        
+        if (!resultadoAnalisis) {
+            showNotification('Por favor seleccione el resultado del análisis', 'error');
+            resultadoSelect.focus();
             return;
         }
         
@@ -4216,7 +4351,8 @@
 
         // Check if content has changed (optional - could be used for optimization)
         const originalContent = textarea.getAttribute('data-original-content') || '';
-        if (comentario === originalContent) {
+        const originalResultado = resultadoSelect.getAttribute('data-original-resultado') || '';
+        if (comentario === originalContent && resultadoAnalisis === originalResultado) {
             showNotification('No hay cambios para guardar', 'info');
             return;
         }
@@ -4236,7 +4372,7 @@
             }
             
             // Make API call
-            const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/comentario-analista-credito/`, {
+            const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios-analista/crear/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -4244,7 +4380,8 @@
                     'X-Requested-With': 'XMLHttpRequest',
                 },
                 body: JSON.stringify({
-                    comentario: comentario
+                    comentario: comentario,
+                    resultado_analisis: resultadoAnalisis
                 })
             });
             
@@ -4263,6 +4400,7 @@
                 
                 // Update the original content marker to prevent duplicate saves
                 textarea.setAttribute('data-original-content', comentario);
+                resultadoSelect.setAttribute('data-original-resultado', resultadoAnalisis);
                 
                 // Reset button appearance
                 submitButton.classList.remove('btn-warning');
@@ -4295,7 +4433,7 @@
         }
 
         try {
-            const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios-analista-credito/`, {
+            const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/comentarios-analista/`, {
                 method: 'GET',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
@@ -4313,12 +4451,21 @@
                 // Get the most recent comment and populate the textarea only if it's empty
                 const latestComment = data.comentarios[0]; // Already sorted by date descending
                 const textarea = document.getElementById('comentario-analista-credito-text');
+                const resultadoSelect = document.getElementById('resultado-analisis');
+                
                 if (textarea && !textarea.value.trim()) {
                     textarea.value = latestComment.comentario;
                     textarea.setAttribute('data-original-content', latestComment.comentario);
                     updateCharCount('comentario-analista-credito-text', 'char-count-analista-credito', 2000);
                 }
+                
+                if (resultadoSelect && latestComment.resultado_analisis && !resultadoSelect.value) {
+                    resultadoSelect.value = latestComment.resultado_analisis;
+                    resultadoSelect.setAttribute('data-original-resultado', latestComment.resultado_analisis);
+                }
+                
                 console.log('Loaded existing analyst comment:', latestComment.comentario);
+                console.log('Loaded existing resultado análisis:', latestComment.resultado_analisis);
             } else {
                 console.log('No existing analyst comments found');
             }

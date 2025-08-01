@@ -14,12 +14,13 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 import os
 import tempfile
+import json
+import io
 from PyPDF2 import PdfMerger
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib.utils import ImageReader
 from PIL import Image
-import io
 from .modelsWorkflow import (
     Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, 
     Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, 
@@ -5601,102 +5602,62 @@ def enviar_correo_pdf_resultado_consulta(solicitud):
             print(f"❌ No se puede enviar correo para solicitud {solicitud.codigo}: propietario sin email válido")
             return
 
-        # Importar aquí para evitar dependencias circulares
-        from io import BytesIO
-        from reportlab.lib.pagesizes import letter
-        from reportlab.lib import colors
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer
-
-        # Generar el PDF en memoria
-        buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
-        styles = getSampleStyleSheet()
-        content = []
-
-        # Título
-        title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
-            fontSize=16,
-            textColor=colors.darkblue,
-            spaceAfter=20,
-            alignment=1  # Center
-        )
-        content.append(Paragraph(f"RESULTADO CONSULTA - SOLICITUD {solicitud.codigo}", title_style))
-        content.append(Spacer(1, 20))
-
-        # Información del cliente
-        if hasattr(solicitud, 'cliente') and solicitud.cliente:
-            cliente_info = [
-                ['Cliente:', getattr(solicitud, 'cliente_nombre_completo', 'No disponible')],
-                ['Cédula:', getattr(solicitud, 'cliente_cedula_completa', 'No disponible')],
-                ['Fecha de Solicitud:', solicitud.fecha_creacion.strftime('%d/%m/%Y') if solicitud.fecha_creacion else 'No disponible']
-            ]
-        else:
-            cliente_info = [
-                ['Cliente:', 'No disponible'],
-                ['Cédula:', 'No disponible'],
-                ['Fecha de Solicitud:', solicitud.fecha_creacion.strftime('%d/%m/%Y') if solicitud.fecha_creacion else 'No disponible']
-            ]
-
-        cliente_table = Table(cliente_info, colWidths=[2*72, 4*72])
-        cliente_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
-            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-        ]))
-        content.append(cliente_table)
-        content.append(Spacer(1, 20))
-
-        # Resumen Completo (usar motivo_consulta)
-        content.append(Paragraph("RESUMEN COMPLETO", styles['Heading2']))
-        resumen_text = solicitud.motivo_consulta if solicitud.motivo_consulta else "No disponible"
-        content.append(Paragraph(resumen_text, styles['Normal']))
-        content.append(Spacer(1, 15))
-
-        # Análisis General (usar comentarios de analista)
+        # Generar el PDF usando la función optimizada con xhtml2pdf (en lugar de ReportLab)
+        from workflow.models import CalificacionCampo
         from workflow.modelsWorkflow import SolicitudComentario
+        from django.utils import timezone
+        
+        # Obtener datos para el PDF
+        calificaciones = CalificacionCampo.objects.filter(solicitud=solicitud)
         comentarios_analista = SolicitudComentario.objects.filter(
             solicitud=solicitud,
             tipo="analista_credito"
         ).order_by("-fecha_creacion")
         
-        if comentarios_analista.exists():
-            content.append(Paragraph("ANÁLISIS GENERAL", styles['Heading2']))
-            for comentario in comentarios_analista:
-                analisis_text = comentario.comentario if comentario.comentario else "No disponible"
-                content.append(Paragraph(analisis_text, styles['Normal']))
-                content.append(Spacer(1, 10))
-        else:
-            content.append(Paragraph("ANÁLISIS GENERAL", styles['Heading2']))
-            content.append(Paragraph("No disponible", styles['Normal']))
-        content.append(Spacer(1, 15))
-
-        # Comentarios por ítem
-        from workflow.models import ComentarioDocumentoBackoffice
-        comentarios = ComentarioDocumentoBackoffice.objects.filter(requisito_solicitud__solicitud=solicitud).order_by('requisito_solicitud__requisito__nombre')
+        # Obtener el comentario más reciente del analista
+        # Priorizar CalificacionCampo con campo 'comentario_analista_credito'
+        analyst_comment = ""
         
-        if comentarios.exists():
-            content.append(Paragraph("COMENTARIOS POR ÍTEM", styles['Heading2']))
+        # Primero, buscar en CalificacionCampo
+        calificacion_analista = CalificacionCampo.objects.filter(
+            solicitud=solicitud,
+            campo='comentario_analista_credito'
+        ).exclude(comentario__isnull=True).exclude(comentario='').first()
+        
+        if calificacion_analista and calificacion_analista.comentario:
+            analyst_comment = calificacion_analista.comentario
+        elif comentarios_analista.exists():
+            # Fallback a SolicitudComentario si no hay CalificacionCampo
+            first_comment = comentarios_analista.first()
+            if first_comment:
+                analyst_comment = first_comment.comentario
+        
+        # Obtener resultado de análisis
+        # Priorizar solicitud.resultado_consulta sobre subestado_actual.nombre
+        resultado_analisis = ""
+        if solicitud.resultado_consulta:
+            resultado_analisis = solicitud.resultado_consulta
+        elif solicitud.subestado_actual:
+            resultado_analisis = solicitud.subestado_actual.nombre
+        
+        # Preparar datos para el PDF
+        pdf_data = {
+            "solicitud": solicitud,
+            "calificaciones": calificaciones,
+            "comentarios_analista": comentarios_analista,
+            "analyst_comment": analyst_comment,
+            "resultado_analisis": resultado_analisis,
+            "usuario_generador": solicitud.propietario,
+            "fecha_generacion": timezone.now(),
+        }
+        
+        # Generar PDF usando la función optimizada con xhtml2pdf
+        pdf_buffer = generar_pdf_resultado_consulta(pdf_data)
+        if not pdf_buffer:
+            raise Exception("No se pudo generar el PDF con xhtml2pdf")
             
-            for comentario in comentarios:
-                item_name = comentario.requisito_solicitud.requisito.nombre if comentario.requisito_solicitud and comentario.requisito_solicitud.requisito else "Ítem sin nombre"
-                comentario_text = comentario.comentario if comentario.comentario else "Sin comentario"
-                
-                content.append(Paragraph(f"<b>{item_name}:</b>", styles['Normal']))
-                content.append(Paragraph(comentario_text, styles['Normal']))
-                content.append(Spacer(1, 10))
-
-        # Construir el PDF
-        doc.build(content)
-        buffer.seek(0)
-        pdf_content = buffer.getvalue()
-        buffer.close()
+        pdf_content = pdf_buffer.getvalue()
+        print(f"📊 PDF generado para email con xhtml2pdf: {len(pdf_content)} bytes")
 
         # Determinar colores basados en el subestado
         subestado_nombre = solicitud.subestado_actual.nombre.lower() if solicitud.subestado_actual else ""
@@ -5746,6 +5707,10 @@ def enviar_correo_pdf_resultado_consulta(solicitud):
             </div>
             """
 
+        # Obtener comentarios de compliance para los ítems
+        from workflow.models import ComentarioDocumentoBackoffice
+        comentarios = ComentarioDocumentoBackoffice.objects.filter(requisito_solicitud__solicitud=solicitud).order_by('requisito_solicitud__requisito__nombre')
+        
         comentarios_section = ""
         if comentarios.exists():
             comentarios_section = f"""
@@ -15923,7 +15888,7 @@ def api_obtener_transiciones_negativas(request, solicitud_id):
 @csrf_exempt
 def api_pdf_resultado_consulta(request, solicitud_id):
     """
-    API para generar PDF con el resultado de la consulta de análisis
+    API para generar PDF con el resultado de la consulta de análisis usando xhtml2pdf
     """
     try:
         # Obtener solicitud
@@ -15931,6 +15896,11 @@ def api_pdf_resultado_consulta(request, solicitud_id):
         
         # Parsear datos del request
         data = json.loads(request.body) if request.body else {}
+        
+        # Generar PDF usando xhtml2pdf directamente (como en el sistema de email)
+        from xhtml2pdf import pisa
+        from django.template.loader import render_to_string
+        from django.utils import timezone
         
         # Obtener calificaciones existentes de la base de datos
         calificaciones = CalificacionCampo.objects.filter(solicitud=solicitud)
@@ -15941,23 +15911,84 @@ def api_pdf_resultado_consulta(request, solicitud_id):
             tipo="analista_credito"
         ).order_by("-fecha_creacion")
         
-        # Preparar datos para el PDF
-        pdf_data = {
-            "solicitud": solicitud,
-            "calificaciones": calificaciones,
-            "comentarios_analista": comentarios_analista,
-            "analyst_comment": data.get("analyst_comment", ""),
-            "compliance_ratings": data.get("compliance_ratings", []),
-            "field_values": data.get("field_values", {}),
-            "usuario_generador": request.user,
-            "fecha_generacion": timezone.now(),
+        # Obtener el comentario más reciente del analista
+        # Priorizar CalificacionCampo con campo 'comentario_analista_credito'
+        analyst_comment = ""
+        
+        # Primero, buscar en CalificacionCampo
+        calificacion_analista = CalificacionCampo.objects.filter(
+            solicitud=solicitud,
+            campo='comentario_analista_credito'
+        ).exclude(comentario__isnull=True).exclude(comentario='').first()
+        
+        if calificacion_analista and calificacion_analista.comentario:
+            analyst_comment = calificacion_analista.comentario
+        elif comentarios_analista.exists():
+            # Fallback a SolicitudComentario si no hay CalificacionCampo
+            first_comment = comentarios_analista.first()
+            if first_comment:
+                analyst_comment = first_comment.comentario
+        
+        # Obtener resultado de análisis
+        # Priorizar solicitud.resultado_consulta sobre subestado_actual.nombre
+        resultado_analisis = ""
+        if solicitud.resultado_consulta:
+            resultado_analisis = solicitud.resultado_consulta
+        elif solicitud.subestado_actual:
+            resultado_analisis = solicitud.subestado_actual.nombre
+        
+        # Obtener field values desde los datos del request
+        field_values = data.get('field_values', {})
+        
+        # Crear lista enriquecida de calificaciones con valores
+        calificaciones_with_values = []
+        for cal in calificaciones:
+            field_value = field_values.get(cal.campo, '')
+            cal_dict = {
+                'campo': cal.campo,
+                'campo_legible': getattr(cal, 'campo_legible', None),
+                'estado': cal.estado,
+                'comentario': cal.comentario,
+                'field_value': field_value,
+            }
+            calificaciones_with_values.append(cal_dict)
+        
+        # Preparar contexto para el template
+        context = {
+            'solicitud': solicitud,
+            'calificaciones': calificaciones_with_values,
+            'comentarios_analista': comentarios_analista,
+            'analyst_comment': analyst_comment,
+            'resultado_analisis': resultado_analisis,
+            'field_values': field_values,  # Keep for backward compatibility
+            'fecha_generacion': timezone.now(),
         }
         
-        # Generar PDF
-        pdf_buffer = generar_pdf_resultado_consulta(pdf_data)
+        # Renderizar HTML usando el template optimizado
+        html_string = render_to_string('workflow/pdf_resultado_consulta_simple.html', context)
+        
+        # Generar PDF con xhtml2pdf
+        pdf_buffer = io.BytesIO()
+        pisa_status = pisa.pisaDocument(io.StringIO(html_string), pdf_buffer)
+        
+        if pisa_status.err:
+            return JsonResponse({
+                "success": False,
+                "error": "Error al generar PDF con xhtml2pdf"
+            }, status=500)
+        
+        # Obtener contenido del PDF
+        pdf_content = pdf_buffer.getvalue()
+        pdf_buffer.close()
+        
+        if not pdf_content:
+            return JsonResponse({
+                "success": False,
+                "error": "PDF generado está vacío"
+            }, status=500)
         
         # Preparar respuesta
-        response = HttpResponse(pdf_buffer.getvalue(), content_type="application/pdf")
+        response = HttpResponse(pdf_content, content_type="application/pdf")
         filename = f"Resultado_Consulta_{solicitud.codigo}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
         response["Content-Disposition"] = f"attachment; filename=\"{filename}\""
         
@@ -15974,6 +16005,7 @@ def api_pdf_resultado_consulta(request, solicitud_id):
             "error": "Datos JSON inválidos"
         }, status=400)
     except Exception as e:
+        print(f"❌ Error generating PDF: {str(e)}")
         return JsonResponse({
             "success": False,
             "error": f"Error interno: {str(e)}"
@@ -16225,7 +16257,7 @@ def generar_pdf_resultado_consulta(pdf_data):
 @csrf_exempt
 def api_pdf_resultado_comite(request, solicitud_id):
     """
-    API para generar PDF con el resultado del comité de análisis
+    API para generar PDF con el resultado del comité de análisis usando xhtml2pdf
     """
     try:
         # Obtener solicitud
@@ -16233,6 +16265,11 @@ def api_pdf_resultado_comite(request, solicitud_id):
         
         # Parsear datos del request
         data = json.loads(request.body) if request.body else {}
+        
+        # Generar PDF usando xhtml2pdf directamente (como en el sistema de email)
+        from xhtml2pdf import pisa
+        from django.template.loader import render_to_string
+        from django.utils import timezone
         
         # Obtener calificaciones existentes de la base de datos
         calificaciones = CalificacionCampo.objects.filter(solicitud=solicitud)
@@ -16243,30 +16280,94 @@ def api_pdf_resultado_comite(request, solicitud_id):
             tipo="analista_credito"
         ).order_by("-fecha_creacion")
         
+        # Obtener el comentario más reciente del analista
+        # Priorizar CalificacionCampo con campo 'comentario_analista_credito'
+        analyst_comment = ""
+        
+        # Primero, buscar en CalificacionCampo
+        calificacion_analista = CalificacionCampo.objects.filter(
+            solicitud=solicitud,
+            campo='comentario_analista_credito'
+        ).exclude(comentario__isnull=True).exclude(comentario='').first()
+        
+        if calificacion_analista and calificacion_analista.comentario:
+            analyst_comment = calificacion_analista.comentario
+        elif comentarios_analista.exists():
+            # Fallback a SolicitudComentario si no hay CalificacionCampo
+            first_comment = comentarios_analista.first()
+            if first_comment:
+                analyst_comment = first_comment.comentario
+        
+        # Obtener resultado de análisis
+        # Priorizar solicitud.resultado_consulta sobre subestado_actual.nombre
+        resultado_analisis = ""
+        if solicitud.resultado_consulta:
+            resultado_analisis = solicitud.resultado_consulta
+        elif solicitud.subestado_actual:
+            resultado_analisis = solicitud.subestado_actual.nombre
+        
         # Obtener participaciones del comité
         from .modelsWorkflow import ParticipacionComite, NivelComite
         participaciones_comite = ParticipacionComite.objects.filter(
             solicitud=solicitud
         ).select_related('usuario', 'nivel').order_by('nivel__orden', 'fecha_modificacion')
         
-        # Preparar datos para el PDF
-        pdf_data = {
-            "solicitud": solicitud,
-            "calificaciones": calificaciones,
-            "comentarios_analista": comentarios_analista,
-            "participaciones_comite": participaciones_comite,
-            "analyst_comment": data.get("analyst_comment", ""),
-            "compliance_ratings": data.get("compliance_ratings", []),
-            "field_values": data.get("field_values", {}),
-            "usuario_generador": request.user,
-            "fecha_generacion": timezone.now(),
+        # Obtener field values desde los datos del request
+        field_values = data.get('field_values', {})
+        
+        # Crear lista enriquecida de calificaciones con valores
+        calificaciones_with_values = []
+        for cal in calificaciones:
+            field_value = field_values.get(cal.campo, '')
+            cal_dict = {
+                'campo': cal.campo,
+                'campo_legible': getattr(cal, 'campo_legible', None),
+                'estado': cal.estado,
+                'comentario': cal.comentario,
+                'field_value': field_value,
+            }
+            calificaciones_with_values.append(cal_dict)
+        
+        # Preparar contexto para el template
+        context = {
+            'solicitud': solicitud,
+            'calificaciones': calificaciones_with_values,
+            'comentarios_analista': comentarios_analista,
+            'participaciones_comite': participaciones_comite,
+            'analyst_comment': analyst_comment,
+            'resultado_analisis': resultado_analisis,
+            'field_values': field_values,  # Keep for backward compatibility
+            'committee_comment': data.get('committee_comment', ''),
+            'compliance_ratings': data.get('compliance_ratings', []),
+            'usuario_generador': request.user,
+            'fecha_generacion': timezone.now(),
         }
         
-        # Generar PDF
-        pdf_buffer = generar_pdf_resultado_comite(pdf_data)
+        # Renderizar HTML usando el template simple (evita problemas con fuentes externas)
+        html_string = render_to_string('workflow/pdf_resultado_consulta_simple.html', context)
+        
+        # Generar PDF con xhtml2pdf
+        pdf_buffer = io.BytesIO()
+        pisa_status = pisa.pisaDocument(io.StringIO(html_string), pdf_buffer)
+        
+        if pisa_status.err:
+            return JsonResponse({
+                "success": False,
+                "error": "Error al generar PDF con xhtml2pdf"
+            }, status=500)
+        
+        # Obtener contenido del PDF
+        pdf_content = pdf_buffer.getvalue()
+        pdf_buffer.close()
+        
+        if not pdf_content:
+            return JsonResponse({
+                "success": False,
+                "error": "PDF generado está vacío"
+            }, status=500)
         
         # Preparar respuesta
-        response = HttpResponse(pdf_buffer.getvalue(), content_type="application/pdf")
+        response = HttpResponse(pdf_content, content_type="application/pdf")
         filename = f"Resultado_Comite_{solicitud.codigo}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
         response["Content-Disposition"] = f"attachment; filename=\"{filename}\""
         
@@ -16287,288 +16388,6 @@ def api_pdf_resultado_comite(request, solicitud_id):
             "success": False,
             "error": f"Error interno: {str(e)}"
         }, status=500)
-
-
-def generar_pdf_resultado_comite(pdf_data):
-    """
-    Genera el PDF con el resultado del comité de análisis
-    """
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
-    from reportlab.lib.units import inch
-    from reportlab.lib import colors
-    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
-    from django.conf import settings
-    import os
-    
-    buffer = io.BytesIO()
-    
-    # Crear documento PDF
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        rightMargin=72,
-        leftMargin=72,
-        topMargin=72,
-        bottomMargin=72
-    )
-    
-    # Estilos
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle(
-        "CustomTitle",
-        parent=styles["Heading1"],
-        fontSize=16,
-        spaceAfter=30,
-        alignment=TA_CENTER,
-        textColor=colors.darkblue
-    )
-    
-    document_title_style = ParagraphStyle(
-        "DocumentTitle",
-        parent=styles["Heading1"],
-        fontSize=14,
-        spaceAfter=20,
-        alignment=TA_CENTER,
-        textColor=colors.darkgreen
-    )
-    
-    subtitle_style = ParagraphStyle(
-        "CustomSubtitle",
-        parent=styles["Heading2"],
-        fontSize=14,
-        spaceAfter=12,
-        textColor=colors.darkgreen
-    )
-    
-    normal_style = ParagraphStyle(
-        "CustomNormal",
-        parent=styles["Normal"],
-        fontSize=10,
-        spaceAfter=6,
-        alignment=TA_JUSTIFY
-    )
-    
-    # Elementos del documento
-    elements = []
-    
-    # Logo de la empresa
-    try:
-        # Buscar el logo en diferentes ubicaciones posibles
-        logo_paths = [
-            os.path.join(settings.STATICFILES_DIRS[0], 'logoColor.png') if settings.STATICFILES_DIRS else None,
-            os.path.join(settings.STATIC_ROOT, 'logoColor.png') if settings.STATIC_ROOT else None,
-            os.path.join(settings.BASE_DIR, 'staticfiles', 'logoColor.png'),
-            os.path.join(settings.BASE_DIR, 'static', 'images', 'logoColor.png'),
-            os.path.join(settings.BASE_DIR, 'staticfiles', 'images', 'logoColor.png'),
-        ]
-        
-        logo_path = None
-        for path in logo_paths:
-            if path and os.path.exists(path):
-                logo_path = path
-                break
-        
-        if logo_path:
-            # Crear imagen del logo
-            logo = Image(logo_path, width=2*inch, height=1*inch)
-            logo.hAlign = 'CENTER'
-            elements.append(logo)
-            elements.append(Spacer(1, 20))
-        else:
-            # Si no se encuentra el logo, agregar el nombre de la empresa
-            company_name = Paragraph("Financiera Pacífico", title_style)
-            elements.append(company_name)
-            elements.append(Spacer(1, 20))
-            
-    except Exception as e:
-        # Fallback en caso de error con el logo
-        company_name = Paragraph("Financiera Pacífico", title_style)
-        elements.append(company_name)
-        elements.append(Spacer(1, 20))
-    
-    # Título principal
-    solicitud = pdf_data["solicitud"]
-    title = Paragraph(f"Resultado de Comité - Análisis de Solicitud {solicitud.codigo}", document_title_style)
-    elements.append(title)
-    elements.append(Spacer(1, 20))
-    
-    # Información general de la solicitud
-    elements.append(Paragraph("Resumen Completo de la Solicitud", subtitle_style))
-    
-    # Crear tabla con información básica
-    solicitud_info = [
-        ["Código de Solicitud:", solicitud.codigo or "-"],
-        ["Pipeline:", solicitud.pipeline.nombre if solicitud.pipeline else "-"],
-        ["Etapa Actual:", solicitud.etapa_actual.nombre if solicitud.etapa_actual else "-"],
-        ["Cliente:", (solicitud.cliente.nombreCliente or '') if solicitud.cliente else "-"],
-        ["Cédula/Documento:", solicitud.cliente.cedulaCliente if solicitud.cliente else "-"],
-        ["Fecha de Creación:", solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M') if solicitud.fecha_creacion else "-"],
-        ["Asignado a:", f"{solicitud.asignada_a.first_name} {solicitud.asignada_a.last_name}" if solicitud.asignada_a else "Sin asignar"],
-        ["Prioridad:", solicitud.prioridad or "-"],
-    ]
-    
-    # Agregar información de cotización si existe
-    if solicitud.cotizacion:
-        solicitud_info.extend([
-            ["Monto Préstamo:", f"B/. {solicitud.cotizacion.montoPrestamo:,.2f}" if solicitud.cotizacion.montoPrestamo else "-"],
-            ["Plazo:", f"{solicitud.cotizacion.plazoPago} meses" if solicitud.cotizacion.plazoPago else "-"],
-            ["Tasa:", f"{solicitud.cotizacion.tasaInteres}%" if solicitud.cotizacion.tasaInteres else "-"],
-        ])
-    
-    info_table = Table(solicitud_info, colWidths=[2*inch, 3*inch])
-    info_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (0, -1), colors.lightgrey),
-        ("TEXTCOLOR", (0, 0), (-1, -1), colors.black),
-        ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-        ("FONTNAME", (1, 0), (1, -1), "Helvetica"),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("GRID", (0, 0), (-1, -1), 1, colors.black),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-    ]))
-    
-    elements.append(info_table)
-    elements.append(Spacer(1, 20))
-    
-    # Motivo de la consulta
-    if solicitud.motivo_consulta:
-        elements.append(Paragraph("Motivo de la Consulta", subtitle_style))
-        motivo_text = Paragraph(solicitud.motivo_consulta, normal_style)
-        elements.append(motivo_text)
-        elements.append(Spacer(1, 15))
-    
-    # Comentarios de campos (calificaciones)
-    calificaciones = pdf_data["calificaciones"]
-    if calificaciones:
-        elements.append(Paragraph("Comentarios de Campos (Auto-generados)", subtitle_style))
-        
-        for cal in calificaciones:
-            campo_name = obtener_nombre_campo_legible(cal.campo, solicitud)
-            estado_text = "✓ Bueno" if cal.estado == "bueno" else "✗ Malo"
-            estado_color = colors.green if cal.estado == "bueno" else colors.red
-            
-            # Crear párrafo con el campo y estado
-            campo_paragraph = Paragraph(
-                f"<b>{campo_name}:</b> <font color=\"{estado_color.hexval()}\">{estado_text}</font>",
-                normal_style
-            )
-            elements.append(campo_paragraph)
-            
-            # Agregar comentario si existe
-            if cal.comentario:
-                comentario_paragraph = Paragraph(
-                    f"&nbsp;&nbsp;&nbsp;&nbsp;<i>Comentario: {cal.comentario}</i>",
-                    normal_style
-                )
-                elements.append(comentario_paragraph)
-        
-        elements.append(Spacer(1, 15))
-    
-    # Análisis General del Analista
-    elementos_analisis = []
-    
-    # Comentario del analista desde el formulario
-    if pdf_data.get("analyst_comment"):
-        elementos_analisis.append(("Análisis Actual:", pdf_data["analyst_comment"]))
-    
-    # Comentarios históricos del analista
-    comentarios_analista = pdf_data["comentarios_analista"]
-    if comentarios_analista:
-        for i, comentario in enumerate(comentarios_analista[:3]):  # Últimos 3 comentarios
-            fecha_str = comentario.fecha_creacion.strftime('%d/%m/%Y %H:%M')
-            usuario_str = f"{comentario.usuario.first_name} {comentario.usuario.last_name}"
-            elementos_analisis.append((
-                f"Comentario {i+1} ({fecha_str} - {usuario_str}):",
-                comentario.contenido
-            ))
-    
-    if elementos_analisis:
-        elements.append(Paragraph("Análisis General", subtitle_style))
-        
-        for titulo, contenido in elementos_analisis:
-            elements.append(Paragraph(f"<b>{titulo}</b>", normal_style))
-            elements.append(Paragraph(contenido, normal_style))
-            elements.append(Spacer(1, 8))
-    
-    # NUEVA SECCIÓN: Participaciones del Comité
-    participaciones_comite = pdf_data["participaciones_comite"]
-    if participaciones_comite:
-        elements.append(Spacer(1, 20))
-        elements.append(Paragraph("Participaciones del Comité de Crédito", subtitle_style))
-        
-        # Agrupar participaciones por nivel
-        niveles_participacion = {}
-        for participacion in participaciones_comite:
-            nivel_nombre = participacion.nivel.nombre
-            if nivel_nombre not in niveles_participacion:
-                niveles_participacion[nivel_nombre] = []
-            niveles_participacion[nivel_nombre].append(participacion)
-        
-        # Mostrar participaciones por cada nivel
-        for nivel_nombre, participaciones in niveles_participacion.items():
-            elements.append(Paragraph(f"<b>Nivel: {nivel_nombre}</b>", normal_style))
-            
-            # Crear tabla con las participaciones del nivel
-            participacion_data = [["Participante", "Resultado", "Comentario", "Fecha"]]
-            
-            for participacion in participaciones:
-                usuario_nombre = f"{participacion.usuario.first_name} {participacion.usuario.last_name}"
-                resultado = participacion.resultado or "Sin resultado"
-                comentario = participacion.comentario[:100] + "..." if participacion.comentario and len(participacion.comentario) > 100 else participacion.comentario or "Sin comentario"
-                fecha = participacion.fecha_modificacion.strftime('%d/%m/%Y %H:%M') if participacion.fecha_modificacion else "Sin fecha"
-                
-                participacion_data.append([usuario_nombre, resultado, comentario, fecha])
-            
-            # Crear tabla para este nivel
-            participacion_table = Table(participacion_data, colWidths=[1.5*inch, 1*inch, 2*inch, 1*inch])
-            participacion_table.setStyle(TableStyle([
-                ("BACKGROUND", (0, 0), (-1, 0), colors.lightblue),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
-                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
-                ("GRID", (0, 0), (-1, -1), 1, colors.black),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
-            ]))
-            
-            elements.append(participacion_table)
-            elements.append(Spacer(1, 10))
-    
-    # Información del generador del reporte
-    elements.append(Spacer(1, 20))
-    elements.append(Paragraph("Información del Reporte", subtitle_style))
-    
-    usuario_generador = pdf_data["usuario_generador"]
-    fecha_generacion = pdf_data["fecha_generacion"]
-    
-    info_reporte = [
-        ["Generado por:", f"{usuario_generador.first_name} {usuario_generador.last_name} ({usuario_generador.username})"],
-        ["Fecha de Generación:", fecha_generacion.strftime('%d/%m/%Y %H:%M:%S')],
-        ["Sistema:", "PACIFICO - Sistema de Workflow"]
-    ]
-    
-    reporte_table = Table(info_reporte, colWidths=[2*inch, 3*inch])
-    reporte_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (0, -1), colors.lightblue),
-        ("TEXTCOLOR", (0, 0), (-1, -1), colors.black),
-        ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-        ("FONTNAME", (1, 0), (1, -1), "Helvetica"),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("GRID", (0, 0), (-1, -1), 1, colors.black),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-    ]))
-    
-    elements.append(reporte_table)
-    
-    # Construir PDF
-    doc.build(elements)
-    buffer.seek(0)
-    
-    return buffer
 
 
 # ==========================================================

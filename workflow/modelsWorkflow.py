@@ -620,10 +620,17 @@ class SolicitudComentario(models.Model):
         ('analista', 'Analista'),
     ]
     
+    RESULTADO_ANALISIS_CHOICES = [
+        ('Aprobado', 'Aprobado'),
+        ('Rechazado', 'Rechazado'),
+        ('Alternativa', 'Alternativa'),
+    ]
+    
     solicitud = models.ForeignKey('Solicitud', on_delete=models.CASCADE, related_name='comentarios')
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
     comentario = models.TextField()
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='general')
+    resultado_analisis = models.CharField(max_length=20, choices=RESULTADO_ANALISIS_CHOICES, blank=True, null=True, help_text="Resultado del análisis para comentarios de analista")
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField(auto_now=True)
     es_editado = models.BooleanField(default=False)
@@ -673,10 +680,17 @@ class CalificacionCampo(models.Model):
         ('sin_calificar', 'Sin Calificar'),
     ]
     
+    RESULTADO_ANALISIS_CHOICES = [
+        ('Aprobado', 'Aprobado'),
+        ('Rechazado', 'Rechazado'),
+        ('Alternativa', 'Alternativa'),
+    ]
+    
     solicitud = models.ForeignKey('Solicitud', on_delete=models.CASCADE, related_name='calificaciones_campos')
     campo = models.CharField(max_length=50, help_text="Nombre del campo (nombre, cedula, monto, etc.)")
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='sin_calificar')
     comentario = models.TextField(blank=True, null=True, help_text="Comentario sobre la calificación")
+    resultado_analisis = models.CharField(max_length=20, choices=RESULTADO_ANALISIS_CHOICES, blank=True, null=True, help_text="Resultado del análisis para comentarios de analista")
     usuario = models.ForeignKey(User, on_delete=models.CASCADE, help_text="Usuario que realizó la calificación")
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField(auto_now=True)

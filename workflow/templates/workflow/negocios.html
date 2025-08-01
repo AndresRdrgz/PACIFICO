@@ -228,11 +228,11 @@
                         {% if can_create_solicitudes %}
                         {% if pipeline %}
                         <a href="#" class="btn btn-light btn-sm"
-                            onclick="openSolicitudDrawerWithContext('{{ pipeline.id }}')">
+                            onclick="event.preventDefault(); event.stopPropagation(); openSolicitudDrawerWithContext('{{ pipeline.id }}'); return false;">
                             <i class="fas fa-plus me-1"></i>Nueva Solicitud
                         </a>
                         {% else %}
-                        <a href="#" class="btn btn-light btn-sm" onclick="openSolicitudDrawerWithContext()">
+                        <a href="#" class="btn btn-light btn-sm" onclick="event.preventDefault(); event.stopPropagation(); openSolicitudDrawerWithContext(); return false;">
                             <i class="fas fa-plus me-1"></i>Nueva Solicitud
                         </a>
                         {% endif %}
@@ -2957,29 +2957,104 @@
         let searchTimeout;
         let currentSearchType = '';
 
+        // Debug function to test drawer opening
+        window.testDrawer = function() {
+            console.log('🧪 Testing drawer functionality...');
+            const drawer = document.getElementById('solicitudDrawer');
+            console.log('Drawer element:', drawer);
+            console.log('Drawer classes:', drawer ? drawer.classList : 'DRAWER NOT FOUND');
+            console.log('Drawer display:', drawer ? window.getComputedStyle(drawer).display : 'DRAWER NOT FOUND');
+            console.log('Drawer opacity:', drawer ? window.getComputedStyle(drawer).opacity : 'DRAWER NOT FOUND');
+            
+            if (drawer) {
+                drawer.style.display = 'flex';
+                drawer.style.opacity = '1';
+                drawer.classList.add('active');
+                console.log('✅ Drawer should be visible now');
+            }
+        };
+
         // Ensure drawer functions are available globally
         window.openSolicitudDrawerWithContext = function (pipelineId = null) {
             console.log('🔧 openSolicitudDrawerWithContext called with pipelineId:', pipelineId);
+            console.log('🔍 Document ready state:', document.readyState);
+
+            // Wait for DOM to be ready
+            if (document.readyState === 'loading') {
+                console.log('⏳ Waiting for DOM to be ready...');
+                document.addEventListener('DOMContentLoaded', function() {
+                    window.openSolicitudDrawerWithContext(pipelineId);
+                });
+                return;
+            }
 
             // Check if drawer exists
             const drawer = document.getElementById('solicitudDrawer');
             if (!drawer) {
                 console.error('❌ Drawer element not found!');
+                console.log('🔍 Available elements with "drawer" in ID:', 
+                    document.querySelectorAll('[id*="drawer"]'));
+                console.log('🔍 All elements with ID starting with "solicitud":', 
+                    document.querySelectorAll('[id^="solicitud"]'));
                 alert('Error: Drawer not found. Please refresh the page.');
                 return;
             }
 
-            // Open drawer
-            drawer.classList.add('active');
-            document.body.style.overflow = 'hidden';
+            console.log('🎯 Drawer element found:', drawer);
+            console.log('🔍 Current drawer classes:', Array.from(drawer.classList));
+            console.log('🔍 Current drawer display:', window.getComputedStyle(drawer).display);
+            console.log('🔍 Current drawer opacity:', window.getComputedStyle(drawer).opacity);
+            console.log('🔍 Current drawer z-index:', window.getComputedStyle(drawer).zIndex);
 
-            // If pipelineId is provided, lock the pipeline selection
-            if (pipelineId) {
-                console.log('🔒 Locking pipeline:', pipelineId);
-                lockPipeline(pipelineId);
-            }
+            // Close any open modals first
+            const openModals = document.querySelectorAll('.modal.show');
+            console.log('🔍 Found open modals:', openModals.length);
+            openModals.forEach((modal, index) => {
+                console.log(`🔍 Closing modal ${index}:`, modal.id);
+                const bsModal = bootstrap.Modal.getInstance(modal);
+                if (bsModal) {
+                    bsModal.hide();
+                }
+            });
 
-            console.log('✅ Drawer opened successfully');
+            // Check if there are any modal backdrops that might interfere
+            const modalBackdrops = document.querySelectorAll('.modal-backdrop');
+            console.log('🔍 Found modal backdrops:', modalBackdrops.length);
+            modalBackdrops.forEach((backdrop, index) => {
+                console.log(`🔍 Removing modal backdrop ${index}`);
+                backdrop.remove();
+            });
+
+            // Force immediate display
+            drawer.style.display = 'flex';
+            drawer.style.opacity = '0';
+            console.log('🔧 Set drawer display to flex and opacity to 0');
+            
+            // Use requestAnimationFrame to ensure proper rendering
+            requestAnimationFrame(() => {
+                console.log('🎬 Animation frame - adding active class');
+                drawer.classList.add('active');
+                drawer.style.opacity = '1';
+                document.body.style.overflow = 'hidden';
+
+                console.log('🔍 After activation - drawer classes:', Array.from(drawer.classList));
+                console.log('🔍 After activation - drawer display:', window.getComputedStyle(drawer).display);
+                console.log('🔍 After activation - drawer opacity:', window.getComputedStyle(drawer).opacity);
+
+                // If pipelineId is provided, lock the pipeline selection
+                if (pipelineId) {
+                    console.log('🔒 Locking pipeline:', pipelineId);
+                    setTimeout(() => {
+                        if (typeof lockPipeline === 'function') {
+                            lockPipeline(pipelineId);
+                        } else {
+                            console.warn('⚠️ lockPipeline function not found');
+                        }
+                    }, 100);
+                }
+
+                console.log('✅ Drawer opened successfully');
+            });
         };
 
         // Also define the base openSolicitudDrawer function
@@ -3043,6 +3118,13 @@
             const drawer = document.getElementById('solicitudDrawer');
             if (drawer) {
                 drawer.classList.remove('active');
+                drawer.style.opacity = '0';
+                
+                // Wait for transition to complete before hiding
+                setTimeout(() => {
+                    drawer.style.display = 'none';
+                }, 300);
+                
                 document.body.style.overflow = '';
                 resetForm();
                 console.log('✅ Drawer closed successfully');
