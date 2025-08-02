@@ -361,6 +361,9 @@
                                 <div class="col-md-2">
                                     <label for="desarrollador" class="form-label small">Desarrollador</label>
                                     <select class="form-control form-control-sm" id="desarrollador" name="desarrollador" multiple size="4">
+                                        <option value="sin_asignar" {% if 'sin_asignar' in desarrollador_filter %}selected{% endif %}>
+                                            Sin asignar
+                                        </option>
                                         {% for desarrollador in desarrolladores %}
                                             <option value="{{ desarrollador.id }}" {% if desarrollador.id|stringformat:"s" in desarrollador_filter %}selected{% endif %}>
                                                 {{ desarrollador.get_full_name|default:desarrollador.username }}
@@ -1025,7 +1028,7 @@ th a .fas.fa-sort-down {
 
 /* Kanban View Styles */
 .kanban-board {
-    min-height: 600px;
+    min-height: 800px;
 }
 
 .kanban-column {
@@ -1033,7 +1036,7 @@ th a .fas.fa-sort-down {
     border-radius: 12px;
     border: 1px solid #dee2e6;
     height: 100%;
-    min-height: 600px;
+    min-height: 800px;
     display: flex;
     flex-direction: column;
 }
@@ -1048,7 +1051,7 @@ th a .fas.fa-sort-down {
     flex: 1;
     padding: 1rem;
     overflow-y: auto;
-    max-height: 500px;
+    max-height: 700px;
 }
 
 .kanban-card {
@@ -1209,6 +1212,8 @@ th a .fas.fa-sort-down {
 /* Table refresh animation */
 .table-responsive {
     transition: opacity 0.3s ease;
+    max-height: 700px;
+    overflow-y: auto;
 }
 
 .table-responsive.refreshing {
@@ -1225,6 +1230,16 @@ th a .fas.fa-sort-down {
         opacity: 1;
         transform: scale(1);
     }
+}
+
+/* View container styles */
+.view-container {
+    min-height: 800px;
+}
+
+/* Ensure table takes full height */
+.table-responsive table {
+    margin-bottom: 0;
 }
 </style>
 
@@ -1294,20 +1309,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Function to update Kanban column counts
 function updateKanbanCounts() {
-    const pendienteCount = document.querySelectorAll('.kanban-column:first-child .kanban-card').length;
-    const exitosoCount = document.querySelectorAll('.kanban-column:nth-child(2) .kanban-card').length;
-    const fallidoCount = document.querySelectorAll('.kanban-column:nth-child(3) .kanban-card').length;
-    const revisionCount = document.querySelectorAll('.kanban-column:nth-child(4) .kanban-card').length;
+    // Get all kanban columns in order: Pendiente, En Revisión, Fallido, Exitoso
+    const columns = document.querySelectorAll('.kanban-column');
     
-    const pendienteBadge = document.getElementById('pendiente-count');
-    const exitosoBadge = document.getElementById('exitoso-count');
-    const fallidoBadge = document.getElementById('fallido-count');
-    const revisionBadge = document.getElementById('revision-count');
-    
-    if (pendienteBadge) pendienteBadge.textContent = pendienteCount;
-    if (exitosoBadge) exitosoBadge.textContent = exitosoCount;
-    if (fallidoBadge) fallidoBadge.textContent = fallidoCount;
-    if (revisionBadge) revisionBadge.textContent = revisionCount;
+    if (columns.length >= 4) {
+        const pendienteCount = columns[0].querySelectorAll('.kanban-card').length;
+        const revisionCount = columns[1].querySelectorAll('.kanban-card').length;
+        const fallidoCount = columns[2].querySelectorAll('.kanban-card').length;
+        const exitosoCount = columns[3].querySelectorAll('.kanban-card').length;
+        
+        const pendienteBadge = document.getElementById('pendiente-count');
+        const revisionBadge = document.getElementById('revision-count');
+        const fallidoBadge = document.getElementById('fallido-count');
+        const exitosoBadge = document.getElementById('exitoso-count');
+        
+        if (pendienteBadge) pendienteBadge.textContent = pendienteCount;
+        if (revisionBadge) revisionBadge.textContent = revisionCount;
+        if (fallidoBadge) fallidoBadge.textContent = fallidoCount;
+        if (exitosoBadge) exitosoBadge.textContent = exitosoCount;
+        
+        console.log('Kanban counts updated:', {
+            pendiente: pendienteCount,
+            revision: revisionCount,
+            fallido: fallidoCount,
+            exitoso: exitosoCount
+        });
+    } else {
+        console.error('Expected 4 kanban columns, found:', columns.length);
+    }
 }
 
 // Helper function to get dropdown items for developer assignment

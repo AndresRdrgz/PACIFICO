@@ -176,7 +176,15 @@ def proyecto_detail(request, proyecto_id):
     # Filter pruebas by desarrollador (multiple selection)
     desarrollador_filter = request.GET.getlist('desarrollador')
     if desarrollador_filter:
-        pruebas = pruebas.filter(desarrollador_id__in=desarrollador_filter)
+        if 'sin_asignar' in desarrollador_filter:
+            desarrollador_ids = [did for did in desarrollador_filter if did != 'sin_asignar']
+            q_objects = Q()
+            q_objects |= Q(desarrollador__isnull=True)  # Filter for unassigned tests
+            if desarrollador_ids:
+                q_objects |= Q(desarrollador_id__in=desarrollador_ids)  # Combine with specific developers
+            pruebas = pruebas.filter(q_objects)
+        else:
+            pruebas = pruebas.filter(desarrollador_id__in=desarrollador_filter)
     
     # Filter pruebas by assigned user (role-based filtering)
     if rol_usuario == 'tester':
@@ -921,7 +929,15 @@ def export_pruebas_excel(request, proyecto_id):
     
     desarrollador_filter = request.GET.getlist('desarrollador')
     if desarrollador_filter:
-        pruebas = pruebas.filter(desarrollador_id__in=desarrollador_filter)
+        if 'sin_asignar' in desarrollador_filter:
+            desarrollador_ids = [did for did in desarrollador_filter if did != 'sin_asignar']
+            q_objects = Q()
+            q_objects |= Q(desarrollador__isnull=True)  # Filter for unassigned tests
+            if desarrollador_ids:
+                q_objects |= Q(desarrollador_id__in=desarrollador_ids)  # Combine with specific developers
+            pruebas = pruebas.filter(q_objects)
+        else:
+            pruebas = pruebas.filter(desarrollador_id__in=desarrollador_filter)
     
     # Apply sorting (same logic as in proyecto_detail view)
     sort_by = request.GET.get('sort', '-fecha_creacion')
