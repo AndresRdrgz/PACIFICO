@@ -153,7 +153,25 @@ def proyecto_detail(request, proyecto_id):
     # Filter pruebas by tester (multiple selection)
     tester_filter = request.GET.getlist('tester')
     if tester_filter:
-        pruebas = pruebas.filter(tester_id__in=tester_filter)
+        # Handle "sin_asignar" (unassigned) filter
+        if 'sin_asignar' in tester_filter:
+            # Remove 'sin_asignar' from the list and get the remaining tester IDs
+            tester_ids = [tid for tid in tester_filter if tid != 'sin_asignar']
+            
+            # Create Q objects for the filter
+            q_objects = Q()
+            
+            # Add filter for unassigned tests (tester is None)
+            q_objects |= Q(tester__isnull=True)
+            
+            # Add filter for assigned testers if any
+            if tester_ids:
+                q_objects |= Q(tester_id__in=tester_ids)
+            
+            pruebas = pruebas.filter(q_objects)
+        else:
+            # Normal filter without "sin_asignar"
+            pruebas = pruebas.filter(tester_id__in=tester_filter)
     
     # Filter pruebas by desarrollador (multiple selection)
     desarrollador_filter = request.GET.getlist('desarrollador')
@@ -866,26 +884,44 @@ def export_pruebas_excel(request, proyecto_id):
     # Get all test cases with filters
     pruebas = proyecto.pruebas.all()
     
-    # Apply filters
-    resultado_filter = request.GET.get('resultado')
+    # Apply filters (multiple selection support)
+    resultado_filter = request.GET.getlist('resultado')
     if resultado_filter:
-        pruebas = pruebas.filter(resultado=resultado_filter)
+        pruebas = pruebas.filter(resultado__in=resultado_filter)
     
-    modulo_filter = request.GET.get('modulo')
+    modulo_filter = request.GET.getlist('modulo')
     if modulo_filter:
-        pruebas = pruebas.filter(modulo_id=modulo_filter)
+        pruebas = pruebas.filter(modulo_id__in=modulo_filter)
     
-    prioridad_filter = request.GET.get('prioridad')
+    prioridad_filter = request.GET.getlist('prioridad')
     if prioridad_filter:
-        pruebas = pruebas.filter(prioridad=prioridad_filter)
+        pruebas = pruebas.filter(prioridad__in=prioridad_filter)
     
-    tester_filter = request.GET.get('tester')
+    tester_filter = request.GET.getlist('tester')
     if tester_filter:
-        pruebas = pruebas.filter(tester_id=tester_filter)
+        # Handle "sin_asignar" (unassigned) filter
+        if 'sin_asignar' in tester_filter:
+            # Remove 'sin_asignar' from the list and get the remaining tester IDs
+            tester_ids = [tid for tid in tester_filter if tid != 'sin_asignar']
+            
+            # Create Q objects for the filter
+            q_objects = Q()
+            
+            # Add filter for unassigned tests (tester is None)
+            q_objects |= Q(tester__isnull=True)
+            
+            # Add filter for assigned testers if any
+            if tester_ids:
+                q_objects |= Q(tester_id__in=tester_ids)
+            
+            pruebas = pruebas.filter(q_objects)
+        else:
+            # Normal filter without "sin_asignar"
+            pruebas = pruebas.filter(tester_id__in=tester_filter)
     
-    desarrollador_filter = request.GET.get('desarrollador')
+    desarrollador_filter = request.GET.getlist('desarrollador')
     if desarrollador_filter:
-        pruebas = pruebas.filter(desarrollador_id=desarrollador_filter)
+        pruebas = pruebas.filter(desarrollador_id__in=desarrollador_filter)
     
     # Apply sorting (same logic as in proyecto_detail view)
     sort_by = request.GET.get('sort', '-fecha_creacion')
