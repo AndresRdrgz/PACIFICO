@@ -288,6 +288,15 @@
                             Pruebas del Proyecto
                         </h5>
                         <div class="d-flex gap-2">
+                            <!-- View Toggle -->
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-primary" id="tableViewBtn" onclick="switchToTableView()">
+                                    <i class="fas fa-table me-1"></i>Tabla
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" id="kanbanViewBtn" onclick="switchToKanbanView()">
+                                    <i class="fas fa-columns me-1"></i>Kanban
+                                </button>
+                            </div>
                             <a href="{% url 'proyectos:export_pruebas_excel' proyecto.id %}?{{ request.GET.urlencode }}" 
                                class="btn btn-success btn-sm">
                                 <i class="fas fa-file-excel me-1"></i>Exportar Excel
@@ -371,9 +380,12 @@
                             </div>
                         </div>
                     </div>
-                    {% if page_obj %}
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0">
+
+                    <!-- View Containers -->
+                    <div id="tableView" class="view-container">
+                        {% if page_obj %}
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
                                 <thead>
                                     <tr>
                                         <th class="px-3">
@@ -592,9 +604,279 @@
                             <p class="text-muted">Aún no se han creado pruebas para este proyecto.</p>
                         </div>
                     {% endif %}
+                    </div>
+                    
+                    <!-- Kanban View -->
+                    <div id="kanbanView" class="view-container" style="display: none;">
+                        {% if page_obj %}
+                            <div class="kanban-board">
+                                <div class="row">
+                                    <!-- Pendiente Column -->
+                                    <div class="col-md-3">
+                                        <div class="kanban-column">
+                                            <div class="kanban-column-header bg-secondary text-white">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-clock me-2"></i>
+                                                    Pendiente
+                                                    <span class="badge bg-light text-dark ms-2" id="pendiente-count">0</span>
+                                                </h6>
+                                            </div>
+                                            <div class="kanban-column-body">
+                                                {% for prueba in page_obj %}
+                                                    {% if prueba.resultado == 'pendiente' %}
+                                                        <div class="kanban-card" data-prueba-id="{{ prueba.id }}">
+                                                            <div class="kanban-card-header">
+                                                                <h6 class="kanban-card-title">{{ prueba.titulo }}</h6>
+                                                                <span class="badge 
+                                                                    {% if prueba.prioridad == 'critica' %}bg-danger
+                                                                    {% elif prueba.prioridad == 'alta' %}bg-warning text-dark
+                                                                    {% elif prueba.prioridad == 'media' %}bg-info
+                                                                    {% else %}bg-secondary{% endif %}">
+                                                                    {{ prueba.get_prioridad_display }}
+                                                                </span>
+                                                            </div>
+                                                            <div class="kanban-card-body">
+                                                                <p class="kanban-card-description">{{ prueba.descripcion|truncatewords:15 }}</p>
+                                                                <div class="kanban-card-meta">
+                                                                    <small class="text-muted">
+                                                                        <i class="fas fa-folder me-1"></i>{{ prueba.modulo.nombre }}
+                                                                    </small>
+                                                                </div>
+                                                                <div class="kanban-card-assignees">
+                                                                    {% if prueba.tester %}
+                                                                        <small class="text-muted d-block">
+                                                                            <i class="fas fa-user me-1"></i>{{ prueba.tester.get_full_name|default:prueba.tester.username }}
+                                                                        </small>
+                                                                    {% endif %}
+                                                                    {% if prueba.desarrollador %}
+                                                                        <small class="text-muted d-block">
+                                                                            <i class="fas fa-code me-1"></i>{{ prueba.desarrollador.get_full_name|default:prueba.desarrollador.username }}
+                                                                        </small>
+                                                                    {% endif %}
+                                                                </div>
+                                                            </div>
+                                                            <div class="kanban-card-actions">
+                                                                <a href="{% url 'proyectos:prueba_detail' prueba.id %}" class="btn btn-sm btn-outline-primary">
+                                                                    <i class="fas fa-eye"></i>
+                                                                </a>
+                                                                {% if user.is_superuser or rol_usuario == 'tester' %}
+                                                                    <a href="{% url 'proyectos:prueba_edit' prueba.id %}" class="btn btn-sm btn-outline-warning">
+                                                                        <i class="fas fa-edit"></i>
+                                                                    </a>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Exitoso Column -->
+                                    <div class="col-md-3">
+                                        <div class="kanban-column">
+                                            <div class="kanban-column-header bg-success text-white">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-check-circle me-2"></i>
+                                                    Exitoso
+                                                    <span class="badge bg-light text-dark ms-2" id="exitoso-count">0</span>
+                                                </h6>
+                                            </div>
+                                            <div class="kanban-column-body">
+                                                {% for prueba in page_obj %}
+                                                    {% if prueba.resultado == 'exitoso' %}
+                                                        <div class="kanban-card" data-prueba-id="{{ prueba.id }}">
+                                                            <div class="kanban-card-header">
+                                                                <h6 class="kanban-card-title">{{ prueba.titulo }}</h6>
+                                                                <span class="badge 
+                                                                    {% if prueba.prioridad == 'critica' %}bg-danger
+                                                                    {% elif prueba.prioridad == 'alta' %}bg-warning text-dark
+                                                                    {% elif prueba.prioridad == 'media' %}bg-info
+                                                                    {% else %}bg-secondary{% endif %}">
+                                                                    {{ prueba.get_prioridad_display }}
+                                                                </span>
+                                                            </div>
+                                                            <div class="kanban-card-body">
+                                                                <p class="kanban-card-description">{{ prueba.descripcion|truncatewords:15 }}</p>
+                                                                <div class="kanban-card-meta">
+                                                                    <small class="text-muted">
+                                                                        <i class="fas fa-folder me-1"></i>{{ prueba.modulo.nombre }}
+                                                                    </small>
+                                                                </div>
+                                                                <div class="kanban-card-assignees">
+                                                                    {% if prueba.tester %}
+                                                                        <small class="text-muted d-block">
+                                                                            <i class="fas fa-user me-1"></i>{{ prueba.tester.get_full_name|default:prueba.tester.username }}
+                                                                        </small>
+                                                                    {% endif %}
+                                                                    {% if prueba.desarrollador %}
+                                                                        <small class="text-muted d-block">
+                                                                            <i class="fas fa-code me-1"></i>{{ prueba.desarrollador.get_full_name|default:prueba.desarrollador.username }}
+                                                                        </small>
+                                                                    {% endif %}
+                                                                </div>
+                                                            </div>
+                                                            <div class="kanban-card-actions">
+                                                                <a href="{% url 'proyectos:prueba_detail' prueba.id %}" class="btn btn-sm btn-outline-primary">
+                                                                    <i class="fas fa-eye"></i>
+                                                                </a>
+                                                                {% if user.is_superuser or rol_usuario == 'tester' %}
+                                                                    <a href="{% url 'proyectos:prueba_edit' prueba.id %}" class="btn btn-sm btn-outline-warning">
+                                                                        <i class="fas fa-edit"></i>
+                                                                    </a>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Fallido Column -->
+                                    <div class="col-md-3">
+                                        <div class="kanban-column">
+                                            <div class="kanban-column-header bg-danger text-white">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-times-circle me-2"></i>
+                                                    Fallido
+                                                    <span class="badge bg-light text-dark ms-2" id="fallido-count">0</span>
+                                                </h6>
+                                            </div>
+                                            <div class="kanban-column-body">
+                                                {% for prueba in page_obj %}
+                                                    {% if prueba.resultado == 'fallido' %}
+                                                        <div class="kanban-card" data-prueba-id="{{ prueba.id }}">
+                                                            <div class="kanban-card-header">
+                                                                <h6 class="kanban-card-title">{{ prueba.titulo }}</h6>
+                                                                <span class="badge 
+                                                                    {% if prueba.prioridad == 'critica' %}bg-danger
+                                                                    {% elif prueba.prioridad == 'alta' %}bg-warning text-dark
+                                                                    {% elif prueba.prioridad == 'media' %}bg-info
+                                                                    {% else %}bg-secondary{% endif %}">
+                                                                    {{ prueba.get_prioridad_display }}
+                                                                </span>
+                                                            </div>
+                                                            <div class="kanban-card-body">
+                                                                <p class="kanban-card-description">{{ prueba.descripcion|truncatewords:15 }}</p>
+                                                                <div class="kanban-card-meta">
+                                                                    <small class="text-muted">
+                                                                        <i class="fas fa-folder me-1"></i>{{ prueba.modulo.nombre }}
+                                                                    </small>
+                                                                </div>
+                                                                <div class="kanban-card-assignees">
+                                                                    {% if prueba.tester %}
+                                                                        <small class="text-muted d-block">
+                                                                            <i class="fas fa-user me-1"></i>{{ prueba.tester.get_full_name|default:prueba.tester.username }}
+                                                                        </small>
+                                                                    {% endif %}
+                                                                    {% if prueba.desarrollador %}
+                                                                        <small class="text-muted d-block">
+                                                                            <i class="fas fa-code me-1"></i>{{ prueba.desarrollador.get_full_name|default:prueba.desarrollador.username }}
+                                                                        </small>
+                                                                    {% endif %}
+                                                                </div>
+                                                            </div>
+                                                            <div class="kanban-card-actions">
+                                                                <a href="{% url 'proyectos:prueba_detail' prueba.id %}" class="btn btn-sm btn-outline-primary">
+                                                                    <i class="fas fa-eye"></i>
+                                                                </a>
+                                                                {% if user.is_superuser or rol_usuario == 'tester' %}
+                                                                    <a href="{% url 'proyectos:prueba_edit' prueba.id %}" class="btn btn-sm btn-outline-warning">
+                                                                        <i class="fas fa-edit"></i>
+                                                                    </a>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- En Revisión Column -->
+                                    <div class="col-md-3">
+                                        <div class="kanban-column">
+                                            <div class="kanban-column-header bg-warning text-dark">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-clock me-2"></i>
+                                                    En Revisión
+                                                    <span class="badge bg-light text-dark ms-2" id="revision-count">0</span>
+                                                </h6>
+                                            </div>
+                                            <div class="kanban-column-body">
+                                                {% for prueba in page_obj %}
+                                                    {% if prueba.resultado == 'solicitud_revision' %}
+                                                        <div class="kanban-card" data-prueba-id="{{ prueba.id }}">
+                                                            <div class="kanban-card-header">
+                                                                <h6 class="kanban-card-title">{{ prueba.titulo }}</h6>
+                                                                <span class="badge 
+                                                                    {% if prueba.prioridad == 'critica' %}bg-danger
+                                                                    {% elif prueba.prioridad == 'alta' %}bg-warning text-dark
+                                                                    {% elif prueba.prioridad == 'media' %}bg-info
+                                                                    {% else %}bg-secondary{% endif %}">
+                                                                    {{ prueba.get_prioridad_display }}
+                                                                </span>
+                                                            </div>
+                                                            <div class="kanban-card-body">
+                                                                <p class="kanban-card-description">{{ prueba.descripcion|truncatewords:15 }}</p>
+                                                                <div class="kanban-card-meta">
+                                                                    <small class="text-muted">
+                                                                        <i class="fas fa-folder me-1"></i>{{ prueba.modulo.nombre }}
+                                                                    </small>
+                                                                </div>
+                                                                <div class="kanban-card-assignees">
+                                                                    {% if prueba.tester %}
+                                                                        <small class="text-muted d-block">
+                                                                            <i class="fas fa-user me-1"></i>{{ prueba.tester.get_full_name|default:prueba.tester.username }}
+                                                                        </small>
+                                                                    {% endif %}
+                                                                    {% if prueba.desarrollador %}
+                                                                        <small class="text-muted d-block">
+                                                                            <i class="fas fa-code me-1"></i>{{ prueba.desarrollador.get_full_name|default:prueba.desarrollador.username }}
+                                                                        </small>
+                                                                    {% endif %}
+                                                                </div>
+                                                            </div>
+                                                            <div class="kanban-card-actions">
+                                                                <a href="{% url 'proyectos:prueba_detail' prueba.id %}" class="btn btn-sm btn-outline-primary">
+                                                                    <i class="fas fa-eye"></i>
+                                                                </a>
+                                                                {% if user.is_superuser or rol_usuario == 'tester' %}
+                                                                    <a href="{% url 'proyectos:prueba_edit' prueba.id %}" class="btn btn-sm btn-outline-warning">
+                                                                        <i class="fas fa-edit"></i>
+                                                                    </a>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-columns fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No hay pruebas en este proyecto</h5>
+                                <p class="text-muted">Aún no se han creado pruebas para este proyecto.</p>
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" style="display: none;">
+    <div class="d-flex flex-column align-items-center justify-content-center">
+        <div class="spinner-border text-light mb-3" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p class="text-light mb-0">Actualizando tabla...</p>
     </div>
 </div>
 
@@ -736,6 +1018,116 @@ th a .fas.fa-sort-down {
     border: 1px solid #dee2e6;
 }
 
+/* Kanban View Styles */
+.kanban-board {
+    min-height: 600px;
+}
+
+.kanban-column {
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 1px solid #dee2e6;
+    height: 100%;
+    min-height: 600px;
+    display: flex;
+    flex-direction: column;
+}
+
+.kanban-column-header {
+    padding: 1rem;
+    border-radius: 12px 12px 0 0;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.kanban-column-body {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    max-height: 500px;
+}
+
+.kanban-card {
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.kanban-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.kanban-card-header {
+    padding: 0.75rem;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.kanban-card-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin: 0;
+    line-height: 1.3;
+    flex: 1;
+    margin-right: 0.5rem;
+}
+
+.kanban-card-body {
+    padding: 0.75rem;
+}
+
+.kanban-card-description {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+}
+
+.kanban-card-meta {
+    margin-bottom: 0.5rem;
+}
+
+.kanban-card-assignees {
+    margin-bottom: 0.5rem;
+}
+
+.kanban-card-actions {
+    padding: 0.5rem 0.75rem;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    gap: 0.25rem;
+    justify-content: flex-end;
+}
+
+.kanban-card-actions .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+/* View toggle button styles */
+.btn-group .btn.active {
+    background-color: var(--verde-pacifico);
+    border-color: var(--verde-pacifico);
+    color: white;
+}
+
+.btn-group .btn:not(.active) {
+    background-color: white;
+    border-color: #dee2e6;
+    color: #6c757d;
+}
+
+.btn-group .btn:not(.active):hover {
+    background-color: #f8f9fa;
+    border-color: var(--verde-pacifico);
+    color: var(--verde-pacifico);
+}
+
 .dropdown-header {
     font-weight: 600;
     color: var(--verde-pacifico);
@@ -830,6 +1222,283 @@ th a .fas.fa-sort-down {
     }
 }
 </style>
+
+<script>
+// View switching functions
+function switchToTableView() {
+    document.getElementById('tableView').style.display = 'block';
+    document.getElementById('kanbanView').style.display = 'none';
+    document.getElementById('tableViewBtn').classList.add('active');
+    document.getElementById('kanbanViewBtn').classList.remove('active');
+    
+    // Store preference in localStorage
+    localStorage.setItem('proyecto_view_preference', 'table');
+}
+
+function switchToKanbanView() {
+    document.getElementById('tableView').style.display = 'none';
+    document.getElementById('kanbanView').style.display = 'block';
+    document.getElementById('tableViewBtn').classList.remove('active');
+    document.getElementById('kanbanViewBtn').classList.add('active');
+    
+    // Store preference in localStorage
+    localStorage.setItem('proyecto_view_preference', 'kanban');
+}
+
+// Initialize view based on stored preference or default to table
+document.addEventListener('DOMContentLoaded', function() {
+    const savedView = localStorage.getItem('proyecto_view_preference');
+    
+    if (savedView === 'kanban') {
+        switchToKanbanView();
+    } else {
+        switchToTableView();
+    }
+    
+    // Restore scroll position if this was a table refresh
+    const wasRefreshed = sessionStorage.getItem('table_refreshed');
+    if (wasRefreshed) {
+        const scrollPosition = sessionStorage.getItem('scroll_position');
+        if (scrollPosition) {
+            setTimeout(() => {
+                window.scrollTo(0, parseInt(scrollPosition));
+            }, 100);
+        }
+        sessionStorage.removeItem('table_refreshed');
+        sessionStorage.removeItem('scroll_position');
+    }
+    
+    // Add event listeners to filter selects for auto-submit
+    const filterSelects = document.querySelectorAll('.filter-section select');
+    filterSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            // Add a small delay to allow multiple selections
+            clearTimeout(this.submitTimeout);
+            this.submitTimeout = setTimeout(() => {
+                this.closest('form').submit();
+            }, 500);
+        });
+    });
+    
+    // Update active filters count
+    updateActiveFiltersCount();
+    
+    // Update Kanban column counts
+    updateKanbanCounts();
+});
+
+// Function to update Kanban column counts
+function updateKanbanCounts() {
+    const pendienteCount = document.querySelectorAll('.kanban-column:first-child .kanban-card').length;
+    const exitosoCount = document.querySelectorAll('.kanban-column:nth-child(2) .kanban-card').length;
+    const fallidoCount = document.querySelectorAll('.kanban-column:nth-child(3) .kanban-card').length;
+    const revisionCount = document.querySelectorAll('.kanban-column:nth-child(4) .kanban-card').length;
+    
+    const pendienteBadge = document.getElementById('pendiente-count');
+    const exitosoBadge = document.getElementById('exitoso-count');
+    const fallidoBadge = document.getElementById('fallido-count');
+    const revisionBadge = document.getElementById('revision-count');
+    
+    if (pendienteBadge) pendienteBadge.textContent = pendienteCount;
+    if (exitosoBadge) exitosoBadge.textContent = exitosoCount;
+    if (fallidoBadge) fallidoBadge.textContent = fallidoCount;
+    if (revisionBadge) revisionBadge.textContent = revisionCount;
+}
+
+// Helper function to get dropdown items for developer assignment
+function getDesarrolladoresDropdownItems(pruebaId) {
+    const desarrolladores = [
+        {% for desarrollador in desarrolladores %}
+            {id: {{ desarrollador.id }}, name: "{{ desarrollador.get_full_name|default:desarrollador.username }}"},
+        {% endfor %}
+    ];
+    
+    let items = `<li><h6 class="dropdown-header">Asignar desarrollador</h6></li>`;
+    items += `<li><a class="dropdown-item" href="#" onclick="assignDesarrollador(${pruebaId}, null, event)">
+        <i class="fas fa-times me-2"></i>Sin asignar
+    </a></li>`;
+    
+    desarrolladores.forEach(dev => {
+        items += `<li><a class="dropdown-item" href="#" onclick="assignDesarrollador(${pruebaId}, ${dev.id}, event)">
+            <i class="fas fa-user me-2"></i>${dev.name}
+        </a></li>`;
+    });
+    
+    return items;
+}
+
+// Function to assign developer to a test case
+function assignDesarrollador(pruebaId, desarrolladorId, event) {
+    console.log('assignDesarrollador called with:', { pruebaId, desarrolladorId, event });
+    
+    // Prevent default link behavior
+    event.preventDefault();
+    
+    // Find the button element
+    let button = event.target.closest('.dropdown-toggle');
+    if (!button) {
+        button = event.target.closest('td').querySelector('.dropdown-toggle');
+    }
+    if (!button) {
+        button = document.querySelector(`[data-prueba-id="${pruebaId}"] .dropdown-toggle`);
+    }
+    
+    console.log('Button found:', button);
+    
+    if (!button) {
+        console.error('Could not find button element');
+        return;
+    }
+    
+    // Get CSRF token
+    const csrfToken = getCookie('csrftoken');
+    if (!csrfToken) {
+        console.error('CSRF token not found');
+        showNotification('Error: CSRF token not found', 'danger');
+        return;
+    }
+    
+    // Show loading state
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
+    
+    // Make API call
+    fetch(`/proyectos/api/prueba/${pruebaId}/assign-desarrollador/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+        },
+        body: JSON.stringify({
+            desarrollador_id: desarrolladorId
+        })
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Response data:', data);
+        
+        if (data.success) {
+            showNotification(data.message, 'success');
+            
+            // Refresh the table to show updated data
+            refreshTable();
+        } else {
+            showNotification(data.message || 'Error al asignar desarrollador', 'danger');
+            button.innerHTML = originalHTML;
+            button.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error al asignar desarrollador: ' + error.message, 'danger');
+        button.innerHTML = originalHTML;
+        button.disabled = false;
+    });
+}
+
+// Function to show sorting information
+function showSortingInfo() {
+    const currentSort = '{{ sort_by|default:"fecha_creacion" }}';
+    const currentOrder = '{{ sort_order|default:"desc" }}';
+    
+    let message = `Ordenamiento actual: ${currentSort} (${currentOrder === 'asc' ? 'ascendente' : 'descendente'})`;
+    
+    showNotification(message, 'info');
+}
+
+// Global function for testing
+function testAssignDesarrolladorFunction() {
+    console.log('Testing assignDesarrollador function...');
+    const mockEvent = {
+        preventDefault: () => console.log('preventDefault called'),
+        target: {
+            closest: () => null
+        }
+    };
+    
+    // Test with mock data
+    assignDesarrollador(1, 2, mockEvent);
+}
+
+// Function to refresh the table
+function refreshTable() {
+    // Store current scroll position
+    sessionStorage.setItem('scroll_position', window.scrollY.toString());
+    sessionStorage.setItem('table_refreshed', 'true');
+    
+    // Show loading overlay
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        overlay.style.display = 'flex';
+    }
+    
+    // Add refresh timestamp to URL to prevent caching
+    const currentUrl = new URL(window.location);
+    currentUrl.searchParams.set('_refresh', Date.now());
+    
+    // Reload the page
+    window.location.href = currentUrl.toString();
+}
+
+// Function to show notifications
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Add to page
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+// Function to get cookie value
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Function to update active filters count
+function updateActiveFiltersCount() {
+    const filterSelects = document.querySelectorAll('.filter-section select');
+    let totalActive = 0;
+    
+    filterSelects.forEach(select => {
+        const selectedOptions = Array.from(select.selectedOptions);
+        totalActive += selectedOptions.length;
+    });
+    
+    // You can add visual indicator here if needed
+    console.log(`Active filters: ${totalActive}`);
+}
+</script>
 
 <!-- JavaScript for enhanced filtering and sorting -->
 <script>
