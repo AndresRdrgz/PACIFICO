@@ -135,36 +135,63 @@ def proyecto_detail(request, proyecto_id):
     testers = User.objects.filter(proyectos_invitado__proyecto=proyecto, proyectos_invitado__rol='tester')
     desarrolladores = User.objects.filter(proyectos_invitado__proyecto=proyecto, proyectos_invitado__rol='desarrollador')
     
-    # Filter pruebas by status
-    resultado_filter = request.GET.get('resultado')
+    # Filter pruebas by status (multiple selection)
+    resultado_filter = request.GET.getlist('resultado')
     if resultado_filter:
-        pruebas = pruebas.filter(resultado=resultado_filter)
+        pruebas = pruebas.filter(resultado__in=resultado_filter)
     
-    # Filter pruebas by module
-    modulo_filter = request.GET.get('modulo')
+    # Filter pruebas by module (multiple selection)
+    modulo_filter = request.GET.getlist('modulo')
     if modulo_filter:
-        pruebas = pruebas.filter(modulo_id=modulo_filter)
+        pruebas = pruebas.filter(modulo_id__in=modulo_filter)
     
-    # Filter pruebas by priority
-    prioridad_filter = request.GET.get('prioridad')
+    # Filter pruebas by priority (multiple selection)
+    prioridad_filter = request.GET.getlist('prioridad')
     if prioridad_filter:
-        pruebas = pruebas.filter(prioridad=prioridad_filter)
+        pruebas = pruebas.filter(prioridad__in=prioridad_filter)
     
-    # Filter pruebas by tester
-    tester_filter = request.GET.get('tester')
+    # Filter pruebas by tester (multiple selection)
+    tester_filter = request.GET.getlist('tester')
     if tester_filter:
-        pruebas = pruebas.filter(tester_id=tester_filter)
+        pruebas = pruebas.filter(tester_id__in=tester_filter)
     
-    # Filter pruebas by desarrollador
-    desarrollador_filter = request.GET.get('desarrollador')
+    # Filter pruebas by desarrollador (multiple selection)
+    desarrollador_filter = request.GET.getlist('desarrollador')
     if desarrollador_filter:
-        pruebas = pruebas.filter(desarrollador_id=desarrollador_filter)
+        pruebas = pruebas.filter(desarrollador_id__in=desarrollador_filter)
     
     # Filter pruebas by assigned user (role-based filtering)
     if rol_usuario == 'tester':
         pruebas = pruebas.filter(tester=request.user)
     elif rol_usuario == 'desarrollador':
         pruebas = pruebas.filter(desarrollador=request.user)
+    
+    # Sorting functionality
+    sort_by = request.GET.get('sort', '-fecha_creacion')
+    sort_order = request.GET.get('order', 'desc')
+    
+    # Validate sort field to prevent injection
+    allowed_sort_fields = {
+        'titulo': 'titulo',
+        'modulo': 'modulo__nombre',
+        'prioridad': 'prioridad',
+        'resultado': 'resultado',
+        'tester': 'tester__first_name',
+        'desarrollador': 'desarrollador__first_name',
+        'fecha_creacion': 'fecha_creacion',
+        'fecha_ejecucion': 'fecha_ejecucion',
+        'fecha_resolucion': 'fecha_resolucion',
+    }
+    
+    if sort_by in allowed_sort_fields:
+        sort_field = allowed_sort_fields[sort_by]
+        if sort_order == 'asc':
+            pruebas = pruebas.order_by(sort_field)
+        else:
+            pruebas = pruebas.order_by(f'-{sort_field}')
+    else:
+        # Default sorting
+        pruebas = pruebas.order_by('-fecha_creacion')
     
     # Pagination
     paginator = Paginator(pruebas, 20)
@@ -183,6 +210,8 @@ def proyecto_detail(request, proyecto_id):
         'prioridad_filter': prioridad_filter,
         'tester_filter': tester_filter,
         'desarrollador_filter': desarrollador_filter,
+        'sort_by': sort_by,
+        'sort_order': sort_order,
     }
     
     return render(request, 'proyectos/proyecto_detail.html', context)
@@ -858,6 +887,33 @@ def export_pruebas_excel(request, proyecto_id):
     if desarrollador_filter:
         pruebas = pruebas.filter(desarrollador_id=desarrollador_filter)
     
+    # Apply sorting (same logic as in proyecto_detail view)
+    sort_by = request.GET.get('sort', '-fecha_creacion')
+    sort_order = request.GET.get('order', 'desc')
+    
+    # Validate sort field to prevent injection
+    allowed_sort_fields = {
+        'titulo': 'titulo',
+        'modulo': 'modulo__nombre',
+        'prioridad': 'prioridad',
+        'resultado': 'resultado',
+        'tester': 'tester__first_name',
+        'desarrollador': 'desarrollador__first_name',
+        'fecha_creacion': 'fecha_creacion',
+        'fecha_ejecucion': 'fecha_ejecucion',
+        'fecha_resolucion': 'fecha_resolucion',
+    }
+    
+    if sort_by in allowed_sort_fields:
+        sort_field = allowed_sort_fields[sort_by]
+        if sort_order == 'asc':
+            pruebas = pruebas.order_by(sort_field)
+        else:
+            pruebas = pruebas.order_by(f'-{sort_field}')
+    else:
+        # Default sorting
+        pruebas = pruebas.order_by('-fecha_creacion')
+    
     # Create Excel file
     output = BytesIO()
     workbook = xlsxwriter.Workbook(output)
@@ -1063,3 +1119,60 @@ def api_eliminar_archivo(request, archivo_id):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required
+@require_POST
+@csrf_exempt
+def api_assign_desarrollador(request, prueba_id):
+    """API endpoint para asignar un desarrollador a una prueba"""
+    prueba = get_object_or_404(Prueba, id=prueba_id)
+    
+    # Check if user has access to this test case
+    if not request.user.is_superuser:
+        try:
+            proyecto_usuario = prueba.proyecto.usuarios_invitados.get(usuario=request.user, activo=True)
+            rol_usuario = proyecto_usuario.rol
+            # Only admins and testers can assign developers
+            if rol_usuario not in ['tester', 'admin']:
+                return JsonResponse({'success': False, 'error': 'No tienes permisos para asignar desarrolladores'}, status=403)
+        except ProyectoUsuario.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'No tienes acceso a esta prueba'}, status=403)
+    
+    try:
+        data = json.loads(request.body)
+        desarrollador_id = data.get('desarrollador_id')
+        
+        # Validate desarrollador_id
+        if desarrollador_id:
+            try:
+                desarrollador = User.objects.get(id=desarrollador_id)
+                # Check if the user is actually a developer in this project
+                if not request.user.is_superuser:
+                    proyecto_usuario_dev = prueba.proyecto.usuarios_invitados.filter(
+                        usuario=desarrollador,
+                        rol='desarrollador',
+                        activo=True
+                    ).exists()
+                    if not proyecto_usuario_dev:
+                        return JsonResponse({'success': False, 'error': 'El usuario seleccionado no es un desarrollador válido para este proyecto'}, status=400)
+                
+                prueba.desarrollador = desarrollador
+            except User.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Desarrollador no encontrado'}, status=404)
+        else:
+            # Remove developer assignment
+            prueba.desarrollador = None
+        
+        prueba.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Desarrollador {"asignado" if desarrollador_id else "removido"} exitosamente',
+            'desarrollador_id': desarrollador_id,
+            'desarrollador_name': desarrollador.get_full_name() if desarrollador_id and desarrollador else None
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Datos JSON inválidos'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error al asignar desarrollador: {str(e)}'}, status=500)

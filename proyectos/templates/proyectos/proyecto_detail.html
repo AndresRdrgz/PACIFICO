@@ -1,5 +1,6 @@
 {% extends 'workflow/base.html' %}
 {% load static %}
+{% load proyectos_filters %}
 
 {% block title %}{{ proyecto.nombre }} - Detalles{% endblock %}
 
@@ -291,6 +292,9 @@
                                class="btn btn-success btn-sm">
                                 <i class="fas fa-file-excel me-1"></i>Exportar Excel
                             </a>
+                            <button type="button" class="btn btn-info btn-sm" onclick="showSortingInfo()" title="Información de ordenamiento">
+                                <i class="fas fa-info-circle"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -302,56 +306,56 @@
                                 <form method="get" class="row g-3">
                                 <div class="col-md-2">
                                     <label for="resultado" class="form-label small">Resultado</label>
-                                    <select class="form-control form-control-sm" id="resultado" name="resultado">
-                                        <option value="">Todos</option>
-                                        <option value="pendiente" {% if resultado_filter == 'pendiente' %}selected{% endif %}>Pendiente</option>
-                                        <option value="exitoso" {% if resultado_filter == 'exitoso' %}selected{% endif %}>Exitoso</option>
-                                        <option value="fallido" {% if resultado_filter == 'fallido' %}selected{% endif %}>Fallido</option>
-                                        <option value="solicitud_revision" {% if resultado_filter == 'solicitud_revision' %}selected{% endif %}>En Revisión</option>
+                                    <select class="form-control form-control-sm" id="resultado" name="resultado" multiple size="4">
+                                        <option value="pendiente" {% if 'pendiente' in resultado_filter %}selected{% endif %}>Pendiente</option>
+                                        <option value="exitoso" {% if 'exitoso' in resultado_filter %}selected{% endif %}>Exitoso</option>
+                                        <option value="fallido" {% if 'fallido' in resultado_filter %}selected{% endif %}>Fallido</option>
+                                        <option value="solicitud_revision" {% if 'solicitud_revision' in resultado_filter %}selected{% endif %}>En Revisión</option>
                                     </select>
+                                    <small class="text-muted">Ctrl+Click para múltiple selección</small>
                                 </div>
                                 <div class="col-md-2">
                                     <label for="modulo" class="form-label small">Módulo</label>
-                                    <select class="form-control form-control-sm" id="modulo" name="modulo">
-                                        <option value="">Todos</option>
+                                    <select class="form-control form-control-sm" id="modulo" name="modulo" multiple size="4">
                                         {% for modulo in modulos %}
-                                            <option value="{{ modulo.id }}" {% if modulo_filter == modulo.id|stringformat:"s" %}selected{% endif %}>
+                                            <option value="{{ modulo.id }}" {% if modulo.id|stringformat:"s" in modulo_filter %}selected{% endif %}>
                                                 {{ modulo.nombre }}
                                             </option>
                                         {% endfor %}
                                     </select>
+                                    <small class="text-muted">Ctrl+Click para múltiple selección</small>
                                 </div>
                                 <div class="col-md-2">
                                     <label for="prioridad" class="form-label small">Prioridad</label>
-                                    <select class="form-control form-control-sm" id="prioridad" name="prioridad">
-                                        <option value="">Todas</option>
-                                        <option value="baja" {% if prioridad_filter == 'baja' %}selected{% endif %}>Baja</option>
-                                        <option value="media" {% if prioridad_filter == 'media' %}selected{% endif %}>Media</option>
-                                        <option value="alta" {% if prioridad_filter == 'alta' %}selected{% endif %}>Alta</option>
-                                        <option value="critica" {% if prioridad_filter == 'critica' %}selected{% endif %}>Crítica</option>
+                                    <select class="form-control form-control-sm" id="prioridad" name="prioridad" multiple size="4">
+                                        <option value="baja" {% if 'baja' in prioridad_filter %}selected{% endif %}>Baja</option>
+                                        <option value="media" {% if 'media' in prioridad_filter %}selected{% endif %}>Media</option>
+                                        <option value="alta" {% if 'alta' in prioridad_filter %}selected{% endif %}>Alta</option>
+                                        <option value="critica" {% if 'critica' in prioridad_filter %}selected{% endif %}>Crítica</option>
                                     </select>
+                                    <small class="text-muted">Ctrl+Click para múltiple selección</small>
                                 </div>
                                 <div class="col-md-2">
                                     <label for="tester" class="form-label small">Tester</label>
-                                    <select class="form-control form-control-sm" id="tester" name="tester">
-                                        <option value="">Todos</option>
+                                    <select class="form-control form-control-sm" id="tester" name="tester" multiple size="4">
                                         {% for tester in testers %}
-                                            <option value="{{ tester.id }}" {% if tester_filter == tester.id|stringformat:"s" %}selected{% endif %}>
+                                            <option value="{{ tester.id }}" {% if tester.id|stringformat:"s" in tester_filter %}selected{% endif %}>
                                                 {{ tester.get_full_name|default:tester.username }}
                                             </option>
                                         {% endfor %}
                                     </select>
+                                    <small class="text-muted">Ctrl+Click para múltiple selección</small>
                                 </div>
                                 <div class="col-md-2">
                                     <label for="desarrollador" class="form-label small">Desarrollador</label>
-                                    <select class="form-control form-control-sm" id="desarrollador" name="desarrollador">
-                                        <option value="">Todos</option>
+                                    <select class="form-control form-control-sm" id="desarrollador" name="desarrollador" multiple size="4">
                                         {% for desarrollador in desarrolladores %}
-                                            <option value="{{ desarrollador.id }}" {% if desarrollador_filter == desarrollador.id|stringformat:"s" %}selected{% endif %}>
+                                            <option value="{{ desarrollador.id }}" {% if desarrollador.id|stringformat:"s" in desarrollador_filter %}selected{% endif %}>
                                                 {{ desarrollador.get_full_name|default:desarrollador.username }}
                                             </option>
                                         {% endfor %}
                                     </select>
+                                    <small class="text-muted">Ctrl+Click para múltiple selección</small>
                                 </div>
                                 <div class="col-md-2 d-flex align-items-end">
                                     <div class="d-flex gap-2 w-100">
@@ -372,19 +376,83 @@
                             <table class="table table-hover mb-0">
                                 <thead>
                                     <tr>
-                                        <th class="px-3">Prueba</th>
-                                        <th class="px-3">Módulo</th>
-                                        <th class="px-3">Prioridad</th>
-                                        <th class="px-3">Resultado</th>
-                                        <th class="px-3">Tester</th>
-                                        <th class="px-3">Fecha</th>
+                                        <th class="px-3">
+                                            <a href="?{% if resultado_filter %}{{ resultado_filter|build_filter_url:'resultado' }}{% endif %}{% if modulo_filter %}{% if resultado_filter %}&{% endif %}{{ modulo_filter|build_filter_url:'modulo' }}{% endif %}{% if prioridad_filter %}{% if resultado_filter or modulo_filter %}&{% endif %}{{ prioridad_filter|build_filter_url:'prioridad' }}{% endif %}{% if tester_filter %}{% if resultado_filter or modulo_filter or prioridad_filter %}&{% endif %}{{ tester_filter|build_filter_url:'tester' }}{% endif %}{% if desarrollador_filter %}{% if resultado_filter or modulo_filter or prioridad_filter or tester_filter %}&{% endif %}{{ desarrollador_filter|build_filter_url:'desarrollador' }}{% endif %}{% if resultado_filter or modulo_filter or prioridad_filter or tester_filter or desarrollador_filter %}&{% endif %}sort=titulo&order={% if sort_by == 'titulo' and sort_order == 'asc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-dark">
+                                                Prueba
+                                                {% if sort_by == 'titulo' %}
+                                                    <i class="fas fa-sort-{% if sort_order == 'asc' %}up{% else %}down{% endif %} ms-1"></i>
+                                                {% else %}
+                                                    <i class="fas fa-sort ms-1 text-muted"></i>
+                                                {% endif %}
+                                            </a>
+                                        </th>
+                                        <th class="px-3">
+                                            <a href="?{% if resultado_filter %}{{ resultado_filter|build_filter_url:'resultado' }}{% endif %}{% if modulo_filter %}{% if resultado_filter %}&{% endif %}{{ modulo_filter|build_filter_url:'modulo' }}{% endif %}{% if prioridad_filter %}{% if resultado_filter or modulo_filter %}&{% endif %}{{ prioridad_filter|build_filter_url:'prioridad' }}{% endif %}{% if tester_filter %}{% if resultado_filter or modulo_filter or prioridad_filter %}&{% endif %}{{ tester_filter|build_filter_url:'tester' }}{% endif %}{% if desarrollador_filter %}{% if resultado_filter or modulo_filter or prioridad_filter or tester_filter %}&{% endif %}{{ desarrollador_filter|build_filter_url:'desarrollador' }}{% endif %}{% if resultado_filter or modulo_filter or prioridad_filter or tester_filter or desarrollador_filter %}&{% endif %}sort=modulo&order={% if sort_by == 'modulo' and sort_order == 'asc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-dark">
+                                                Módulo
+                                                {% if sort_by == 'modulo' %}
+                                                    <i class="fas fa-sort-{% if sort_order == 'asc' %}up{% else %}down{% endif %} ms-1"></i>
+                                                {% else %}
+                                                    <i class="fas fa-sort ms-1 text-muted"></i>
+                                                {% endif %}
+                                            </a>
+                                        </th>
+                                        <th class="px-3">
+                                            <a href="?{% if resultado_filter %}{{ resultado_filter|build_filter_url:'resultado' }}{% endif %}{% if modulo_filter %}{% if resultado_filter %}&{% endif %}{{ modulo_filter|build_filter_url:'modulo' }}{% endif %}{% if prioridad_filter %}{% if resultado_filter or modulo_filter %}&{% endif %}{{ prioridad_filter|build_filter_url:'prioridad' }}{% endif %}{% if tester_filter %}{% if resultado_filter or modulo_filter or prioridad_filter %}&{% endif %}{{ tester_filter|build_filter_url:'tester' }}{% endif %}{% if desarrollador_filter %}{% if resultado_filter or modulo_filter or prioridad_filter or tester_filter %}&{% endif %}{{ desarrollador_filter|build_filter_url:'desarrollador' }}{% endif %}{% if resultado_filter or modulo_filter or prioridad_filter or tester_filter or desarrollador_filter %}&{% endif %}sort=prioridad&order={% if sort_by == 'prioridad' and sort_order == 'asc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-dark">
+                                                Prioridad
+                                                {% if sort_by == 'prioridad' %}
+                                                    <i class="fas fa-sort-{% if sort_order == 'asc' %}up{% else %}down{% endif %} ms-1"></i>
+                                                {% else %}
+                                                    <i class="fas fa-sort ms-1 text-muted"></i>
+                                                {% endif %}
+                                            </a>
+                                        </th>
+                                        <th class="px-3">
+                                            <a href="?{% if resultado_filter %}{{ resultado_filter|build_filter_url:'resultado' }}{% endif %}{% if modulo_filter %}{% if resultado_filter %}&{% endif %}{{ modulo_filter|build_filter_url:'modulo' }}{% endif %}{% if prioridad_filter %}{% if resultado_filter or modulo_filter %}&{% endif %}{{ prioridad_filter|build_filter_url:'prioridad' }}{% endif %}{% if tester_filter %}{% if resultado_filter or modulo_filter or prioridad_filter %}&{% endif %}{{ tester_filter|build_filter_url:'tester' }}{% endif %}{% if desarrollador_filter %}{% if resultado_filter or modulo_filter or prioridad_filter or tester_filter %}&{% endif %}{{ desarrollador_filter|build_filter_url:'desarrollador' }}{% endif %}{% if resultado_filter or modulo_filter or prioridad_filter or tester_filter or desarrollador_filter %}&{% endif %}sort=resultado&order={% if sort_by == 'resultado' and sort_order == 'asc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-dark">
+                                                Resultado
+                                                {% if sort_by == 'resultado' %}
+                                                    <i class="fas fa-sort-{% if sort_order == 'asc' %}up{% else %}down{% endif %} ms-1"></i>
+                                                {% else %}
+                                                    <i class="fas fa-sort ms-1 text-muted"></i>
+                                                {% endif %}
+                                            </a>
+                                        </th>
+                                        <th class="px-3">
+                                            <a href="?{% if resultado_filter %}{{ resultado_filter|build_filter_url:'resultado' }}{% endif %}{% if modulo_filter %}{% if resultado_filter %}&{% endif %}{{ modulo_filter|build_filter_url:'modulo' }}{% endif %}{% if prioridad_filter %}{% if resultado_filter or modulo_filter %}&{% endif %}{{ prioridad_filter|build_filter_url:'prioridad' }}{% endif %}{% if tester_filter %}{% if resultado_filter or modulo_filter or prioridad_filter %}&{% endif %}{{ tester_filter|build_filter_url:'tester' }}{% endif %}{% if desarrollador_filter %}{% if resultado_filter or modulo_filter or prioridad_filter or tester_filter %}&{% endif %}{{ desarrollador_filter|build_filter_url:'desarrollador' }}{% endif %}{% if resultado_filter or modulo_filter or prioridad_filter or tester_filter or desarrollador_filter %}&{% endif %}sort=tester&order={% if sort_by == 'tester' and sort_order == 'asc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-dark">
+                                                Tester
+                                                {% if sort_by == 'tester' %}
+                                                    <i class="fas fa-sort-{% if sort_order == 'asc' %}up{% else %}down{% endif %} ms-1"></i>
+                                                {% else %}
+                                                    <i class="fas fa-sort ms-1 text-muted"></i>
+                                                {% endif %}
+                                            </a>
+                                        </th>
+                                        <th class="px-3">
+                                            <a href="?{% if resultado_filter %}{{ resultado_filter|build_filter_url:'resultado' }}{% endif %}{% if modulo_filter %}{% if resultado_filter %}&{% endif %}{{ modulo_filter|build_filter_url:'modulo' }}{% endif %}{% if prioridad_filter %}{% if resultado_filter or modulo_filter %}&{% endif %}{{ prioridad_filter|build_filter_url:'prioridad' }}{% endif %}{% if tester_filter %}{% if resultado_filter or modulo_filter or prioridad_filter %}&{% endif %}{{ tester_filter|build_filter_url:'tester' }}{% endif %}{% if desarrollador_filter %}{% if resultado_filter or modulo_filter or prioridad_filter or tester_filter %}&{% endif %}{{ desarrollador_filter|build_filter_url:'desarrollador' }}{% endif %}{% if resultado_filter or modulo_filter or prioridad_filter or tester_filter or desarrollador_filter %}&{% endif %}sort=desarrollador&order={% if sort_by == 'desarrollador' and sort_order == 'asc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-dark">
+                                                Desarrollador
+                                                {% if sort_by == 'desarrollador' %}
+                                                    <i class="fas fa-sort-{% if sort_order == 'asc' %}up{% else %}down{% endif %} ms-1"></i>
+                                                {% else %}
+                                                    <i class="fas fa-sort ms-1 text-muted"></i>
+                                                {% endif %}
+                                            </a>
+                                        </th>
+                                        <th class="px-3">
+                                            <a href="?{% if resultado_filter %}{{ resultado_filter|build_filter_url:'resultado' }}{% endif %}{% if modulo_filter %}{% if resultado_filter %}&{% endif %}{{ modulo_filter|build_filter_url:'modulo' }}{% endif %}{% if prioridad_filter %}{% if resultado_filter or modulo_filter %}&{% endif %}{{ prioridad_filter|build_filter_url:'prioridad' }}{% endif %}{% if tester_filter %}{% if resultado_filter or modulo_filter or prioridad_filter %}&{% endif %}{{ tester_filter|build_filter_url:'tester' }}{% endif %}{% if desarrollador_filter %}{% if resultado_filter or modulo_filter or prioridad_filter or tester_filter %}&{% endif %}{{ desarrollador_filter|build_filter_url:'desarrollador' }}{% endif %}{% if resultado_filter or modulo_filter or prioridad_filter or tester_filter or desarrollador_filter %}&{% endif %}sort=fecha_creacion&order={% if sort_by == 'fecha_creacion' and sort_order == 'asc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-dark">
+                                                Fecha
+                                                {% if sort_by == 'fecha_creacion' %}
+                                                    <i class="fas fa-sort-{% if sort_order == 'asc' %}up{% else %}down{% endif %} ms-1"></i>
+                                                {% else %}
+                                                    <i class="fas fa-sort ms-1 text-muted"></i>
+                                                {% endif %}
+                                            </a>
+                                        </th>
                                         <th class="px-3">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for prueba in page_obj %}
-                                    <tr>
-                                        <td class="px-3">
+                                                                         {% for prueba in page_obj %}
+                                     <tr data-prueba-id="{{ prueba.id }}">
+                                         <td class="px-3">
                                             <strong>{{ prueba.titulo }}</strong>
                                             <br>
                                             <small class="text-muted">{{ prueba.descripcion|truncatewords:10 }}</small>
@@ -416,12 +484,51 @@
                                                 <span class="text-muted">Sin asignar</span>
                                             {% endif %}
                                         </td>
+                                        <td class="px-3">
+                                            <div class="d-flex align-items-center">
+                                                {% if prueba.desarrollador %}
+                                                    <span class="me-2">{{ prueba.desarrollador.get_full_name|default:prueba.desarrollador.username }}</span>
+                                                {% else %}
+                                                    <span class="text-muted me-2">Sin asignar</span>
+                                                {% endif %}
+                                                {% if user.is_superuser or rol_usuario == 'tester' %}
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                                            data-bs-toggle="dropdown" 
+                                                            aria-expanded="false"
+                                                            title="Asignar desarrollador">
+                                                        <i class="fas fa-user-plus"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><h6 class="dropdown-header">Asignar desarrollador</h6></li>
+                                                        <li><a class="dropdown-item" href="#" onclick="assignDesarrollador({{ prueba.id }}, null, event)">
+                                                            <i class="fas fa-times me-2"></i>Sin asignar
+                                                        </a></li>
+                                                        {% for desarrollador in desarrolladores %}
+                                                            <li><a class="dropdown-item" href="#" onclick="assignDesarrollador({{ prueba.id }}, {{ desarrollador.id }}, event)">
+                                                                <i class="fas fa-user me-2"></i>{{ desarrollador.get_full_name|default:desarrollador.username }}
+                                                            </a></li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                {% endif %}
+                                            </div>
+                                        </td>
                                         <td class="px-3">{{ prueba.fecha_creacion|date:"d/m/Y" }}</td>
                                         <td class="px-3">
-                                            <a href="{% url 'proyectos:prueba_detail' prueba.id %}" 
-                                               class="btn btn-sm btn-outline-primary">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
+                                            <div class="btn-group" role="group">
+                                                <a href="{% url 'proyectos:prueba_detail' prueba.id %}" 
+                                                   class="btn btn-sm btn-outline-primary"
+                                                   title="Ver detalles">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                {% if user.is_superuser or rol_usuario == 'tester' %}
+                                                    <a href="{% url 'proyectos:prueba_edit' prueba.id %}" 
+                                                       class="btn btn-sm btn-outline-warning"
+                                                       title="Editar prueba">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                {% endif %}
+                                            </div>
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -439,12 +546,12 @@
                                 <ul class="pagination pagination-sm mb-0">
                                     {% if page_obj.has_previous %}
                                         <li class="page-item">
-                                            <a class="page-link" href="?page=1{% if resultado_filter %}&resultado={{ resultado_filter }}{% endif %}{% if modulo_filter %}&modulo={{ modulo_filter }}{% endif %}{% if prioridad_filter %}&prioridad={{ prioridad_filter }}{% endif %}{% if tester_filter %}&tester={{ tester_filter }}{% endif %}{% if desarrollador_filter %}&desarrollador={{ desarrollador_filter }}{% endif %}">
+                                            <a class="page-link" href="{% build_pagination_url 1 resultado_filter modulo_filter prioridad_filter tester_filter desarrollador_filter sort_by sort_order %}">
                                                 <i class="fas fa-angle-double-left"></i>
                                             </a>
                                         </li>
                                         <li class="page-item">
-                                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if resultado_filter %}&resultado={{ resultado_filter }}{% endif %}{% if modulo_filter %}&modulo={{ modulo_filter }}{% endif %}{% if prioridad_filter %}&prioridad={{ prioridad_filter }}{% endif %}{% if tester_filter %}&tester={{ tester_filter }}{% endif %}{% if desarrollador_filter %}&desarrollador={{ desarrollador_filter }}{% endif %}">
+                                            <a class="page-link" href="{% build_pagination_url page_obj.previous_page_number resultado_filter modulo_filter prioridad_filter tester_filter desarrollador_filter sort_by sort_order %}">
                                                 <i class="fas fa-angle-left"></i>
                                             </a>
                                         </li>
@@ -457,19 +564,19 @@
                                             </li>
                                         {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
                                             <li class="page-item">
-                                                <a class="page-link" href="?page={{ num }}{% if resultado_filter %}&resultado={{ resultado_filter }}{% endif %}{% if modulo_filter %}&modulo={{ modulo_filter }}{% endif %}{% if prioridad_filter %}&prioridad={{ prioridad_filter }}{% endif %}{% if tester_filter %}&tester={{ tester_filter }}{% endif %}{% if desarrollador_filter %}&desarrollador={{ desarrollador_filter }}{% endif %}">{{ num }}</a>
+                                                <a class="page-link" href="{% build_pagination_url num resultado_filter modulo_filter prioridad_filter tester_filter desarrollador_filter sort_by sort_order %}">{{ num }}</a>
                                             </li>
                                         {% endif %}
                                     {% endfor %}
                                     
                                     {% if page_obj.has_next %}
                                         <li class="page-item">
-                                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if resultado_filter %}&resultado={{ resultado_filter }}{% endif %}{% if modulo_filter %}&modulo={{ modulo_filter }}{% endif %}{% if prioridad_filter %}&prioridad={{ prioridad_filter }}{% endif %}{% if tester_filter %}&tester={{ tester_filter }}{% endif %}{% if desarrollador_filter %}&desarrollador={{ desarrollador_filter }}{% endif %}">
+                                            <a class="page-link" href="{% build_pagination_url page_obj.next_page_number resultado_filter modulo_filter prioridad_filter tester_filter desarrollador_filter sort_by sort_order %}">
                                                 <i class="fas fa-angle-right"></i>
                                             </a>
                                         </li>
                                         <li class="page-item">
-                                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if resultado_filter %}&resultado={{ resultado_filter }}{% endif %}{% if modulo_filter %}&modulo={{ modulo_filter }}{% endif %}{% if prioridad_filter %}&prioridad={{ prioridad_filter }}{% endif %}{% if tester_filter %}&tester={{ tester_filter }}{% endif %}{% if desarrollador_filter %}&desarrollador={{ desarrollador_filter }}{% endif %}">
+                                            <a class="page-link" href="{% build_pagination_url page_obj.paginator.num_pages resultado_filter modulo_filter prioridad_filter tester_filter desarrollador_filter sort_by sort_order %}">
                                                 <i class="fas fa-angle-double-right"></i>
                                             </a>
                                         </li>
@@ -529,6 +636,34 @@
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
+/* Multiple select styling */
+.filter-section select[multiple] {
+    min-height: 120px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.filter-section select[multiple] option {
+    padding: 4px 8px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.filter-section select[multiple] option:checked {
+    background: linear-gradient(135deg, var(--verde-pacifico) 0%, #00a651 100%);
+    color: white;
+    font-weight: 600;
+}
+
+.filter-section select[multiple] option:hover {
+    background-color: #e9ecef;
+}
+
+.filter-section small {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    display: block;
+}
+
 .pagination .page-link {
     border-radius: 6px;
     margin: 0 2px;
@@ -567,11 +702,147 @@
     opacity: 0.6;
     pointer-events: none;
 }
+
+/* Sorting styles */
+th a {
+    color: inherit;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+th a:hover {
+    color: var(--verde-pacifico);
+    text-decoration: none;
+}
+
+th a .fas.fa-sort {
+    opacity: 0.3;
+}
+
+th a:hover .fas.fa-sort {
+    opacity: 0.7;
+}
+
+th a .fas.fa-sort-up,
+th a .fas.fa-sort-down {
+    opacity: 1;
+    color: var(--verde-pacifico);
+}
+
+/* Developer assignment dropdown styles */
+.dropdown-menu {
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border: 1px solid #dee2e6;
+}
+
+.dropdown-header {
+    font-weight: 600;
+    color: var(--verde-pacifico);
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.dropdown-item {
+    padding: 0.5rem 1rem;
+    transition: all 0.2s ease;
+}
+
+.dropdown-item:hover {
+    background-color: #e9ecef;
+    color: var(--verde-pacifico);
+}
+
+.dropdown-item i {
+    width: 16px;
+    text-align: center;
+}
+
+/* Button group styles */
+.btn-group .btn {
+    border-radius: 0;
+}
+
+.btn-group .btn:first-child {
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+}
+
+.btn-group .btn:last-child {
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+/* Notification styles */
+.alert {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border: none;
+    border-radius: 8px;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+    border-left: 4px solid #28a745;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-left: 4px solid #dc3545;
+}
+
+.alert-info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border-left: 4px solid #17a2b8;
+}
+
+/* Loading overlay styles */
+#loading-overlay {
+    backdrop-filter: blur(2px);
+    transition: all 0.3s ease;
+}
+
+#loading-overlay .spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Table refresh animation */
+.table-responsive {
+    transition: opacity 0.3s ease;
+}
+
+.table-responsive.refreshing {
+    opacity: 0.7;
+}
+
+/* Animation for loading overlay */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
 </style>
 
-<!-- JavaScript for enhanced filtering -->
+<!-- JavaScript for enhanced filtering and sorting -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Restore scroll position if this is a table refresh
+    const savedScrollPosition = sessionStorage.getItem('tableRefreshScrollPosition');
+    if (savedScrollPosition && window.location.search.includes('_refresh')) {
+        setTimeout(() => {
+            window.scrollTo(0, parseInt(savedScrollPosition));
+            sessionStorage.removeItem('tableRefreshScrollPosition');
+        }, 100);
+    }
+    
     // Auto-submit form when filters change
     const filterSelects = document.querySelectorAll('#resultado, #modulo, #prioridad, #tester, #desarrollador');
     filterSelects.forEach(select => {
@@ -621,6 +892,311 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 10000);
         });
     }
+    
+    // Enhanced sorting functionality
+    const sortableHeaders = document.querySelectorAll('th a[href*="sort="]');
+    sortableHeaders.forEach(header => {
+        header.addEventListener('click', function(e) {
+            e.preventDefault();
+            const url = new URL(this.href);
+            const currentUrl = new URL(window.location);
+            
+            // Preserve all current filters
+            const params = currentUrl.searchParams;
+            params.forEach((value, key) => {
+                if (key !== 'sort' && key !== 'order' && key !== 'page') {
+                    url.searchParams.set(key, value);
+                }
+            });
+            
+            // Reset to page 1 when sorting
+            url.searchParams.delete('page');
+            
+            window.location.href = url.toString();
+        });
+    });
 });
-</script>
+
+// Helper function to generate dropdown items for developers
+function getDesarrolladoresDropdownItems(pruebaId) {
+    const desarrolladores = [
+        {% for desarrollador in desarrolladores %}
+            {
+                id: {{ desarrollador.id }},
+                name: "{{ desarrollador.get_full_name|default:desarrollador.username|escapejs }}"
+            },
+        {% endfor %}
+    ];
+    
+    return desarrolladores.map(dev => 
+        `<li><a class="dropdown-item" href="#" onclick="assignDesarrollador(${pruebaId}, ${dev.id}, event)">
+            <i class="fas fa-user me-2"></i>${dev.name}
+        </a></li>`
+    ).join('');
+}
+
+// Function to assign developer to a test case
+function assignDesarrollador(pruebaId, desarrolladorId, event) {
+    console.log('assignDesarrollador called with:', { pruebaId, desarrolladorId, event });
+    
+    // Prevent default link behavior
+    event.preventDefault();
+    
+    // Find the dropdown toggle button - try multiple selectors
+    let button = event.target.closest('.dropdown-toggle');
+    console.log('Button found with closest:', button);
+    
+    if (!button) {
+        // If not found, try to find it in the parent elements
+        const td = event.target.closest('td');
+        console.log('Looking in TD:', td);
+        if (td) {
+            button = td.querySelector('.dropdown-toggle');
+            console.log('Button found in TD:', button);
+        }
+    }
+    
+    if (!button) {
+        // Last resort: find by data attribute or class
+        const row = document.querySelector(`[data-prueba-id="${pruebaId}"]`);
+        console.log('Looking for row with data-prueba-id:', row);
+        if (row) {
+            button = row.querySelector('.dropdown-toggle');
+            console.log('Button found in row:', button);
+        }
+    }
+    
+    if (!button) {
+        console.error('Could not find dropdown toggle button');
+        console.log('Available dropdown toggles:', document.querySelectorAll('.dropdown-toggle'));
+        showNotification('Error: No se pudo encontrar el botón de asignación', 'error');
+        return;
+    }
+    
+    const originalText = button.innerHTML;
+    
+    // Show loading state
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
+    
+    const csrfToken = getCookie('csrftoken');
+    if (!csrfToken) {
+        console.error('CSRF token not found');
+        showNotification('Error: Token de seguridad no encontrado', 'error');
+        return;
+    }
+    
+    console.log('Sending request to assign developer:', { pruebaId, desarrolladorId, csrfToken });
+    
+    fetch(`/proyectos/api/prueba/${pruebaId}/assign-desarrollador/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            desarrollador_id: desarrolladorId
+        })
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Response data:', data);
+        if (data.success) {
+            // Show success message
+            showNotification(data.message, 'success');
+            
+            // Refresh the table automatically
+            console.log('Refreshing table after successful assignment...');
+            refreshTable();
+            
+        } else {
+            showNotification(data.error || 'Error al asignar desarrollador', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error de conexión al asignar desarrollador', 'error');
+    })
+    .finally(() => {
+        // Restore button state
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+// Helper function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Notification function
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    // Add to page
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+// Function to show sorting information
+function showSortingInfo() {
+    const currentSort = '{{ sort_by }}' || 'fecha_creacion';
+    const currentOrder = '{{ sort_order }}' || 'desc';
+    const orderText = currentOrder === 'asc' ? 'ascendente' : 'descendente';
+    
+    let sortFieldText = '';
+    switch(currentSort) {
+        case 'titulo':
+            sortFieldText = 'Título';
+            break;
+        case 'modulo':
+            sortFieldText = 'Módulo';
+            break;
+        case 'prioridad':
+            sortFieldText = 'Prioridad';
+            break;
+        case 'resultado':
+            sortFieldText = 'Resultado';
+            break;
+        case 'tester':
+            sortFieldText = 'Tester';
+            break;
+        case 'desarrollador':
+            sortFieldText = 'Desarrollador';
+            break;
+        case 'fecha_creacion':
+            sortFieldText = 'Fecha de creación';
+            break;
+        default:
+            sortFieldText = 'Fecha de creación';
+    }
+    
+    const message = `Ordenamiento actual: <strong>${sortFieldText}</strong> (${orderText})<br><br>
+                    <small>Haz clic en los encabezados de columna para cambiar el ordenamiento.</small>`;
+    
+         showNotification(message, 'info');
+ }
+ 
+ // Test function for debugging - can be called from browser console
+ function testAssignDesarrolladorFunction() {
+     console.log('Testing assignDesarrollador function...');
+     
+     // Create a mock event
+     const mockEvent = {
+         preventDefault: () => console.log('Event prevented'),
+         target: document.createElement('a')
+     };
+     
+     // Find the first dropdown toggle button
+     const firstButton = document.querySelector('.dropdown-toggle');
+     if (firstButton) {
+         mockEvent.target = firstButton;
+         console.log('Found button:', firstButton);
+         
+         // Get the prueba ID from the row
+         const row = firstButton.closest('tr');
+         const pruebaId = row ? row.getAttribute('data-prueba-id') : '1';
+         console.log('Testing with prueba ID:', pruebaId);
+         
+         // Test the function
+         try {
+             assignDesarrollador(pruebaId, 1, mockEvent);
+         } catch (error) {
+             console.error('Test failed:', error);
+         }
+     } else {
+         console.log('No dropdown buttons found');
+     }
+ }
+ 
+ // Function to refresh the table automatically
+ function refreshTable() {
+     console.log('refreshTable function called');
+     
+     // Store current scroll position
+     const scrollPosition = window.scrollY;
+     sessionStorage.setItem('tableRefreshScrollPosition', scrollPosition);
+     
+     // Show loading indicator
+     const tableContainer = document.querySelector('.table-responsive');
+     if (tableContainer) {
+         // Add refreshing class for smooth transition
+         tableContainer.classList.add('refreshing');
+         
+         const loadingOverlay = document.createElement('div');
+         loadingOverlay.id = 'loading-overlay';
+         loadingOverlay.style.cssText = `
+             position: absolute;
+             top: 0;
+             left: 0;
+             right: 0;
+             bottom: 0;
+             background: rgba(255, 255, 255, 0.9);
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             z-index: 1000;
+             border-radius: 8px;
+             animation: fadeIn 0.3s ease;
+         `;
+         loadingOverlay.innerHTML = `
+             <div class="text-center">
+                 <div class="spinner-border text-primary" role="status">
+                     <span class="visually-hidden">Actualizando...</span>
+                 </div>
+                 <div class="mt-2 text-muted">Actualizando tabla...</div>
+             </div>
+         `;
+         
+         tableContainer.style.position = 'relative';
+         tableContainer.appendChild(loadingOverlay);
+     }
+     
+     // Get current URL parameters
+     const currentUrl = new URL(window.location);
+     const params = currentUrl.searchParams;
+     
+     // Add a timestamp to prevent caching
+     params.set('_refresh', Date.now());
+     
+     // Reload the page with current parameters
+     setTimeout(() => {
+         window.location.href = currentUrl.toString();
+     }, 800); // Slightly longer delay to show the loading indicator
+ }
+ 
+ // Make the test function globally available
+ window.testAssignDesarrolladorFunction = testAssignDesarrolladorFunction;
+ window.refreshTable = refreshTable;
+ </script>
 {% endblock %} 

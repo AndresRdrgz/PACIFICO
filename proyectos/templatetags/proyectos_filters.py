@@ -45,3 +45,51 @@ def get_file_icon(filename):
         return 'fas fa-file-alt'
     else:
         return 'fas fa-file'
+
+@register.filter
+def build_filter_url(filter_list, param_name):
+    """Build URL parameters for multiple filter values"""
+    if not filter_list:
+        return ""
+    
+    url_parts = []
+    for value in filter_list:
+        url_parts.append(f"{param_name}={value}")
+    
+    return "&".join(url_parts)
+
+@register.simple_tag
+def build_pagination_url(page_number, resultado_filter, modulo_filter, prioridad_filter, tester_filter, desarrollador_filter, sort_by, sort_order):
+    """Build complete URL for pagination with all filters and sorting"""
+    params = []
+    
+    if page_number != 1:
+        params.append(f"page={page_number}")
+    
+    if resultado_filter:
+        for value in resultado_filter:
+            params.append(f"resultado={value}")
+    
+    if modulo_filter:
+        for value in modulo_filter:
+            params.append(f"modulo={value}")
+    
+    if prioridad_filter:
+        for value in prioridad_filter:
+            params.append(f"prioridad={value}")
+    
+    if tester_filter:
+        for value in tester_filter:
+            params.append(f"tester={value}")
+    
+    if desarrollador_filter:
+        for value in desarrollador_filter:
+            params.append(f"desarrollador={value}")
+    
+    if sort_by:
+        params.append(f"sort={sort_by}")
+    
+    if sort_order:
+        params.append(f"order={sort_order}")
+    
+    return "?" + "&".join(params) if params else "?"

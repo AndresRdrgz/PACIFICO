@@ -23,6 +23,7 @@ urlpatterns = [
     path('api/proyecto/<int:proyecto_id>/stats/', views.api_proyecto_stats, name='api_proyecto_stats'),
     path('api/prueba/<int:prueba_id>/update-result/', views.api_update_result, name='api_update_result'),
     path('api/prueba/<int:prueba_id>/mark-resolved/', views.api_mark_resolved, name='api_mark_resolved'),
+    path('api/prueba/<int:prueba_id>/assign-desarrollador/', views.api_assign_desarrollador, name='api_assign_desarrollador'),
     path('api/archivo/<int:archivo_id>/eliminar/', views.api_eliminar_archivo, name='api_eliminar_archivo'),
     
     # Export endpoints
