@@ -9,6 +9,9 @@
                             <span class="code-text" id="modalSolicitudCodigo">SOL-000000</span>
                             <span class="status-badge" id="modalSolicitudEstadoBadge">Pendiente</span>
                         </div>
+                        
+
+                        
                         <div class="solicitud-type" id="modalSolicitudTipo">Solicitud de préstamo personal</div>
                     </div>
                     <div class="header-actions">
@@ -18,6 +21,31 @@
                                 <i class="fas fa-redo"></i>
                             </button>
                         </div>
+                        
+                        <!-- 🚨 ICONOS DE ALERTA SUTILES - POSICIÓN DERECHA -->
+                        <div class="documentos-icons-alert" id="documentosIconsAlert" style="display: none;">
+                            <!-- Botón de Asociar Entrevista -->
+                            <div class="icon-alert asociar-entrevista" id="iconAsociarEntrevista" style="display: flex;" 
+                                 title="Asociar entrevista de cliente" 
+                                 onclick="manejarClickEntrevista()">
+                                <i class="fas fa-link" id="iconAsociarEntrevistaIcon"></i>
+                                <span class="status-badge" id="estadoEntrevistaBadge">!</span>
+                            </div>
+                            
+                            <div class="icon-alert urgente" id="iconUrgente" style="display: none;" 
+                                 title="Documentos urgentes que requieren corrección" 
+                                 onclick="switchToTab('documentos-urgentes')">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span class="count-badge" id="urgenteCountIcon">0</span>
+                            </div>
+                            <div class="icon-alert pendiente" id="iconPendiente" style="display: none;" 
+                                 title="Documentos pendientes por completar" 
+                                 onclick="switchToTab('documentos-pendientes')">
+                                <i class="fas fa-clock"></i>
+                                <span class="count-badge" id="pendienteCountIcon">0</span>
+                            </div>
+                        </div>
+                        
                         <button type="button" class="btn-close-modern" data-bs-dismiss="modal" aria-label="Close">
                             <i class="fas fa-times"></i>
                         </button>
@@ -65,6 +93,12 @@
                         <button class="nav-link" id="historial-tab" data-bs-toggle="tab" data-bs-target="#historial"
                             type="button" role="tab" aria-controls="historial" aria-selected="false">
                             <i class="fas fa-history me-2"></i>Historial
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="formulario-general-tab" data-bs-toggle="tab" data-bs-target="#formulario-general"
+                            type="button" role="tab" aria-controls="formulario-general" aria-selected="false">
+                            <i class="fas fa-user-edit me-2"></i>Formulario General
                         </button>
                     </li>
                     <!-- Nuevos tabs -->
@@ -180,6 +214,95 @@
                         </div>
                     </div>
 
+                    <!-- Formulario General Tab -->
+                    <div class="tab-pane fade" id="formulario-general" role="tabpanel" aria-labelledby="formulario-general-tab">
+                        <div class="formulario-general-section">
+                            <div class="section-title">
+                                <i class="fas fa-user-edit me-2"></i>
+                                Formulario General del Cliente
+                            </div>
+                            <div class="formulario-general-container" id="modalSolicitudFormularioGeneral">
+                                
+                                <!-- Estado: Sin entrevista asociada - Mostrar búsqueda integrada -->
+                                <div class="busqueda-entrevista-integrada" id="busquedaEntrevistaIntegrada" style="display: block;">
+                                    <!-- Información del cliente -->
+                                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                                        <div class="flex items-center mb-2">
+                                            <i class="fas fa-user text-blue-600 me-2"></i>
+                                            <strong>Cliente:</strong> <span id="clienteNombreFormulario" class="ml-1">Cargando...</span>
+                                        </div>
+                                        <div class="flex items-center">
+                                            <i class="fas fa-id-card text-blue-600 me-2"></i>
+                                            <strong>Cédula:</strong> <span id="clienteCedulaFormulario" class="font-mono ml-1">Cargando...</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Barra de búsqueda -->
+                                    <div class="mb-4">
+                                        <label for="buscarEntrevistaTab" class="block text-sm font-medium text-gray-700 mb-2">
+                                            <i class="fas fa-search me-1"></i>Buscar Entrevista
+                                        </label>
+                                        <div class="relative">
+                                            <input type="text" class="form-control" id="buscarEntrevistaTab" 
+                                                   placeholder="Refinar búsqueda por nombre o email (opcional)..." 
+                                                   onkeyup="buscarEntrevistasEnTab()">
+                                        </div>
+                                        <div class="text-xs text-gray-500 mt-1">
+                                            <i class="fas fa-filter me-1"></i>Ya filtrado por cédula: <span id="filteredByCedulaTab">Cargando...</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Resultados de búsqueda -->
+                                    <div id="resultadosEntrevistasTab" class="mb-4">
+                                        <div class="text-center p-3">
+                                            <i class="fas fa-spinner fa-spin me-2"></i> Buscando entrevistas...
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Entrevista seleccionada -->
+                                    <div id="entrevistaSeleccionadaTab" class="p-4 border-2 border-green-500 rounded-md bg-green-50 shadow-sm" style="display: none;">
+                                        <div class="flex items-center mb-2">
+                                            <i class="fas fa-check-circle text-green-500 text-xl me-2"></i>
+                                            <div>
+                                                <strong class="text-gray-700">Entrevista seleccionada:</strong>
+                                                <span id="nombreEntrevistaSeleccionadaTab" class="font-medium ml-1"></span>
+                                            </div>
+                                        </div>
+                                        <div class="text-sm mb-3">
+                                            <strong class="text-gray-700">Cédula:</strong>
+                                            <span id="cedulaEntrevistaSeleccionadaTab" class="font-mono font-medium ml-1"></span>
+                                        </div>
+                                        <button type="button" class="btn btn-success" id="btnConfirmarAsociacionTab" onclick="confirmarAsociacionEnTab()">
+                                            <i class="fas fa-link me-1"></i> Confirmar Asociación
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Estado: Entrevista asociada - Mostrar datos -->
+                                <div class="entrevista-asociada" id="entrevistaAsociada" style="display: none;">
+                                    <div class="entrevista-info">
+                                        <h6>Entrevista Asociada</h6>
+                                        <div class="entrevista-details">
+                                            <p><strong>Cliente:</strong> <span id="entrevistaClienteNombre"></span></p>
+                                            <p><strong>Cédula:</strong> <span id="entrevistaClienteCedula"></span></p>
+                                            <p><strong>Email:</strong> <span id="entrevistaClienteEmail"></span></p>
+                                            <p><strong>Teléfono:</strong> <span id="entrevistaClienteTelefono"></span></p>
+                                            <p><strong>Fecha:</strong> <span id="entrevistaFecha"></span></p>
+                                        </div>
+                                        <div class="entrevista-actions mt-3">
+                                            <button class="btn btn-outline-primary" onclick="mostrarBusquedaEntrevista()">
+                                                <i class="fas fa-edit me-1"></i>Cambiar Entrevista
+                                            </button>
+                                            <button class="btn btn-outline-danger" onclick="desasociarEntrevista()">
+                                                <i class="fas fa-unlink me-1"></i>Desasociar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Notas y Recordatorios Tab -->
                     <div class="tab-pane fade" id="notas" role="tabpanel" aria-labelledby="notas-tab">
                         <div class="notas-section">
@@ -240,6 +363,11 @@
                                     <button class="btn btn-primary" onclick="abrirModalNuevaNota()">
                                         <i class="fas fa-plus me-1"></i>Crear primera nota
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Documentos Urgentes Tab -->
                     <div class="tab-pane fade" id="documentos-urgentes" role="tabpanel" aria-labelledby="documentos-urgentes-tab">
                         <div class="documentos-urgentes-section">
@@ -370,6 +498,160 @@
         --neutral-900: #212529;
         
         --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* === ESTILOS PARA ICONOS DE ALERTA SUTILES === */
+    .documentos-icons-alert {
+        display: flex;
+        gap: 8px;
+        margin: 0 12px;
+        align-items: center;
+    }
+
+    .icon-alert {
+        position: relative;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 14px;
+        color: white;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        flex-shrink: 0; /* Evitar que se comprima */
+        overflow: visible; /* Permitir que el badge se vea fuera del contenedor */
+    }
+
+    .icon-alert.urgente {
+        background: linear-gradient(135deg, #ff4757, #ff3838);
+        box-shadow: 0 2px 8px rgba(255, 71, 87, 0.3);
+        animation: pulseSubtle 2s infinite;
+    }
+
+    .icon-alert.pendiente {
+        background: linear-gradient(135deg, #ffa502, #ff9500);
+        box-shadow: 0 2px 8px rgba(255, 165, 2, 0.3);
+    }
+
+    .icon-alert.asociar-entrevista {
+        background: linear-gradient(135deg, #17a2b8, #138496);
+        box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
+        position: relative;
+        overflow: visible;
+    }
+
+    .icon-alert.asociar-entrevista.asociada {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+        position: relative;
+        overflow: visible;
+    }
+
+    @keyframes pulseSubtle {
+        0%, 100% { 
+            box-shadow: 0 2px 8px rgba(255, 71, 87, 0.3);
+            transform: scale(1);
+        }
+        50% { 
+            box-shadow: 0 4px 12px rgba(255, 71, 87, 0.5);
+            transform: scale(1.05);
+        }
+    }
+
+    .icon-alert:hover {
+        transform: scale(1.1);
+        filter: brightness(1.1);
+    }
+
+    .icon-alert.urgente:hover {
+        box-shadow: 0 4px 16px rgba(255, 71, 87, 0.6);
+    }
+
+    .icon-alert.pendiente:hover {
+        box-shadow: 0 4px 16px rgba(255, 165, 2, 0.6);
+    }
+
+    .icon-alert.asociar-entrevista:hover {
+        box-shadow: 0 4px 16px rgba(23, 162, 184, 0.6);
+    }
+
+    .icon-alert.asociar-entrevista.asociada:hover {
+        box-shadow: 0 4px 16px rgba(40, 167, 69, 0.6);
+    }
+
+    .count-badge, .icon-alert .status-badge {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        background: white;
+        color: #333;
+        font-size: 10px;
+        font-weight: bold;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        border: 2px solid rgba(255,255,255,1);
+        line-height: 1;
+        z-index: 10;
+        transform: translateX(0) translateY(0);
+    }
+
+    /* Corrección específica para el badge de asociar entrevista */
+    #estadoEntrevistaBadge {
+        position: absolute !important;
+        top: -8px !important;
+        right: -8px !important;
+        background: white !important;
+        color: #333 !important;
+        font-size: 10px !important;
+        font-weight: bold !important;
+        width: 18px !important;
+        height: 18px !important;
+        border-radius: 50% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+        border: 2px solid rgba(255,255,255,1) !important;
+        line-height: 1 !important;
+        z-index: 15 !important;
+        transform: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .icon-alert .status-badge.asociada {
+        background: #28a745;
+        color: white;
+        border: 1px solid rgba(40, 167, 69, 0.8);
+    }
+
+    /* Responsive para iconos */
+    @media (max-width: 768px) {
+        .icon-alert {
+            width: 28px;
+            height: 28px;
+            font-size: 12px;
+        }
+        
+        .count-badge, .icon-alert .status-badge {
+            width: 14px;
+            height: 14px;
+            font-size: 9px;
+            top: -3px;
+            right: -3px;
+        }
+    }
+
+    /* === OTRAS VARIABLES CSS === */
+    :root {
         --shadow-medium: 0 4px 8px rgba(0, 0, 0, 0.12);
         --shadow-heavy: 0 8px 16px rgba(0, 0, 0, 0.15);
         --border-radius-sm: 6px;
@@ -524,6 +806,16 @@
         font-weight: 600;
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.3);
+        position: static !important;
+        display: inline-block !important;
+    }
+
+    /* Asegurar que el status-badge dentro del solicitud-code-badge no se mueva */
+    .solicitud-code-badge .status-badge {
+        position: static !important;
+        top: auto !important;
+        right: auto !important;
+        transform: none !important;
     }
 
     .solicitud-type {
@@ -4586,6 +4878,22 @@
             // Populate nuevos tabs
             populateDocumentosUrgentesTab(documentos);
             populateDocumentosPendientesTab(documentos);
+            
+            // 🚨 MOSTRAR ALERTAS DE DOCUMENTOS
+            mostrarAlertasDocumentos(documentos);
+            
+            // Verificar y actualizar estado de entrevista
+            if (data.solicitud) {
+                verificarEstadoEntrevista(data.solicitud);
+            } else {
+                console.log('⚠️ No hay datos de solicitud en la respuesta');
+                // Mostrar solo el botón sin datos de entrevista
+                const alertContainer = document.getElementById('documentosIconsAlert');
+                if (alertContainer) {
+                    alertContainer.style.display = 'flex';
+                }
+                actualizarEstadoEntrevista(false);
+            }
 
             // Add smooth animations for the new layout
             setTimeout(() => {
@@ -5505,30 +5813,65 @@
     // ============================================
 
     function populateDocumentosUrgentesTab(documentos) {
+        try {
+            console.log('🚀 INICIANDO populateDocumentosUrgentesTab');
+            
         const urgentesContainer = document.getElementById('modalSolicitudDocumentosUrgentes');
         const loadingPlaceholder = urgentesContainer.querySelector('.loading-placeholder');
         const emptyState = urgentesContainer.querySelector('.empty-state');
         const urgentesNav = document.getElementById('documentos-urgentes-nav');
+            
+            if (urgentesNav) {
+                console.log('✅ Nav de documentos urgentes encontrado');
+            } else {
+                console.log('❌ ERROR: Nav de documentos urgentes no encontrado');
+            }
 
         if (!urgentesContainer) {
-            console.error('Documentos urgentes container not found');
+                console.error('❌ ERROR: Documentos urgentes container not found');
             return;
+            } else {
+                console.log('✅ Documentos urgentes container encontrado');
         }
 
         // Hide loading and empty states initially
-        if (loadingPlaceholder) loadingPlaceholder.style.display = 'none';
-        if (emptyState) emptyState.style.display = 'none';
+            if (loadingPlaceholder) {
+                loadingPlaceholder.style.display = 'none';
+                console.log('✅ Loading placeholder ocultado');
+            } else {
+                console.log('⚠️ Loading placeholder no encontrado');
+            }
+            if (emptyState) {
+                emptyState.style.display = 'none';
+                console.log('✅ Empty state ocultado');
+            } else {
+                console.log('⚠️ Empty state no encontrado');
+            }
 
         // Clear existing content
         const existingItems = urgentesContainer.querySelectorAll('.documento-item');
         existingItems.forEach(item => item.remove());
 
+            // DEBUG: Log todos los documentos recibidos
+            console.log('🔴 DEBUG: Todos los documentos recibidos:', documentos);
+
         // Filtrar documentos urgentes (calificados como "malo")
         console.log('🔴 DEBUG: Filtrando documentos urgentes...');
         const documentosUrgentes = documentos.filter(doc => {
+                console.log(`🔴 DEBUG: Analizando documento "${doc.nombre}":`, {
+                    id: doc.id,
+                    calificacion_estado: doc.calificacion_estado,
+                    subsanado: doc.subsanado,
+                    motivo_calificacion: doc.motivo_calificacion,
+                    calificado_por: doc.calificado_por,
+                    fecha_calificacion: doc.fecha_calificacion
+                });
+                
             const esUrgente = doc.calificacion_estado === 'malo' && !doc.subsanado;
             if (esUrgente) {
                 console.log(`🔴 "${doc.nombre}" es urgente: malo=${doc.calificacion_estado === 'malo'}, subsanado=${doc.subsanado}`);
+                } else {
+                    console.log(`🔴 "${doc.nombre}" NO es urgente: malo=${doc.calificacion_estado === 'malo'}, subsanado=${doc.subsanado}`);
             }
             return esUrgente;
         });
@@ -5537,11 +5880,22 @@
 
         // Mostrar/ocultar tab según si hay documentos urgentes
         if (documentosUrgentes.length === 0) {
-            if (urgentesNav) urgentesNav.style.display = 'none';
-            if (emptyState) emptyState.style.display = 'block';
+                if (urgentesNav) {
+                    urgentesNav.style.display = 'none';
+                    console.log('🔴 DEBUG: Ocultando tab de documentos urgentes');
+                }
+                if (emptyState) {
+                    emptyState.style.display = 'block';
+                    console.log('🔴 DEBUG: Mostrando estado vacío');
+                }
+                console.log('🔴 DEBUG: No hay documentos urgentes, ocultando tab');
             return;
         } else {
-            if (urgentesNav) urgentesNav.style.display = 'block';
+                if (urgentesNav) {
+                    urgentesNav.style.display = 'block';
+                    console.log('🔴 DEBUG: Mostrando tab de documentos urgentes');
+                }
+                console.log(`🔴 DEBUG: Mostrando tab con ${documentosUrgentes.length} documentos urgentes`);
         }
 
         const documentosGrid = document.createElement('div');
@@ -5653,7 +6007,30 @@
         });
 
         urgentesContainer.appendChild(documentosGrid);
-        console.log(`Populated ${documentosUrgentes.length} documentos urgentes`);
+            console.log(`🔴 DEBUG: Populated ${documentosUrgentes.length} documentos urgentes`);
+            console.log('🔴 DEBUG: Contenido del contenedor urgentes:', urgentesContainer.innerHTML.length, 'caracteres');
+            console.log('🔴 DEBUG: Elementos .documento-item creados:', urgentesContainer.querySelectorAll('.documento-item').length);
+            
+
+            
+            console.log('✅ FINALIZANDO populateDocumentosUrgentesTab exitosamente');
+            
+        } catch (error) {
+            console.error('❌ ERROR CRÍTICO en populateDocumentosUrgentesTab:', error);
+            console.error('❌ ERROR Stack:', error.stack);
+            
+            // Mostrar estado de error en la UI
+            const urgentesContainer = document.getElementById('modalSolicitudDocumentosUrgentes');
+            if (urgentesContainer) {
+                urgentesContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Error al cargar documentos urgentes:</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+            }
+        }
     }
 
     // ============================================
@@ -5661,13 +6038,18 @@
     // ============================================
 
     function populateDocumentosPendientesTab(documentos) {
+        try {
+            console.log('🚀 INICIANDO populateDocumentosPendientesTab');
+            
         const pendientesContainer = document.getElementById('modalSolicitudDocumentosPendientes');
         const loadingPlaceholder = pendientesContainer.querySelector('.loading-placeholder');
         const emptyState = pendientesContainer.querySelector('.empty-state');
 
         if (!pendientesContainer) {
-            console.error('Documentos pendientes container not found');
+                console.error('❌ ERROR: Documentos pendientes container not found');
             return;
+            } else {
+                console.log('✅ Documentos pendientes container encontrado');
         }
 
         // CRÍTICO: Limpiar completamente el contenedor antes de renderizar
@@ -5822,9 +6204,31 @@
         if (documentosPendientes.length > 0) {
             pendientesContainer.appendChild(documentosGrid);
             console.log(`✅ Mostrados ${documentosPendientes.length} documentos pendientes`);
+                console.log('🟡 DEBUG: Contenido del contenedor pendientes:', pendientesContainer.innerHTML.length, 'caracteres');
+                console.log('🟡 DEBUG: Elementos .documento-item creados:', pendientesContainer.querySelectorAll('.documento-item').length);
+                
+
         } else {
             console.log('✅ No hay documentos pendientes - mostrando estado vacío');
             if (emptyState) emptyState.style.display = 'block';
+            }
+            console.log('✅ FINALIZANDO populateDocumentosPendientesTab exitosamente');
+            
+        } catch (error) {
+            console.error('❌ ERROR CRÍTICO en populateDocumentosPendientesTab:', error);
+            console.error('❌ ERROR Stack:', error.stack);
+            
+            // Mostrar estado de error en la UI
+            const pendientesContainer = document.getElementById('modalSolicitudDocumentosPendientes');
+            if (pendientesContainer) {
+                pendientesContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Error al cargar documentos pendientes:</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+            }
         }
     }
 
@@ -7882,7 +8286,862 @@
         } else {
             console.error('Documentos pendientes tab not found!');
         }
+        
+        // Event listener for documentos urgentes tab activation
+        const documentosUrgentesTab = document.getElementById('documentos-urgentes-tab');
+        if (documentosUrgentesTab) {
+            documentosUrgentesTab.addEventListener('shown.bs.tab', function (event) {
+                console.log('Documentos Urgentes tab activated');
+                console.log('Tab event target:', event.target);
+                console.log('Current modal data available:', !!window.currentModalData);
+                
+                // Ensure the container is visible
+                const urgentesContainer = document.getElementById('modalSolicitudDocumentosUrgentes');
+                if (urgentesContainer) {
+                    console.log('Documentos urgentes container found');
+                    console.log('Container visibility:', getComputedStyle(urgentesContainer).display);
+                } else {
+                    console.error('Documentos urgentes container not found!');
+                }
+                
+                // Refresh documentos urgentes data if needed
+                if (window.currentModalData && window.currentModalData.documentos) {
+                    console.log('Repopulating documentos urgentes with', window.currentModalData.documentos.length, 'documentos');
+                    populateDocumentosUrgentesTab(window.currentModalData.documentos);
+                } else {
+                    console.warn('No modal data available for documentos urgentes');
+                }
+            });
+        } else {
+            console.error('Documentos urgentes tab not found!');
+        }
+
+        // Event listener for formulario general tab activation
+        const formularioGeneralTab = document.getElementById('formulario-general-tab');
+        if (formularioGeneralTab) {
+            formularioGeneralTab.addEventListener('shown.bs.tab', function (event) {
+                console.log('📋 Formulario General tab activated');
+                
+                // Verificar estado de entrevista cuando se abre el tab
+                if (window.currentModalData && window.currentModalData.solicitud) {
+                    console.log('📋 Verificando estado de entrevista en tab...');
+                    verificarEstadoEntrevista(window.currentModalData.solicitud);
+                } else {
+                    console.log('⚠️ No hay datos de solicitud disponibles para verificar entrevista');
+                }
+            });
+        } else {
+            console.error('Formulario general tab not found!');
+        }
     });
+
+    // ========================================
+    // FUNCIONES PARA ALERTAS DE DOCUMENTOS
+    // ========================================
+
+    function mostrarAlertasDocumentos(documentos) {
+        console.log('🚨 INICIANDO mostrarAlertasDocumentos con', documentos.length, 'documentos');
+        
+        const alertContainer = document.getElementById('documentosIconsAlert');
+        const iconUrgente = document.getElementById('iconUrgente');
+        const iconPendiente = document.getElementById('iconPendiente');
+        const urgenteCount = document.getElementById('urgenteCountIcon');
+        const pendienteCount = document.getElementById('pendienteCountIcon');
+        
+        if (!alertContainer) {
+            console.error('❌ No se encontró el contenedor de iconos de alerta');
+            return;
+        }
+        
+        // Filtrar documentos urgentes (malo y no subsanado)
+        const documentosUrgentes = documentos.filter(doc => 
+            doc.calificacion_estado === 'malo' && !doc.subsanado
+        );
+        
+        // Filtrar documentos pendientes
+        const documentosPendientes = documentos.filter(doc => 
+            doc.calificacion_estado === 'pendiente' && !doc.subsanado
+        );
+        
+        console.log('🔴 Documentos urgentes encontrados:', documentosUrgentes.length);
+        console.log('🟡 Documentos pendientes encontrados:', documentosPendientes.length);
+        
+        // Mostrar/ocultar iconos según corresponda
+        let hayAlertas = false;
+        
+        if (documentosUrgentes.length > 0) {
+            urgenteCount.textContent = documentosUrgentes.length;
+            iconUrgente.style.display = 'flex';
+            hayAlertas = true;
+            console.log('🚨 Mostrando icono de documentos urgentes');
+        } else {
+            iconUrgente.style.display = 'none';
+        }
+        
+        if (documentosPendientes.length > 0) {
+            pendienteCount.textContent = documentosPendientes.length;
+            iconPendiente.style.display = 'flex';
+            hayAlertas = true;
+            console.log('⏰ Mostrando icono de documentos pendientes');
+        } else {
+            iconPendiente.style.display = 'none';
+        }
+        
+        // Mostrar/ocultar el contenedor principal
+        if (hayAlertas) {
+            alertContainer.style.display = 'flex';
+            console.log('✅ Contenedor de iconos mostrado');
+            
+            // Reproducir sonido de alerta más sutil
+            reproducirSonidoAlerta(documentosUrgentes.length > 0);
+        } else {
+            alertContainer.style.display = 'none';
+            console.log('ℹ️ No hay alertas que mostrar');
+        }
+    }
+    
+    function reproducirSonidoAlerta(esUrgente) {
+        try {
+            // Crear contexto de audio
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Configuración del sonido más sutil
+            const frequency = esUrgente ? 650 : 550; // Frecuencias más suaves
+            const duration = 0.15; // Más corto
+            
+            // Crear oscilador
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            oscillator.type = 'sine';
+            
+            // Configurar volumen muy suave
+            gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+            
+            // Reproducir
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+            
+            console.log('🔊 Sonido sutil de alerta reproducido');
+        } catch (error) {
+            console.log('🔇 No se pudo reproducir sonido de alerta:', error.message);
+        }
+    }
+
+    // ========================================
+    // FUNCIONES PARA ASOCIAR ENTREVISTA
+    // ========================================
+
+    let entrevistaSeleccionadaId = null;
+    let currentSolicitudData = null;
+
+    function abrirModalAsociarEntrevista() {
+        // Usar los datos de la solicitud actual del modal
+        if (!window.currentModalData || !window.currentModalData.solicitud) {
+            console.error('No hay datos de solicitud disponibles');
+            showNotification('No se pueden cargar los datos de la solicitud para asociar entrevista', 'error');
+            return;
+        }
+
+        const solicitud = window.currentModalData.solicitud;
+        const clienteNombre = solicitud.cliente_nombre_completo || 'Cliente';
+        const clienteCedula = solicitud.cliente_cedula_completa || 'No disponible';
+        
+        // Actualizar el encabezado del modal con los datos del cliente
+        document.getElementById('clienteNombreModal').textContent = clienteNombre;
+        document.getElementById('clienteCedulaModal').textContent = clienteCedula;
+        document.getElementById('filteredByCedula').textContent = clienteCedula;
+        
+        // Mostrar el modal
+        const modal = new bootstrap.Modal(document.getElementById('modalAsociarEntrevista'));
+        modal.show();
+        
+        // Limpiar búsqueda anterior y configurarla con la cédula del cliente
+        const inputBusqueda = document.getElementById('buscarEntrevista');
+        inputBusqueda.value = '';
+        inputBusqueda.placeholder = `Buscar por nombre o email (ya filtrado por cédula)`;
+        
+        // Automáticamente buscar entrevistas con la misma cédula
+        buscarEntrevistasPorCedula(clienteCedula);
+        document.getElementById('resultadosEntrevistas').innerHTML = '';
+        document.getElementById('entrevistaSeleccionada').style.display = 'none';
+        document.getElementById('btnConfirmarAsociacion').disabled = true;
+        entrevistaSeleccionadaId = null;
+    }
+
+    function buscarEntrevistasPorCedula(cedula) {
+        if (!cedula || cedula === 'No disponible') {
+            document.getElementById('resultadosEntrevistas').innerHTML = 
+                '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i>No se puede buscar entrevistas porque la solicitud no tiene un número de cédula asociado.</div>';
+            return;
+        }
+        
+        // Mostrar loading
+        document.getElementById('resultadosEntrevistas').innerHTML = 
+            '<div class="text-center p-3"><i class="fas fa-spinner fa-spin me-2"></i> Buscando entrevistas para la cédula ' + cedula + '...</div>';
+        
+        // Realizar búsqueda AJAX filtrando por cédula
+        fetch(`/workflow/buscar-entrevistas/?cedula=${encodeURIComponent(cedula)}`)
+            .then(response => response.json())
+            .then(data => {
+                // ✅ VALIDACIÓN: Verificar que la respuesta sea exitosa y contenga entrevistas
+                if (!data.success) {
+                    throw new Error(data.error || 'Error en la respuesta del servidor');
+                }
+                
+                // Mostrar mensaje sobre la búsqueda flexible
+                const mensajeFlexible = `
+                    <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-3">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-info-circle text-blue-500"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-blue-700">
+                                    <strong>Búsqueda inteligente:</strong> El sistema busca entrevistas que tengan una cédula similar a <strong>${cedula}</strong>, 
+                                    incluso si el formato de escritura es diferente.
+                                </p>
+                                <p class="text-sm text-blue-700 mt-1">
+                                    <i class="fas fa-shield-alt text-blue-600 me-1"></i>
+                                    <strong>Nota:</strong> Por seguridad, solo puede seleccionar entrevistas con coincidencia exacta o parcial de cédula.
+                                    <button type="button" class="btn btn-link text-info p-0 ml-1" onclick="mostrarInfoCoincidencias()">
+                                        <i class="fas fa-info-circle"></i>
+                                    </button>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                const container = document.getElementById('resultadosEntrevistas');
+                container.innerHTML = mensajeFlexible;
+                mostrarResultadosEntrevistas(data.entrevistas || [], cedula);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('resultadosEntrevistas').innerHTML = 
+                    '<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>Error al buscar entrevistas</div>';
+            });
+    }
+
+    function buscarEntrevistas() {
+        const termino = document.getElementById('buscarEntrevista').value.trim();
+        const clienteCedula = window.currentModalData?.solicitud?.cliente_cedula_completa || 'No disponible';
+        
+        if (termino.length < 3) {
+            // Si no hay término de búsqueda, volvemos a la búsqueda por cédula
+            buscarEntrevistasPorCedula(clienteCedula);
+            return;
+        }
+        
+        // Mostrar loading
+        document.getElementById('resultadosEntrevistas').innerHTML = 
+            '<div class="text-center"><i class="fas fa-spinner fa-spin me-2"></i> Buscando...</div>';
+        
+        // Realizar búsqueda AJAX con filtro adicional de cédula
+        fetch(`/workflow/buscar-entrevistas/?cedula=${encodeURIComponent(clienteCedula)}&query=${encodeURIComponent(termino)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.error || 'Error en la respuesta del servidor');
+                }
+                mostrarResultadosEntrevistas(data.entrevistas || [], clienteCedula);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('resultadosEntrevistas').innerHTML = 
+                    '<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>Error al buscar entrevistas</div>';
+            });
+    }
+
+    function mostrarResultadosEntrevistas(entrevistas, cedulaCliente) {
+        const container = document.getElementById('resultadosEntrevistas');
+        
+        if (!entrevistas || entrevistas.length === 0) {
+            container.innerHTML += `
+                <div class="text-center p-4">
+                    <i class="fas fa-search text-muted mb-3" style="font-size: 3rem;"></i>
+                    <p class="text-muted">No se encontraron entrevistas para la cédula <strong>${cedulaCliente}</strong></p>
+                    <p class="text-sm text-muted">Verifique que el cliente haya completado una entrevista previamente.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        const resultadosHtml = `
+            <div class="divide-y divide-gray-200 max-h-[50vh] overflow-y-auto px-1 py-2 rounded-md shadow-inner bg-gray-50">
+                ${entrevistas.map(entrevista => {
+                    const tieneCoincidencia = verificarCoincidenciaCedula(entrevista.cedula, cedulaCliente);
+                    const esSeleccionable = tieneCoincidencia;
+                    
+                    return `
+                        <div class="p-4 hover:bg-gray-100 rounded-md ${esSeleccionable ? 'cursor-pointer' : 'cursor-not-allowed'} transition-all duration-300 ${esSeleccionable ? 'bg-white' : 'bg-gray-50 opacity-70'} mb-2" 
+                             onclick="${esSeleccionable ? `seleccionarEntrevista('${entrevista.id}', '${entrevista.nombre}', '${entrevista.cedula}', '${entrevista.email}', '${entrevista.telefono}', '${entrevista.fecha}')` : `mostrarMensajeCoincidencia('${entrevista.cedula}', '${cedulaCliente}')`}">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h6 class="font-medium text-gray-900 mb-1">${entrevista.nombre}</h6>
+                                    <p class="text-gray-800 font-mono mb-1">
+                                        <strong class="text-gray-600">Cédula:</strong> ${entrevista.cedula}
+                                        <span class="inline-flex items-center ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${tieneCoincidencia ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                            <i class="fas ${tieneCoincidencia ? 'fa-check-circle' : 'fa-times-circle'} mr-1"></i>${tieneCoincidencia ? 'Coincidencia' : 'Sin coincidencia'}
+                                        </span>
+                                    </p>
+                                    <p class="text-gray-600 text-sm">
+                                        <strong>Email:</strong> ${entrevista.email} | 
+                                        <strong>Teléfono:</strong> ${entrevista.telefono}
+                                    </p>
+                                </div>
+                                <div class="flex flex-col items-end">
+                                    <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">${entrevista.tipo_prestamo}</span>
+                                    <small class="text-gray-500 mt-2">${entrevista.fecha}</small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+        
+        container.innerHTML += resultadosHtml;
+    }
+
+    function verificarCoincidenciaCedula(cedulaEntrevista, cedulaCliente) {
+        // Limpiar ambas cédulas de caracteres especiales y espacios
+        const limpiarCedula = (cedula) => cedula.replace(/[^\w]/g, '').toLowerCase();
+        
+        const cedulaEntrevistaLimpia = limpiarCedula(cedulaEntrevista);
+        const cedulaClienteLimpia = limpiarCedula(cedulaCliente);
+        
+        // Verificar coincidencia exacta o parcial (al menos 70% de coincidencia)
+        if (cedulaEntrevistaLimpia === cedulaClienteLimpia) {
+            return true;
+        }
+        
+        // Verificar si una está contenida en la otra (para casos como "8-123-456" vs "81234567")
+        return cedulaEntrevistaLimpia.includes(cedulaClienteLimpia) || 
+               cedulaClienteLimpia.includes(cedulaEntrevistaLimpia);
+    }
+
+    function seleccionarEntrevista(id, nombre, cedula, email, telefono, fecha) {
+        entrevistaSeleccionadaId = id;
+        
+        // Mostrar información de la entrevista seleccionada
+        document.getElementById('nombreEntrevistaSeleccionada').textContent = nombre;
+        document.getElementById('cedulaEntrevistaSeleccionada').textContent = cedula;
+        document.getElementById('entrevistaSeleccionada').style.display = 'block';
+        document.getElementById('btnConfirmarAsociacion').disabled = false;
+        
+        console.log('Entrevista seleccionada:', { id, nombre, cedula, email, telefono, fecha });
+    }
+
+    function mostrarMensajeCoincidencia(cedulaEntrevista, cedulaCliente) {
+        showNotification(
+            `Esta entrevista (${cedulaEntrevista}) no coincide con la cédula del cliente (${cedulaCliente}). Por seguridad, solo puede seleccionar entrevistas del mismo cliente.`,
+            'warning'
+        );
+    }
+
+    function mostrarInfoCoincidencias() {
+        showNotification(
+            'El sistema verifica que la cédula de la entrevista coincida con la del cliente de la solicitud. Esto garantiza que solo se asocien entrevistas del cliente correcto.',
+            'info'
+        );
+    }
+
+    function confirmarAsociacion() {
+        if (!entrevistaSeleccionadaId) {
+            showNotification('Debe seleccionar una entrevista primero', 'error');
+            return;
+        }
+        
+        if (!window.currentModalData?.solicitud?.id) {
+            showNotification('No se puede obtener el ID de la solicitud', 'error');
+            return;
+        }
+        
+        // Mostrar loading en el botón
+        const btnConfirmar = document.getElementById('btnConfirmarAsociacion');
+        btnConfirmar.disabled = true;
+        btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Asociando...';
+        
+        // Realizar la asociación via AJAX
+        fetch('/workflow/asociar-entrevista/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                solicitud_id: window.currentModalData.solicitud.id,
+                entrevista_id: entrevistaSeleccionadaId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Entrevista asociada exitosamente', 'success');
+                // Cerrar el modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalAsociarEntrevista'));
+                modal.hide();
+                
+                // Actualizar el estado del botón y tab
+                actualizarEstadoEntrevista(true);
+                
+                // Recargar el modal principal para mostrar los datos actualizados
+                setTimeout(() => {
+                    // Solo actualizar el estado visual del tab
+                    verificarEstadoEntrevista(window.currentModalData.solicitud);
+                }, 500);
+            } else {
+                throw new Error(data.error || 'Error al asociar entrevista');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error al asociar entrevista: ' + error.message, 'error');
+        })
+        .finally(() => {
+            // Restaurar el botón
+            btnConfirmar.disabled = false;
+            btnConfirmar.innerHTML = '<i class="fas fa-link me-1"></i> Confirmar Asociación';
+        });
+    }
+
+    function desasociarEntrevista() {
+        if (!window.currentModalData?.solicitud?.id) {
+            showNotification('No se puede obtener el ID de la solicitud', 'error');
+            return;
+        }
+        
+        if (!confirm('¿Está seguro de que desea desasociar la entrevista de esta solicitud?')) {
+            return;
+        }
+        
+        // Realizar la desasociación via AJAX usando el endpoint existente
+        fetch('/workflow/asociar-entrevista/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                solicitud_id: window.currentModalData.solicitud.id,
+                accion: 'desasociar'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Entrevista desasociada exitosamente', 'success');
+                // Actualizar el estado del botón y tab
+                actualizarEstadoEntrevista(false);
+                // Limpiar el contenido del tab
+                mostrarEstadoSinEntrevista();
+            } else {
+                throw new Error(data.error || 'Error al desasociar entrevista');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error al desasociar entrevista: ' + error.message, 'error');
+        });
+    }
+
+    function actualizarEstadoEntrevista(tieneEntrevista) {
+        console.log('🔄 actualizarEstadoEntrevista llamada con:', tieneEntrevista);
+        
+        const iconAsociar = document.getElementById('iconAsociarEntrevista');
+        const iconoElement = document.getElementById('iconAsociarEntrevistaIcon');
+        const badgeElement = document.getElementById('estadoEntrevistaBadge');
+        
+        console.log('🔍 Elementos encontrados:', {
+            iconAsociar: !!iconAsociar,
+            iconoElement: !!iconoElement,
+            badgeElement: !!badgeElement
+        });
+        
+        if (tieneEntrevista) {
+            console.log('✅ Configurando estado ASOCIADA');
+            if (iconAsociar) {
+                iconAsociar.classList.add('asociada');
+                iconAsociar.title = 'Entrevista asociada - Click para ver detalles';
+                console.log('✅ IconAsociar configurado como asociada');
+            }
+            if (iconoElement) {
+                iconoElement.className = 'fas fa-check';
+                console.log('✅ IconoElement cambiado a fa-check');
+            }
+            if (badgeElement) {
+                badgeElement.textContent = '✓';
+                badgeElement.classList.add('asociada');
+                console.log('✅ BadgeElement cambiado a ✓ y clase asociada agregada');
+            }
+        } else {
+            console.log('❌ Configurando estado SIN ASOCIAR');
+            if (iconAsociar) {
+                iconAsociar.classList.remove('asociada');
+                iconAsociar.title = 'Asociar entrevista de cliente';
+                console.log('❌ IconAsociar configurado sin asociar');
+            }
+            if (iconoElement) {
+                iconoElement.className = 'fas fa-link';
+                console.log('❌ IconoElement cambiado a fa-link');
+            }
+            if (badgeElement) {
+                badgeElement.textContent = '!';
+                badgeElement.classList.remove('asociada');
+                console.log('❌ BadgeElement cambiado a ! y clase asociada removida');
+            }
+        }
+    }
+
+    function mostrarEstadoSinEntrevista() {
+        document.getElementById('entrevistaAsociada').style.display = 'none';
+        document.getElementById('busquedaEntrevistaIntegrada').style.display = 'block';
+    }
+
+    function mostrarEstadoConEntrevista(entrevista) {
+        document.getElementById('entrevistaClienteNombre').textContent = entrevista.nombre || 'No disponible';
+        document.getElementById('entrevistaClienteCedula').textContent = entrevista.cedula || 'No disponible';
+        document.getElementById('entrevistaClienteEmail').textContent = entrevista.email || 'No disponible';
+        document.getElementById('entrevistaClienteTelefono').textContent = entrevista.telefono || 'No disponible';
+        document.getElementById('entrevistaFecha').textContent = entrevista.fecha || 'No disponible';
+        
+        document.getElementById('busquedaEntrevistaIntegrada').style.display = 'none';
+        document.getElementById('entrevistaAsociada').style.display = 'block';
+    }
+
+    function manejarClickEntrevista() {
+        // En el modal de negocios, SIEMPRE abrir el tab de Formulario General
+        // El modal de asociación se abre desde el botón dentro del tab
+        switchToTab('formulario-general');
+    }
+
+    function verificarEstadoEntrevista(solicitud) {
+        // Validar que solicitud existe
+        if (!solicitud) {
+            console.log('⚠️ No hay datos de solicitud para verificar entrevista');
+            return;
+        }
+        
+        console.log('🔍 Verificando estado de entrevista para solicitud:', solicitud);
+        console.log('🔍 Datos de entrevista_cliente:', solicitud.entrevista_cliente);
+        
+        // Mostrar siempre el botón de asociar entrevista
+        const alertContainer = document.getElementById('documentosIconsAlert');
+        if (alertContainer) {
+            alertContainer.style.display = 'flex';
+        }
+        
+        // Verificar si tiene entrevista asociada
+        const tieneEntrevista = solicitud.entrevista_cliente && solicitud.entrevista_cliente.id;
+        console.log('🎯 ¿Tiene entrevista asociada?', tieneEntrevista);
+        
+        // Actualizar el estado del botón
+        actualizarEstadoEntrevista(tieneEntrevista);
+        
+        // Actualizar los datos del cliente en el tab
+        document.getElementById('clienteNombreFormulario').textContent = solicitud.cliente_nombre_completo || 'No disponible';
+        document.getElementById('clienteCedulaFormulario').textContent = solicitud.cliente_cedula_completa || 'No disponible';
+        document.getElementById('filteredByCedulaTab').textContent = solicitud.cliente_cedula_completa || 'No disponible';
+        
+        // Actualizar el contenido del tab
+        if (tieneEntrevista) {
+            const entrevista = solicitud.entrevista_cliente;
+            console.log('🎯 Entrevista encontrada:', entrevista);
+            mostrarEstadoConEntrevista({
+                nombre: entrevista.nombre_completo || 'No disponible',
+                cedula: entrevista.cedula || 'No disponible',
+                email: entrevista.email || 'No disponible',
+                telefono: entrevista.telefono || 'No disponible',
+                fecha: entrevista.fecha_entrevista || 'No disponible'
+            });
+        } else {
+            console.log('❌ No hay entrevista asociada');
+            mostrarEstadoSinEntrevista();
+            // Iniciar búsqueda automática por cédula cuando se carga el tab
+            buscarEntrevistasPorCedulaEnTab(solicitud.cliente_cedula_completa);
+        }
+    }
+
+    // ========================================
+    // FUNCIONES PARA BÚSQUEDA INTEGRADA EN TAB
+    // ========================================
+
+    // Variables para el tab integrado
+    let entrevistaSeleccionadaIdTab = null;
+
+    // Función para comparar cédulas y determinar coincidencias
+    function compararCedulas(cedulaSolicitud, cedulaEntrevista) {
+        if (!cedulaSolicitud || !cedulaEntrevista) return 'sin_coincidencia';
+        
+        // Limpiar ambas cédulas de espacios y guiones
+        const cedula1 = cedulaSolicitud.toString().replace(/[-\s]/g, '');
+        const cedula2 = cedulaEntrevista.toString().replace(/[-\s]/g, '');
+        
+        // Coincidencia exacta
+        if (cedula1 === cedula2) return 'exacta';
+        
+        // Coincidencia parcial (al menos 6 dígitos consecutivos)
+        for (let i = 0; i <= cedula1.length - 6; i++) {
+            const subcedula1 = cedula1.substring(i, i + 6);
+            if (cedula2.includes(subcedula1)) return 'parcial';
+        }
+        
+        for (let i = 0; i <= cedula2.length - 6; i++) {
+            const subcedula2 = cedula2.substring(i, i + 6);
+            if (cedula1.includes(subcedula2)) return 'parcial';
+        }
+        
+        return 'sin_coincidencia';
+    }
+
+    // Función para buscar entrevistas por cédula en el tab
+    function buscarEntrevistasPorCedulaEnTab(cedula) {
+        if (!cedula || cedula === 'No disponible') {
+            document.getElementById('resultadosEntrevistasTab').innerHTML = 
+                '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i>No se puede buscar entrevistas porque la solicitud no tiene un número de cédula asociado.</div>';
+            return;
+        }
+        
+        // Mostrar loading
+        document.getElementById('resultadosEntrevistasTab').innerHTML = 
+            '<div class="text-center p-3"><i class="fas fa-spinner fa-spin me-2"></i> Buscando entrevistas para la cédula ' + cedula + '...</div>';
+        
+        // Realizar búsqueda AJAX filtrando por cédula
+        fetch(`/workflow/buscar-entrevistas/?cedula=${encodeURIComponent(cedula)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.error || 'Error en la respuesta del servidor');
+                }
+                
+                mostrarResultadosEntrevistasEnTab(data.entrevistas || [], cedula);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('resultadosEntrevistasTab').innerHTML = 
+                    '<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>Error al buscar entrevistas</div>';
+            });
+    }
+
+    // Función para buscar entrevistas en el tab (con filtro de texto)
+    function buscarEntrevistasEnTab() {
+        const termino = document.getElementById('buscarEntrevistaTab').value.trim();
+        const clienteCedula = document.getElementById('clienteCedulaFormulario').textContent;
+        
+        if (termino.length < 3) {
+            // Si no hay término de búsqueda, volvemos a la búsqueda por cédula
+            buscarEntrevistasPorCedulaEnTab(clienteCedula);
+            return;
+        }
+        
+        // Mostrar loading
+        document.getElementById('resultadosEntrevistasTab').innerHTML = 
+            '<div class="text-center"><i class="fas fa-spinner fa-spin me-2"></i> Buscando...</div>';
+        
+        // Realizar búsqueda AJAX con filtro adicional de cédula
+        fetch(`/workflow/buscar-entrevistas/?cedula=${encodeURIComponent(clienteCedula)}&query=${encodeURIComponent(termino)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    throw new Error(data.error || 'Error en la respuesta del servidor');
+                }
+                
+                mostrarResultadosEntrevistasEnTab(data.entrevistas || [], clienteCedula);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('resultadosEntrevistasTab').innerHTML = 
+                    '<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i>Error al buscar entrevistas</div>';
+            });
+    }
+
+    // Función para mostrar resultados de entrevistas en el tab
+    function mostrarResultadosEntrevistasEnTab(entrevistas, cedula) {
+        const container = document.getElementById('resultadosEntrevistasTab');
+        
+        if (!entrevistas || entrevistas.length === 0) {
+            container.innerHTML = `
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    No se encontraron entrevistas para la cédula <strong>${cedula}</strong>
+                </div>`;
+            return;
+        }
+        
+        let html = `<div class="entrevistas-results max-h-96 overflow-y-auto">`;
+        
+        entrevistas.forEach(entrevista => {
+            const coincidencia = compararCedulas(entrevista.cedula, cedula);
+            let rowClass, badgeClass, badgeText, cursorStyle, onclickAttr;
+            
+            if (coincidencia === 'exacta') {
+                rowClass = 'bg-green-50 border border-green-200 shadow-sm hover:shadow-md';
+                badgeClass = 'bg-green-100 text-green-800';
+                badgeText = '<i class="fas fa-check-circle mr-1"></i>Coincidencia exacta';
+                cursorStyle = 'cursor-pointer';
+                onclickAttr = `onclick="seleccionarEntrevistaEnTab(${entrevista.id}, '${entrevista.nombre_completo}', '${entrevista.cedula}', '${entrevista.email}', '${entrevista.telefono}', '${entrevista.fecha_entrevista}')"`;
+            } else if (coincidencia === 'parcial') {
+                rowClass = 'bg-blue-50 border border-blue-200 shadow-sm hover:shadow-md'; 
+                badgeClass = 'bg-blue-100 text-blue-800';
+                badgeText = '<i class="fas fa-check mr-1"></i>Coincidencia parcial';
+                cursorStyle = 'cursor-pointer';
+                onclickAttr = `onclick="seleccionarEntrevistaEnTab(${entrevista.id}, '${entrevista.nombre_completo}', '${entrevista.cedula}', '${entrevista.email}', '${entrevista.telefono}', '${entrevista.fecha_entrevista}')"`;
+            } else {
+                rowClass = 'bg-gray-50 opacity-70';
+                badgeClass = 'bg-red-100 text-red-800';
+                badgeText = '<i class="fas fa-times-circle mr-1"></i>Sin coincidencia';
+                cursorStyle = 'cursor-not-allowed';
+                onclickAttr = `onclick="showNotification('Esta entrevista no coincide con la cédula del cliente por motivos de seguridad.', 'warning')"`;
+            }
+            
+            html += `
+                <div class="p-3 mb-2 rounded-md ${cursorStyle} transition-all duration-300 ${rowClass}" ${onclickAttr}>
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h6 class="font-medium text-gray-900 mb-1">${entrevista.nombre_completo}</h6>
+                            <p class="text-gray-800 font-mono mb-1">
+                                <strong class="text-gray-600">Cédula:</strong> ${entrevista.cedula}
+                                <span class="inline-flex items-center ml-2 px-2 py-0.5 rounded-full text-xs font-medium ${badgeClass}">
+                                    ${badgeText}
+                                </span>
+                            </p>
+                            <p class="text-gray-600 text-sm">
+                                <strong>Email:</strong> ${entrevista.email || 'No disponible'} | 
+                                <strong>Teléfono:</strong> ${entrevista.telefono || 'No disponible'}
+                            </p>
+                        </div>
+                        <div class="flex flex-col items-end">
+                            <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">${entrevista.tipo_producto || 'Sin producto'}</span>
+                            <small class="text-gray-500 mt-2">${entrevista.fecha_entrevista || 'Fecha no disponible'}</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        
+        container.innerHTML = html;
+    }
+
+    // Función para seleccionar entrevista en el tab
+    function seleccionarEntrevistaEnTab(id, nombre, cedula, email, telefono, fecha) {
+        entrevistaSeleccionadaIdTab = id;
+        
+        // Mostrar la sección de entrevista seleccionada
+        document.getElementById('entrevistaSeleccionadaTab').style.display = 'block';
+        document.getElementById('nombreEntrevistaSeleccionadaTab').textContent = nombre;
+        document.getElementById('cedulaEntrevistaSeleccionadaTab').textContent = cedula;
+        
+        console.log('Entrevista seleccionada en tab:', { id, nombre, cedula, email, telefono, fecha });
+    }
+
+    // Función para confirmar asociación en el tab
+    function confirmarAsociacionEnTab() {
+        if (!entrevistaSeleccionadaIdTab) {
+            showNotification('Debe seleccionar una entrevista primero', 'error');
+            return;
+        }
+        
+        if (!window.currentModalData?.solicitud?.id) {
+            showNotification('No se puede obtener el ID de la solicitud', 'error');
+            return;
+        }
+        
+        // Mostrar loading en el botón
+        const btnConfirmar = document.getElementById('btnConfirmarAsociacionTab');
+        btnConfirmar.disabled = true;
+        btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Asociando...';
+        
+        // Verificar datos antes de enviar
+        const solicitudId = window.currentModalData?.solicitud?.id;
+        console.log('🔍 DEBUG - Datos para asociación:', {
+            solicitudId: solicitudId,
+            entrevistaId: entrevistaSeleccionadaIdTab,
+            currentModalData: window.currentModalData
+        });
+        
+        if (!solicitudId || !entrevistaSeleccionadaIdTab) {
+            showNotification('Error: Faltan datos necesarios para la asociación', 'error');
+            btnConfirmar.disabled = false;
+            btnConfirmar.innerHTML = '<i class="fas fa-link me-1"></i> Confirmar Asociación';
+            return;
+        }
+        
+        // Realizar la asociación via AJAX
+        fetch('/workflow/asociar-entrevista/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                solicitud_id: solicitudId,
+                entrevista_id: entrevistaSeleccionadaIdTab,
+                accion: 'asociar'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Entrevista asociada exitosamente', 'success');
+                
+                // Actualizar los datos de la solicitud con la entrevista asociada
+                if (window.currentModalData && window.currentModalData.solicitud) {
+                    window.currentModalData.solicitud.entrevista_cliente = data.entrevista;
+                    console.log('✅ Datos de solicitud actualizados con entrevista:', data.entrevista);
+                }
+                
+                // Actualizar el estado del botón de asociar entrevista
+                actualizarEstadoEntrevista(true);
+                
+                // Mostrar el estado con entrevista asociada en el tab
+                setTimeout(() => {
+                    if (data.entrevista) {
+                        mostrarEstadoConEntrevista({
+                            nombre: data.entrevista.nombre_completo || 'No disponible',
+                            cedula: data.entrevista.cedula || 'No disponible',
+                            email: 'Asociada exitosamente',
+                            telefono: data.entrevista.celular || '',
+                            fecha: data.entrevista.fecha_creacion || new Date().toLocaleDateString()
+                        });
+                        
+                        // Ocultar la sección de búsqueda y selección
+                        document.getElementById('entrevistaSeleccionadaTab').style.display = 'none';
+                        document.getElementById('resultadosEntrevistasTab').innerHTML = '';
+                        document.getElementById('buscarEntrevistaTab').value = '';
+                    }
+                }, 500);
+            } else {
+                throw new Error(data.error || 'Error al asociar entrevista');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error al asociar entrevista: ' + error.message, 'error');
+        })
+        .finally(() => {
+            // Restaurar botón
+            btnConfirmar.disabled = false;
+            btnConfirmar.innerHTML = '<i class="fas fa-link me-1"></i> Confirmar Asociación';
+        });
+    }
+
+    // Función para mostrar la búsqueda cuando se quiere cambiar entrevista
+    function mostrarBusquedaEntrevista() {
+        document.getElementById('busquedaEntrevistaIntegrada').style.display = 'block';
+        document.getElementById('entrevistaAsociada').style.display = 'none';
+        
+        // Reiniciar búsqueda
+        const cedula = document.getElementById('clienteCedulaFormulario').textContent;
+        buscarEntrevistasPorCedulaEnTab(cedula);
+    }
 
     // ========================================
     // FUNCIONES PARA NOTAS Y RECORDATORIOS
@@ -9899,6 +11158,106 @@
                         <i class="fas fa-paper-plane me-2"></i>Enviar Reconsideración
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Asociar Entrevista -->
+<div class="modal fade" id="modalAsociarEntrevista" tabindex="-1" aria-labelledby="modalAsociarEntrevistaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-white border-b p-4 sticky-top shadow-sm">
+        <div>
+          <h5 class="modal-title text-lg font-medium mb-2" id="modalAsociarEntrevistaLabel">
+            <i class="fas fa-user-edit me-2 text-blue-600"></i>Asociar Entrevista de Cliente
+          </h5>
+          <div class="flex flex-col bg-blue-50 p-3 rounded-lg border border-blue-200 shadow-sm">
+            <div class="text-gray-800 mb-1">
+              <i class="fas fa-user me-1 text-blue-600"></i>
+              <strong>Cliente:</strong> <span id="clienteNombreModal" class="font-semibold ml-1">Cargando...</span>
+            </div>
+            <div class="text-gray-800">
+              <i class="fas fa-id-card me-1 text-blue-600"></i>
+              <strong>Cédula:</strong> <span id="clienteCedulaModal" class="font-mono font-semibold ml-1">Cargando...</span>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4" style="max-height: 60vh; overflow-y: auto;">
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4 sticky top-0 z-10">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <i class="fas fa-shield-alt text-yellow-400"></i>
+            </div>
+            <div class="ml-3">
+              <div class="d-flex align-items-center">
+                <p class="text-sm text-yellow-700 mb-0">
+                  <strong>Seguridad:</strong> Por seguridad, solo puede seleccionar entrevistas con coincidencia exacta o parcial de cédula.
+                  <button type="button" class="btn btn-link text-yellow-700 p-0 ml-1" onclick="mostrarInfoCoincidencias()">
+                    <i class="fas fa-info-circle"></i>
+                  </button>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mb-4 sticky top-20 z-10 pt-2 pb-2 bg-white">
+          <label for="buscarEntrevista" class="block text-sm font-medium text-gray-700 mb-1">Buscar Entrevista</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-search text-gray-400"></i>
+            </div>
+            <input type="text" class="form-control pl-10" id="buscarEntrevista" 
+                   placeholder="Refinar búsqueda por nombre o email (opcional)..."
+                   onkeyup="buscarEntrevistas()">
+          </div>
+          <div class="text-xs text-gray-500 mt-1">
+            <i class="fas fa-filter me-1"></i>Ya filtrado por cédula: <span id="filteredByCedula" class="font-mono">Cargando...</span>
+          </div>
+        </div>
+        
+        <div id="resultadosEntrevistas" class="mt-4 transition-all duration-300">
+          <!-- Aquí se cargarán los resultados -->
+        </div>
+        
+        <div id="entrevistaSeleccionada" class="mt-4 p-4 border-2 border-green-500 rounded-md bg-green-50 shadow-sm transition-all duration-300" style="display: none;">
+          <div class="flex items-center mb-2">
+            <div class="flex-shrink-0">
+              <i class="fas fa-check-circle text-green-500 text-xl"></i>
+            </div>
+            <div class="ml-3">
+              <div class="mb-1">
+                <strong class="text-gray-700">Entrevista seleccionada:</strong>
+                <span id="nombreEntrevistaSeleccionada" class="font-medium"></span>
+              </div>
+              <div class="text-sm">
+                <strong class="text-gray-700">Cédula:</strong>
+                <span id="cedulaEntrevistaSeleccionada" class="font-mono font-medium"></span>
+                <span class="inline-flex items-center ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <i class="fas fa-shield-alt mr-1"></i>Verificada
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="bg-white p-3 rounded-md border border-gray-200 mt-2 text-sm">
+            <p class="text-gray-700 mb-0">
+              <i class="fas fa-info-circle text-blue-600 mr-1"></i>
+              Esta acción vinculará los datos de la entrevista seleccionada con la solicitud actual.
+              <br>Solo se asocian entrevistas del mismo cliente por motivos de seguridad.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-gray-50 p-3 sticky-bottom shadow-sm">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i> Cancelar
+        </button>
+        <button type="button" class="btn btn-success" id="btnConfirmarAsociacion" onclick="confirmarAsociacion()" disabled>
+          <i class="fas fa-link me-1"></i> Confirmar Asociación
+        </button>
             </div>
         </div>
     </div>

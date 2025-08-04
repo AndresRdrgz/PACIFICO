@@ -21,12 +21,15 @@ def capturar_calificacion_anterior(sender, instance, **kwargs):
         try:
             # Obtener el registro anterior de la base de datos
             old_instance = CalificacionDocumentoBackoffice.objects.get(pk=instance.pk)
-            # Almacenar el estado anterior en el instance temporal
+            # Almacenar TANTO el estado como el motivo anterior
             instance._calificacion_anterior = old_instance.estado
+            instance._motivo_anterior = old_instance.opcion_desplegable
         except CalificacionDocumentoBackoffice.DoesNotExist:
             instance._calificacion_anterior = None
+            instance._motivo_anterior = None
     else:
         instance._calificacion_anterior = None
+        instance._motivo_anterior = None
 
 
 @receiver(post_save, sender=CalificacionDocumentoBackoffice)
@@ -63,14 +66,27 @@ def registrar_cambio_calificacion(sender, instance, created, **kwargs):
     if created:
         print(f"🔄 Signal de reseteo de campos temporalmente deshabilitado - ejecutar migration primero")
     
-    # LÓGICA ORIGINAL: Solo registrar si es una actualización (cambio de estado)
+    # LÓGICA MEJORADA: Registrar si cambia el estado O el motivo
     if not created and hasattr(instance, '_calificacion_anterior'):
         calificacion_anterior = instance._calificacion_anterior
         calificacion_nueva = instance.estado
+        motivo_anterior = instance._motivo_anterior
+        motivo_nuevo = instance.opcion_desplegable
         
-        # Solo registrar si realmente cambió
-        if calificacion_anterior != calificacion_nueva:
+        # Registrar si cambió el estado O el motivo (incluso si el estado es igual)
+        cambio_estado = calificacion_anterior != calificacion_nueva
+        cambio_motivo = motivo_anterior != motivo_nuevo
+        
+        if cambio_estado or cambio_motivo:
             try:
+                # Preparar descripción del cambio
+                if cambio_estado and cambio_motivo:
+                    observaciones = f"Cambio de estado ({calificacion_anterior} → {calificacion_nueva}) y motivo"
+                elif cambio_estado:
+                    observaciones = f"Cambio de estado: {calificacion_anterior} → {calificacion_nueva}"
+                else:
+                    observaciones = f"Cambio de motivo (estado: {calificacion_nueva})"
+                
                 HistorialBackoffice.objects.create(
                     tipo_evento='calificacion',
                     solicitud=instance.requisito_solicitud.solicitud,
@@ -79,8 +95,9 @@ def registrar_cambio_calificacion(sender, instance, created, **kwargs):
                     calificacion_anterior=calificacion_anterior,
                     calificacion_nueva=calificacion_nueva,
                     requisito_solicitud_id=instance.requisito_solicitud.id,
-                    observaciones=f"Cambio automático detectado por sistema"
+                    observaciones=observaciones
                 )
+                print(f"📋 Historial registrado: {observaciones} para documento {instance.requisito_solicitud.requisito.nombre}")
             except Exception as e:
                 # Log error but don't break the flow
                 print(f"Error registrando cambio de calificación: {e}")

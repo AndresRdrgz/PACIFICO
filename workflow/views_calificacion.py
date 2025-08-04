@@ -17,21 +17,63 @@ def calificar_documento(request):
         estado = data.get('estado')  # 'bueno' o 'malo'
         opcion_desplegable_id = data.get('opcion_desplegable_id')
         
+        print(f"DEBUG: Calificando documento - requisito_id: {requisito_solicitud_id}, estado: {estado}, opcion_id: {opcion_desplegable_id}")
+        
         # Validar datos
         if not requisito_solicitud_id or estado not in ['bueno', 'malo', 'pendiente']:
             return JsonResponse({'error': 'Datos inválidos'}, status=400)
         
         requisito_solicitud = get_object_or_404(RequisitoSolicitud, id=requisito_solicitud_id)
         
+        # Validar opcion_desplegable_id si se proporciona
+        opcion_desplegable = None
+        if opcion_desplegable_id and opcion_desplegable_id != '' and opcion_desplegable_id != 'null':
+            try:
+                opcion_desplegable = OpcionDesplegable.objects.get(id=opcion_desplegable_id)
+            except OpcionDesplegable.DoesNotExist:
+                return JsonResponse({'error': f'Opción desplegable con ID {opcion_desplegable_id} no existe'}, status=400)
+        
         # Obtener o crear calificación (un usuario solo puede tener una calificación por documento)
-        calificacion, created = CalificacionDocumentoBackoffice.objects.update_or_create(
-            requisito_solicitud=requisito_solicitud,
-            calificado_por=request.user,
-            defaults={
-                'estado': estado,
-                'opcion_desplegable_id': opcion_desplegable_id if opcion_desplegable_id else None
-            }
-        )
+        # IMPORTANTE: Para documentos subsanados, preservar los campos de subsanado durante la actualización
+        try:
+            calificacion = CalificacionDocumentoBackoffice.objects.get(
+                requisito_solicitud=requisito_solicitud,
+                calificado_por=request.user
+            )
+            # Actualización de calificación existente - preservar campos de subsanado si existen
+            calificacion.estado = estado
+            calificacion.opcion_desplegable = opcion_desplegable
+            calificacion.save()
+            created = False
+            print(f"📋 Actualizando calificación existente - subsanado: {calificacion.subsanado}")
+        except CalificacionDocumentoBackoffice.DoesNotExist:
+            # Crear nueva calificación
+            calificacion = CalificacionDocumentoBackoffice.objects.create(
+                requisito_solicitud=requisito_solicitud,
+                calificado_por=request.user,
+                estado=estado,
+                opcion_desplegable=opcion_desplegable
+            )
+            created = True
+            print(f"📋 Creando nueva calificación")
+        
+        # 🆕 LÓGICA PARA DOCUMENTOS SUBSANADOS:
+        if not created and calificacion.subsanado:
+            if estado == 'bueno':
+                # Si se califica como "bueno", limpiar el flag de subsanado (ya no lo necesita)
+                print(f"📋 Documento subsanado re-calificado como 'bueno' - limpiando flag de subsanado")
+                calificacion.subsanado = False
+                calificacion.subsanado_por = None
+                calificacion.fecha_subsanado = None
+                calificacion.save()
+            elif estado == 'malo':
+                # Si se vuelve a calificar como "malo", mantener el flag de subsanado
+                print(f"📋 Documento subsanado re-calificado como 'malo' - manteniendo flag de subsanado")
+                # No cambiar los campos de subsanado, solo actualizar el estado (ya se hizo en update_or_create)
+            elif estado == 'pendiente':
+                # Si se califica como "pendiente", mantener el flag de subsanado
+                print(f"📋 Documento subsanado re-calificado como 'pendiente' - manteniendo flag de subsanado")
+                # No cambiar los campos de subsanado
         
         # Preparar respuesta
         opcion_nombre = ""
@@ -55,6 +97,9 @@ def calificar_documento(request):
         })
         
     except Exception as e:
+        print(f"ERROR en calificar_documento: {str(e)}")
+        import traceback
+        print(f"TRACEBACK: {traceback.format_exc()}")
         return JsonResponse({'error': str(e)}, status=500)
 
 
@@ -227,6 +272,31 @@ def obtener_calificaciones_documento(request, requisito_solicitud_id):
 
 
 @login_required
+@require_http_methods(["GET"])
+def obtener_opciones_desplegables(request):
+    """Vista AJAX para obtener todas las opciones desplegables activas"""
+    try:
+        opciones = OpcionDesplegable.objects.filter(activo=True).order_by('orden', 'nombre')
+        
+        opciones_data = []
+        for opcion in opciones:
+            opciones_data.append({
+                'id': opcion.id,
+                'nombre': opcion.nombre,
+                'descripcion': opcion.descripcion
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'data': opciones_data
+        })
+        
+    except Exception as e:
+        print(f"ERROR en obtener_opciones_desplegables: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
 @require_http_methods(["POST"])
 def subsanar_documento(request):
     """
@@ -256,19 +326,21 @@ def subsanar_documento(request):
                 'error': 'No se encontró una calificación marcada como malo para este documento'
             }, status=404)
         
-        # Actualizar la calificación como subsanada y cambiar estado a 'bueno'
+        # Actualizar la calificación como subsanada PERO MANTENER el estado original
+        # para que pueda ser re-calificado en captura
         calificacion.subsanado = True
         calificacion.subsanado_por = request.user
         calificacion.fecha_subsanado = timezone.now()
-        calificacion.estado = 'bueno'  # Cambiar automáticamente a bueno
+        # NO cambiar el estado a 'bueno' automáticamente - mantener 'malo' para re-calificación
+        # calificacion.estado = 'bueno'  # COMENTADO: Permite re-calificación en captura
         calificacion.save()
         
         return JsonResponse({
             'success': True,
-            'message': 'Documento marcado como subsanado exitosamente',
+            'message': 'Documento marcado como subsanado exitosamente (mantiene estado original para re-calificación en captura)',
             'data': {
                 'id': calificacion.id,
-                'estado': calificacion.estado,
+                'estado': calificacion.estado,  # Mantiene el estado original ('malo')
                 'subsanado': calificacion.subsanado,
                 'subsanado_por': calificacion.subsanado_por.username,
                 'fecha_subsanado': calificacion.fecha_subsanado.strftime('%d/%m/%Y %H:%M'),

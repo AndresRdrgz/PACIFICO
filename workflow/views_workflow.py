@@ -9037,6 +9037,12 @@ def api_solicitud_brief(request, solicitud_id):
             
             documentos.append(documento_info)
             
+            # DEBUG: Log específicamente documentos calificados como "malo"
+            if calificacion and calificacion.estado == 'malo':
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info(f"🔴 DOCUMENTO MALO ENVIADO AL FRONTEND: {req.requisito.nombre} (ID:{req.id}) - estado:{calificacion.estado}, subsanado:{calificacion.subsanado}, motivo:{calificacion.opcion_desplegable.nombre if calificacion.opcion_desplegable else 'Sin motivo'}")
+            
             # DEBUG: Log todos los documentos que se envían al frontend
             if req.requisito.nombre.lower() in ['foto', 'proforma', 'excel']:  # Solo documentos comunes para no spam
                 import logging
@@ -9072,6 +9078,36 @@ def api_solicitud_brief(request, solicitud_id):
         else:
             logger.debug("No cotizacion found")
 
+        # Datos de entrevista asociada (formulario general)
+        entrevista_info = None
+        if hasattr(solicitud, 'entrevista_cliente') and solicitud.entrevista_cliente:
+            entrevista = solicitud.entrevista_cliente
+            # Construir cédula completa
+            cedula_completa = ""
+            if entrevista.provincia_cedula and entrevista.tipo_letra and entrevista.tomo_cedula and entrevista.partida_cedula:
+                cedula_completa = f"{entrevista.provincia_cedula}-{entrevista.tipo_letra}-{entrevista.tomo_cedula}-{entrevista.partida_cedula}"
+            elif entrevista.tomo_cedula and entrevista.partida_cedula:
+                cedula_completa = f"{entrevista.tomo_cedula}-{entrevista.partida_cedula}"
+            
+            entrevista_info = {
+                'id': entrevista.id,
+                'nombre_completo': f"{entrevista.primer_nombre or ''} {entrevista.segundo_nombre or ''} {entrevista.primer_apellido or ''} {entrevista.segundo_apellido or ''}".strip(),
+                'cedula': cedula_completa,
+                'email': entrevista.email or '',
+                'telefono': entrevista.telefono or '',
+                'fecha_entrevista': entrevista.fecha_entrevista.strftime('%d/%m/%Y') if entrevista.fecha_entrevista else '',
+                'tipo_producto': entrevista.tipo_producto or ''
+            }
+
+        # Datos completos de la solicitud para funcionalidades de entrevista
+        solicitud_info = {
+            'id': solicitud.id,
+            'codigo': solicitud.codigo,
+            'cliente_nombre_completo': cliente_info.get('nombre', ''),
+            'cliente_cedula_completa': cliente_info.get('cedula', ''),
+            'entrevista_cliente': entrevista_info
+        }
+
         return JsonResponse({
             'general': general,
             'cliente': cliente_info,
@@ -9086,6 +9122,8 @@ def api_solicitud_brief(request, solicitud_id):
             'cotizacion': cotizacion_info,
             # Include the related Cotizacion primary key for redirection
             'cotizacion_id': solicitud.cotizacion.id if solicitud.cotizacion else None,
+            # Datos de solicitud y entrevista para funcionalidades del modal
+            'solicitud': solicitud_info,
         }, encoder=DjangoJSONEncoder)
         
     except Exception as e:
@@ -14404,7 +14442,7 @@ def asociar_formulario_general(request, solicitud_id):
         entrevista = get_object_or_404(ClienteEntrevista, id=entrevista_id)
         
         # Asociar la entrevista a la solicitud
-        solicitud.formulario_general = entrevista
+        solicitud.entrevista_cliente = entrevista
         solicitud.save()
         
         # Registrar en historial si es necesario
@@ -14453,8 +14491,8 @@ def obtener_formulario_general_asociado(request, solicitud_id):
         # Verificar que la solicitud existe
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         
-        if solicitud.formulario_general:
-            entrevista = solicitud.formulario_general
+        if solicitud.entrevista_cliente:
+            entrevista = solicitud.entrevista_cliente
             entrevista_data = {
                 'id': entrevista.id,
                 'nombre': entrevista.nombre or '',
