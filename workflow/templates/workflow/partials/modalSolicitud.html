@@ -240,6 +240,11 @@
                                     <button class="btn btn-primary" onclick="abrirModalNuevaNota()">
                                         <i class="fas fa-plus me-1"></i>Crear primera nota
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Documentos Urgentes Tab -->
                     <div class="tab-pane fade" id="documentos-urgentes" role="tabpanel" aria-labelledby="documentos-urgentes-tab">
                         <div class="documentos-urgentes-section">
@@ -5505,155 +5510,224 @@
     // ============================================
 
     function populateDocumentosUrgentesTab(documentos) {
-        const urgentesContainer = document.getElementById('modalSolicitudDocumentosUrgentes');
-        const loadingPlaceholder = urgentesContainer.querySelector('.loading-placeholder');
-        const emptyState = urgentesContainer.querySelector('.empty-state');
-        const urgentesNav = document.getElementById('documentos-urgentes-nav');
-
-        if (!urgentesContainer) {
-            console.error('Documentos urgentes container not found');
-            return;
-        }
-
-        // Hide loading and empty states initially
-        if (loadingPlaceholder) loadingPlaceholder.style.display = 'none';
-        if (emptyState) emptyState.style.display = 'none';
-
-        // Clear existing content
-        const existingItems = urgentesContainer.querySelectorAll('.documento-item');
-        existingItems.forEach(item => item.remove());
-
-        // Filtrar documentos urgentes (calificados como "malo")
-        console.log('🔴 DEBUG: Filtrando documentos urgentes...');
-        const documentosUrgentes = documentos.filter(doc => {
-            const esUrgente = doc.calificacion_estado === 'malo' && !doc.subsanado;
-            if (esUrgente) {
-                console.log(`🔴 "${doc.nombre}" es urgente: malo=${doc.calificacion_estado === 'malo'}, subsanado=${doc.subsanado}`);
-            }
-            return esUrgente;
-        });
-        
-        console.log('🔴 DEBUG: Documentos urgentes encontrados:', documentosUrgentes);
-
-        // Mostrar/ocultar tab según si hay documentos urgentes
-        if (documentosUrgentes.length === 0) {
-            if (urgentesNav) urgentesNav.style.display = 'none';
-            if (emptyState) emptyState.style.display = 'block';
-            return;
-        } else {
-            if (urgentesNav) urgentesNav.style.display = 'block';
-        }
-
-        const documentosGrid = document.createElement('div');
-        documentosGrid.className = 'documento-grid';
-
-        documentosUrgentes.forEach(documento => {
-            const documentoItem = document.createElement('div');
-            documentoItem.className = 'documento-item urgente';
-
-            const uploadId = `upload-urgente-${documento.id || Math.random().toString(36).substr(2, 9)}`;
-
-            let motivoHtml = '';
-            if (documento.motivo_calificacion) {
-                motivoHtml = `
-                    <div class="documento-calificacion-info malo">
-                        <strong>Motivo:</strong> ${documento.motivo_calificacion}
-                    </div>
-                `;
-            }
-
-            let metaHtml = '';
-            if (documento.calificado_por || documento.fecha_calificacion) {
-                metaHtml = `
-                    <div class="documento-meta">
-                        <span class="documento-usuario">
-                            <i class="fas fa-user me-1"></i>${documento.calificado_por || 'Usuario'}
-                        </span>
-                        <span class="documento-fecha">
-                            <i class="fas fa-calendar me-1"></i>${documento.fecha_calificacion || 'Fecha no disponible'}
-                        </span>
-                    </div>
-                `;
-            }
+        try {
+            console.log('🚀 INICIANDO populateDocumentosUrgentesTab');
             
-            // NUEVO: Badges temporalmente comentados hasta ejecutar migration
-            let badgesHtml = '';
-            // COMENTADO TEMPORALMENTE - EJECUTAR MIGRATION PRIMERO
-            // if (documento.subsanado_por_oficial) {
-            //     badgesHtml += `
-            //         <div class="documento-badge-oficial">
-            //             <i class="fas fa-check-circle me-1"></i>
-            //             <span class="badge-text">Subsanado por Oficial</span>
-            //         </div>
-            //     `;
-            // }
-            // if (documento.pendiente_completado) {
-            //     badgesHtml += `
-            //         <div class="documento-badge-pendiente">
-            //             <i class="fas fa-clock-o me-1"></i>
-            //             <span class="badge-text">Pendiente Completado</span>
-            //         </div>
-            //     `;
-            // }
+            const urgentesContainer = document.getElementById('modalSolicitudDocumentosUrgentes');
+            const loadingPlaceholder = urgentesContainer.querySelector('.loading-placeholder');
+            const emptyState = urgentesContainer.querySelector('.empty-state');
+            const urgentesNav = document.getElementById('documentos-urgentes-nav');
+            
+            if (urgentesNav) {
+                console.log('✅ Nav de documentos urgentes encontrado');
+            } else {
+                console.log('❌ ERROR: Nav de documentos urgentes no encontrado');
+            }
 
-            let actionsHtml = `
-                <div class="documento-actions">
-                    <button type="button" class="btn-documento btn-replace" onclick="toggleUploadArea('${uploadId}')">
-                        <i class="fas fa-sync-alt me-1"></i>Reemplazar Documento
-                    </button>
-                </div>
-            `;
+            if (!urgentesContainer) {
+                console.error('❌ ERROR: Documentos urgentes container not found');
+                return;
+            } else {
+                console.log('✅ Documentos urgentes container encontrado');
+            }
 
-            let uploadAreaHtml = `
-                <div class="upload-area" id="${uploadId}">
-                    <div class="upload-text">
-                        <i class="fas fa-cloud-upload-alt"></i><br>
-                        Arrastra el nuevo archivo aquí o haz clic para seleccionar
-                    </div>
-                    <input type="file" class="upload-input" id="${uploadId}-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple>
-                    <div class="file-preview" id="${uploadId}-preview">
-                        <div class="file-info">
-                            <i class="fas fa-file"></i>
-                            <span class="file-name"></span>
-                            <span class="file-size"></span>
+            // Hide loading and empty states initially
+            if (loadingPlaceholder) {
+                loadingPlaceholder.style.display = 'none';
+                console.log('✅ Loading placeholder ocultado');
+            } else {
+                console.log('⚠️ Loading placeholder no encontrado');
+            }
+            if (emptyState) {
+                emptyState.style.display = 'none';
+                console.log('✅ Empty state ocultado');
+            } else {
+                console.log('⚠️ Empty state no encontrado');
+            }
+
+            // Clear existing content
+            const existingItems = urgentesContainer.querySelectorAll('.documento-item');
+            existingItems.forEach(item => item.remove());
+
+            // DEBUG: Log todos los documentos recibidos
+            console.log('🔴 DEBUG: Todos los documentos recibidos:', documentos);
+            
+            // Filtrar documentos urgentes (calificados como "malo")
+            console.log('🔴 DEBUG: Filtrando documentos urgentes...');
+            const documentosUrgentes = documentos.filter(doc => {
+                console.log(`🔴 DEBUG: Analizando documento "${doc.nombre}":`, {
+                    id: doc.id,
+                    calificacion_estado: doc.calificacion_estado,
+                    subsanado: doc.subsanado,
+                    motivo_calificacion: doc.motivo_calificacion,
+                    calificado_por: doc.calificado_por,
+                    fecha_calificacion: doc.fecha_calificacion
+                });
+                
+                const esUrgente = doc.calificacion_estado === 'malo' && !doc.subsanado;
+                if (esUrgente) {
+                    console.log(`🔴 "${doc.nombre}" es urgente: malo=${doc.calificacion_estado === 'malo'}, subsanado=${doc.subsanado}`);
+                } else {
+                    console.log(`🔴 "${doc.nombre}" NO es urgente: malo=${doc.calificacion_estado === 'malo'}, subsanado=${doc.subsanado}`);
+                }
+                return esUrgente;
+            });
+            
+            console.log('🔴 DEBUG: Documentos urgentes encontrados:', documentosUrgentes);
+
+            // Mostrar/ocultar tab según si hay documentos urgentes
+            if (documentosUrgentes.length === 0) {
+                if (urgentesNav) {
+                    urgentesNav.style.display = 'none';
+                    console.log('🔴 DEBUG: Ocultando tab de documentos urgentes');
+                }
+                if (emptyState) {
+                    emptyState.style.display = 'block';
+                    console.log('🔴 DEBUG: Mostrando estado vacío');
+                }
+                console.log('🔴 DEBUG: No hay documentos urgentes, ocultando tab');
+                return;
+            } else {
+                if (urgentesNav) {
+                    urgentesNav.style.display = 'block';
+                    console.log('🔴 DEBUG: Mostrando tab de documentos urgentes');
+                }
+                console.log(`🔴 DEBUG: Mostrando tab con ${documentosUrgentes.length} documentos urgentes`);
+            }
+
+            const documentosGrid = document.createElement('div');
+            documentosGrid.className = 'documento-grid';
+
+            documentosUrgentes.forEach(documento => {
+                const documentoItem = document.createElement('div');
+                documentoItem.className = 'documento-item urgente';
+
+                const uploadId = `upload-urgente-${documento.id || Math.random().toString(36).substr(2, 9)}`;
+
+                let motivoHtml = '';
+                if (documento.motivo_calificacion) {
+                    motivoHtml = `
+                        <div class="documento-calificacion-info malo">
+                            <strong>Motivo:</strong> ${documento.motivo_calificacion}
                         </div>
-                        <button type="button" class="file-remove" onclick="removeFile('${uploadId}')">
-                            <i class="fas fa-times"></i>
+                    `;
+                }
+
+                let metaHtml = '';
+                if (documento.calificado_por || documento.fecha_calificacion) {
+                    metaHtml = `
+                        <div class="documento-meta">
+                            <span class="documento-usuario">
+                                <i class="fas fa-user me-1"></i>${documento.calificado_por || 'Usuario'}
+                            </span>
+                            <span class="documento-fecha">
+                                <i class="fas fa-calendar me-1"></i>${documento.fecha_calificacion || 'Fecha no disponible'}
+                            </span>
+                        </div>
+                    `;
+                }
+                
+                // NUEVO: Badges temporalmente comentados hasta ejecutar migration
+                let badgesHtml = '';
+                // COMENTADO TEMPORALMENTE - EJECUTAR MIGRATION PRIMERO
+                // if (documento.subsanado_por_oficial) {
+                //     badgesHtml += `
+                //         <div class="documento-badge-oficial">
+                //             <i class="fas fa-check-circle me-1"></i>
+                //             <span class="badge-text">Subsanado por Oficial</span>
+                //         </div>
+                //     `;
+                // }
+                // if (documento.pendiente_completado) {
+                //     badgesHtml += `
+                //         <div class="documento-badge-pendiente">
+                //             <i class="fas fa-clock-o me-1"></i>
+                //             <span class="badge-text">Pendiente Completado</span>
+                //         </div>
+                //     `;
+                // }
+
+                let actionsHtml = `
+                    <div class="documento-actions">
+                        <button type="button" class="btn-documento btn-replace" onclick="toggleUploadArea('${uploadId}')">
+                            <i class="fas fa-sync-alt me-1"></i>Reemplazar Documento
                         </button>
                     </div>
-                    <div class="upload-progress" id="${uploadId}-progress">
-                        <div class="progress-bar-custom">
-                            <div class="progress-fill"></div>
+                `;
+
+                let uploadAreaHtml = `
+                    <div class="upload-area" id="${uploadId}">
+                        <div class="upload-text">
+                            <i class="fas fa-cloud-upload-alt"></i><br>
+                            Arrastra el nuevo archivo aquí o haz clic para seleccionar
+                        </div>
+                        <input type="file" class="upload-input" id="${uploadId}-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" multiple>
+                        <div class="file-preview" id="${uploadId}-preview">
+                            <div class="file-info">
+                                <i class="fas fa-file"></i>
+                                <span class="file-name"></span>
+                                <span class="file-size"></span>
+                            </div>
+                            <button type="button" class="file-remove" onclick="removeFile('${uploadId}')">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="upload-progress" id="${uploadId}-progress">
+                            <div class="progress-bar-custom">
+                                <div class="progress-fill"></div>
+                            </div>
+                        </div>
+                        <div class="upload-buttons" id="${uploadId}-buttons">
+                            <button type="button" class="btn-upload-confirm" onclick="replaceDocument('${uploadId}', '${documento.id || ''}', '${documento.nombre || ''}')">
+                                <i class="fas fa-check me-1"></i>Confirmar Reemplazo
+                            </button>
+                            <button type="button" class="btn-upload-cancel" onclick="cancelUpload('${uploadId}')">
+                                <i class="fas fa-times me-1"></i>Cancelar
+                            </button>
                         </div>
                     </div>
-                    <div class="upload-buttons" id="${uploadId}-buttons">
-                        <button type="button" class="btn-upload-confirm" onclick="replaceDocument('${uploadId}', '${documento.id || ''}', '${documento.nombre || ''}')">
-                            <i class="fas fa-check me-1"></i>Confirmar Reemplazo
-                        </button>
-                        <button type="button" class="btn-upload-cancel" onclick="cancelUpload('${uploadId}')">
-                            <i class="fas fa-times me-1"></i>Cancelar
-                        </button>
+                `;
+
+                documentoItem.innerHTML = `
+                    <div class="documento-header">
+                        <div class="documento-nombre">${documento.nombre || 'Documento sin nombre'}</div>
+                        <span class="documento-status urgente">❌ MALO</span>
                     </div>
-                </div>
-            `;
+                    ${motivoHtml}
+                    ${metaHtml}
+                    ${badgesHtml}
+                    ${actionsHtml}
+                    ${uploadAreaHtml}
+                `;
 
-            documentoItem.innerHTML = `
-                <div class="documento-header">
-                    <div class="documento-nombre">${documento.nombre || 'Documento sin nombre'}</div>
-                    <span class="documento-status urgente">❌ MALO</span>
-                </div>
-                ${motivoHtml}
-                ${metaHtml}
-                ${badgesHtml}
-                ${actionsHtml}
-                ${uploadAreaHtml}
-            `;
+                documentosGrid.appendChild(documentoItem);
+            });
 
-            documentosGrid.appendChild(documentoItem);
-        });
+            urgentesContainer.appendChild(documentosGrid);
+            console.log(`🔴 DEBUG: Populated ${documentosUrgentes.length} documentos urgentes`);
+            console.log('🔴 DEBUG: Contenido del contenedor urgentes:', urgentesContainer.innerHTML.length, 'caracteres');
+            console.log('🔴 DEBUG: Elementos .documento-item creados:', urgentesContainer.querySelectorAll('.documento-item').length);
+            
 
-        urgentesContainer.appendChild(documentosGrid);
-        console.log(`Populated ${documentosUrgentes.length} documentos urgentes`);
+            
+            console.log('✅ FINALIZANDO populateDocumentosUrgentesTab exitosamente');
+            
+        } catch (error) {
+            console.error('❌ ERROR CRÍTICO en populateDocumentosUrgentesTab:', error);
+            console.error('❌ ERROR Stack:', error.stack);
+            
+            // Mostrar estado de error en la UI
+            const urgentesContainer = document.getElementById('modalSolicitudDocumentosUrgentes');
+            if (urgentesContainer) {
+                urgentesContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Error al cargar documentos urgentes:</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+            }
+        }
     }
 
     // ============================================
@@ -5661,14 +5735,19 @@
     // ============================================
 
     function populateDocumentosPendientesTab(documentos) {
-        const pendientesContainer = document.getElementById('modalSolicitudDocumentosPendientes');
-        const loadingPlaceholder = pendientesContainer.querySelector('.loading-placeholder');
-        const emptyState = pendientesContainer.querySelector('.empty-state');
+        try {
+            console.log('🚀 INICIANDO populateDocumentosPendientesTab');
+            
+            const pendientesContainer = document.getElementById('modalSolicitudDocumentosPendientes');
+            const loadingPlaceholder = pendientesContainer.querySelector('.loading-placeholder');
+            const emptyState = pendientesContainer.querySelector('.empty-state');
 
-        if (!pendientesContainer) {
-            console.error('Documentos pendientes container not found');
-            return;
-        }
+            if (!pendientesContainer) {
+                console.error('❌ ERROR: Documentos pendientes container not found');
+                return;
+            } else {
+                console.log('✅ Documentos pendientes container encontrado');
+            }
 
         // CRÍTICO: Limpiar completamente el contenedor antes de renderizar
         console.log('🧹 Limpiando contenedor de documentos pendientes...');
@@ -5818,13 +5897,35 @@
             documentosGrid.appendChild(documentoItem);
         });
 
-        // Solo agregar el grid si tiene documentos
-        if (documentosPendientes.length > 0) {
-            pendientesContainer.appendChild(documentosGrid);
-            console.log(`✅ Mostrados ${documentosPendientes.length} documentos pendientes`);
-        } else {
-            console.log('✅ No hay documentos pendientes - mostrando estado vacío');
-            if (emptyState) emptyState.style.display = 'block';
+            // Solo agregar el grid si tiene documentos
+            if (documentosPendientes.length > 0) {
+                pendientesContainer.appendChild(documentosGrid);
+                console.log(`✅ Mostrados ${documentosPendientes.length} documentos pendientes`);
+                console.log('🟡 DEBUG: Contenido del contenedor pendientes:', pendientesContainer.innerHTML.length, 'caracteres');
+                console.log('🟡 DEBUG: Elementos .documento-item creados:', pendientesContainer.querySelectorAll('.documento-item').length);
+                
+
+            } else {
+                console.log('✅ No hay documentos pendientes - mostrando estado vacío');
+                if (emptyState) emptyState.style.display = 'block';
+            }
+            console.log('✅ FINALIZANDO populateDocumentosPendientesTab exitosamente');
+            
+        } catch (error) {
+            console.error('❌ ERROR CRÍTICO en populateDocumentosPendientesTab:', error);
+            console.error('❌ ERROR Stack:', error.stack);
+            
+            // Mostrar estado de error en la UI
+            const pendientesContainer = document.getElementById('modalSolicitudDocumentosPendientes');
+            if (pendientesContainer) {
+                pendientesContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Error al cargar documentos pendientes:</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+            }
         }
     }
 
@@ -7881,6 +7982,35 @@
             });
         } else {
             console.error('Documentos pendientes tab not found!');
+        }
+        
+        // Event listener for documentos urgentes tab activation
+        const documentosUrgentesTab = document.getElementById('documentos-urgentes-tab');
+        if (documentosUrgentesTab) {
+            documentosUrgentesTab.addEventListener('shown.bs.tab', function (event) {
+                console.log('Documentos Urgentes tab activated');
+                console.log('Tab event target:', event.target);
+                console.log('Current modal data available:', !!window.currentModalData);
+                
+                // Ensure the container is visible
+                const urgentesContainer = document.getElementById('modalSolicitudDocumentosUrgentes');
+                if (urgentesContainer) {
+                    console.log('Documentos urgentes container found');
+                    console.log('Container visibility:', getComputedStyle(urgentesContainer).display);
+                } else {
+                    console.error('Documentos urgentes container not found!');
+                }
+                
+                // Refresh documentos urgentes data if needed
+                if (window.currentModalData && window.currentModalData.documentos) {
+                    console.log('Repopulating documentos urgentes with', window.currentModalData.documentos.length, 'documentos');
+                    populateDocumentosUrgentesTab(window.currentModalData.documentos);
+                } else {
+                    console.warn('No modal data available for documentos urgentes');
+                }
+            });
+        } else {
+            console.error('Documentos urgentes tab not found!');
         }
     });
 

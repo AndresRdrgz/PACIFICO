@@ -9030,6 +9030,12 @@ def api_solicitud_brief(request, solicitud_id):
             
             documentos.append(documento_info)
             
+            # DEBUG: Log específicamente documentos calificados como "malo"
+            if calificacion and calificacion.estado == 'malo':
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info(f"🔴 DOCUMENTO MALO ENVIADO AL FRONTEND: {req.requisito.nombre} (ID:{req.id}) - estado:{calificacion.estado}, subsanado:{calificacion.subsanado}, motivo:{calificacion.opcion_desplegable.nombre if calificacion.opcion_desplegable else 'Sin motivo'}")
+            
             # DEBUG: Log todos los documentos que se envían al frontend
             if req.requisito.nombre.lower() in ['foto', 'proforma', 'excel']:  # Solo documentos comunes para no spam
                 import logging
