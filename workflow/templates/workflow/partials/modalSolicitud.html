@@ -9,6 +9,9 @@
                             <span class="code-text" id="modalSolicitudCodigo">SOL-000000</span>
                             <span class="status-badge" id="modalSolicitudEstadoBadge">Pendiente</span>
                         </div>
+                        
+
+                        
                         <div class="solicitud-type" id="modalSolicitudTipo">Solicitud de préstamo personal</div>
                     </div>
                     <div class="header-actions">
@@ -18,6 +21,23 @@
                                 <i class="fas fa-redo"></i>
                             </button>
                         </div>
+                        
+                        <!-- 🚨 ICONOS DE ALERTA SUTILES - POSICIÓN DERECHA -->
+                        <div class="documentos-icons-alert" id="documentosIconsAlert" style="display: none;">
+                            <div class="icon-alert urgente" id="iconUrgente" style="display: none;" 
+                                 title="Documentos urgentes que requieren corrección" 
+                                 onclick="switchToTab('documentos-urgentes')">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span class="count-badge" id="urgenteCountIcon">0</span>
+                            </div>
+                            <div class="icon-alert pendiente" id="iconPendiente" style="display: none;" 
+                                 title="Documentos pendientes por completar" 
+                                 onclick="switchToTab('documentos-pendientes')">
+                                <i class="fas fa-clock"></i>
+                                <span class="count-badge" id="pendienteCountIcon">0</span>
+                            </div>
+                        </div>
+                        
                         <button type="button" class="btn-close-modern" data-bs-dismiss="modal" aria-label="Close">
                             <i class="fas fa-times"></i>
                         </button>
@@ -375,6 +395,103 @@
         --neutral-900: #212529;
         
         --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* === ESTILOS PARA ICONOS DE ALERTA SUTILES === */
+    .documentos-icons-alert {
+        display: flex;
+        gap: 8px;
+        margin: 0 12px;
+        align-items: center;
+    }
+
+    .icon-alert {
+        position: relative;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 14px;
+        color: white;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+
+    .icon-alert.urgente {
+        background: linear-gradient(135deg, #ff4757, #ff3838);
+        box-shadow: 0 2px 8px rgba(255, 71, 87, 0.3);
+        animation: pulseSubtle 2s infinite;
+    }
+
+    .icon-alert.pendiente {
+        background: linear-gradient(135deg, #ffa502, #ff9500);
+        box-shadow: 0 2px 8px rgba(255, 165, 2, 0.3);
+    }
+
+    @keyframes pulseSubtle {
+        0%, 100% { 
+            box-shadow: 0 2px 8px rgba(255, 71, 87, 0.3);
+            transform: scale(1);
+        }
+        50% { 
+            box-shadow: 0 4px 12px rgba(255, 71, 87, 0.5);
+            transform: scale(1.05);
+        }
+    }
+
+    .icon-alert:hover {
+        transform: scale(1.1);
+        filter: brightness(1.1);
+    }
+
+    .icon-alert.urgente:hover {
+        box-shadow: 0 4px 16px rgba(255, 71, 87, 0.6);
+    }
+
+    .icon-alert.pendiente:hover {
+        box-shadow: 0 4px 16px rgba(255, 165, 2, 0.6);
+    }
+
+    .count-badge {
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        background: white;
+        color: #333;
+        font-size: 10px;
+        font-weight: bold;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        border: 1px solid rgba(255,255,255,0.8);
+    }
+
+    /* Responsive para iconos */
+    @media (max-width: 768px) {
+        .icon-alert {
+            width: 28px;
+            height: 28px;
+            font-size: 12px;
+        }
+        
+        .count-badge {
+            width: 14px;
+            height: 14px;
+            font-size: 9px;
+            top: -3px;
+            right: -3px;
+        }
+    }
+
+    /* === OTRAS VARIABLES CSS === */
+    :root {
         --shadow-medium: 0 4px 8px rgba(0, 0, 0, 0.12);
         --shadow-heavy: 0 8px 16px rgba(0, 0, 0, 0.15);
         --border-radius-sm: 6px;
@@ -4591,6 +4708,9 @@
             // Populate nuevos tabs
             populateDocumentosUrgentesTab(documentos);
             populateDocumentosPendientesTab(documentos);
+            
+            // 🚨 MOSTRAR ALERTAS DE DOCUMENTOS
+            mostrarAlertasDocumentos(documentos);
 
             // Add smooth animations for the new layout
             setTimeout(() => {
@@ -8013,6 +8133,104 @@
             console.error('Documentos urgentes tab not found!');
         }
     });
+
+    // ========================================
+    // FUNCIONES PARA ALERTAS DE DOCUMENTOS
+    // ========================================
+
+    function mostrarAlertasDocumentos(documentos) {
+        console.log('🚨 INICIANDO mostrarAlertasDocumentos con', documentos.length, 'documentos');
+        
+        const alertContainer = document.getElementById('documentosIconsAlert');
+        const iconUrgente = document.getElementById('iconUrgente');
+        const iconPendiente = document.getElementById('iconPendiente');
+        const urgenteCount = document.getElementById('urgenteCountIcon');
+        const pendienteCount = document.getElementById('pendienteCountIcon');
+        
+        if (!alertContainer) {
+            console.error('❌ No se encontró el contenedor de iconos de alerta');
+            return;
+        }
+        
+        // Filtrar documentos urgentes (malo y no subsanado)
+        const documentosUrgentes = documentos.filter(doc => 
+            doc.calificacion_estado === 'malo' && !doc.subsanado
+        );
+        
+        // Filtrar documentos pendientes
+        const documentosPendientes = documentos.filter(doc => 
+            doc.calificacion_estado === 'pendiente' && !doc.subsanado
+        );
+        
+        console.log('🔴 Documentos urgentes encontrados:', documentosUrgentes.length);
+        console.log('🟡 Documentos pendientes encontrados:', documentosPendientes.length);
+        
+        // Mostrar/ocultar iconos según corresponda
+        let hayAlertas = false;
+        
+        if (documentosUrgentes.length > 0) {
+            urgenteCount.textContent = documentosUrgentes.length;
+            iconUrgente.style.display = 'flex';
+            hayAlertas = true;
+            console.log('🚨 Mostrando icono de documentos urgentes');
+        } else {
+            iconUrgente.style.display = 'none';
+        }
+        
+        if (documentosPendientes.length > 0) {
+            pendienteCount.textContent = documentosPendientes.length;
+            iconPendiente.style.display = 'flex';
+            hayAlertas = true;
+            console.log('⏰ Mostrando icono de documentos pendientes');
+        } else {
+            iconPendiente.style.display = 'none';
+        }
+        
+        // Mostrar/ocultar el contenedor principal
+        if (hayAlertas) {
+            alertContainer.style.display = 'flex';
+            console.log('✅ Contenedor de iconos mostrado');
+            
+            // Reproducir sonido de alerta más sutil
+            reproducirSonidoAlerta(documentosUrgentes.length > 0);
+        } else {
+            alertContainer.style.display = 'none';
+            console.log('ℹ️ No hay alertas que mostrar');
+        }
+    }
+    
+    function reproducirSonidoAlerta(esUrgente) {
+        try {
+            // Crear contexto de audio
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Configuración del sonido más sutil
+            const frequency = esUrgente ? 650 : 550; // Frecuencias más suaves
+            const duration = 0.15; // Más corto
+            
+            // Crear oscilador
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            oscillator.type = 'sine';
+            
+            // Configurar volumen muy suave
+            gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+            
+            // Reproducir
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+            
+            console.log('🔊 Sonido sutil de alerta reproducido');
+        } catch (error) {
+            console.log('🔇 No se pudo reproducir sonido de alerta:', error.message);
+        }
+    }
 
     // ========================================
     // FUNCIONES PARA NOTAS Y RECORDATORIOS
