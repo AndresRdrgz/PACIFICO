@@ -787,7 +787,7 @@
                             <!-- Malo - Abre modal directamente -->
                             <button type="button" class="btn calificar-btn-backoffice {% if archivo_info.ultima_calificacion and archivo_info.ultima_calificacion.estado == 'malo' %}activo{% endif %}" data-estado="malo"
                               title="Marcar como malo"
-                              onclick="mostrarModalOpciones('{{ archivo_info.archivo_actual.id }}', '{{ archivo_info.requisito.nombre }}')">
+                              onclick="mostrarModalOpciones('{{ archivo_info.archivo_actual.id }}', '{{ archivo_info.requisito.nombre }}').catch(console.error)">
                               <i class="fas fa-thumbs-down"></i>
                               <span>Malo</span>
                             </button>
@@ -2100,70 +2100,82 @@
   let currentRequisitoForOpciones = null;
 
   // Función para mostrar el modal de opciones
-  function mostrarModalOpciones(requisitoId, documentoNombre) {
+  async function mostrarModalOpciones(requisitoId, documentoNombre) {
     currentRequisitoForOpciones = requisitoId;
 
     // Actualizar el nombre del documento en el modal
     document.getElementById('opciones-documento-nombre').textContent = documentoNombre;
 
-    // Cargar las opciones disponibles
-    cargarOpcionesDisponibles();
-
-    // Mostrar el modal
+    // Mostrar el modal primero
     const modal = new bootstrap.Modal(document.getElementById('modalOpciones'));
     modal.show();
+
+    // Cargar las opciones disponibles
+    await cargarOpcionesDisponibles();
   }
 
   // Función para cargar las opciones disponibles
-  function cargarOpcionesDisponibles() {
+  async function cargarOpcionesDisponibles() {
     const opcionesContainer = document.getElementById('opciones-container');
-
-    // Opciones predefinidas (puedes obtenerlas del backend si es necesario)
-    const opciones = [
-      { id: 1, nombre: 'Documento ilegible o borroso' },
-      { id: 2, nombre: 'Documento incompleto o faltante' },
-      { id: 3, nombre: 'Documento vencido o desactualizado' },
-      { id: 4, nombre: 'Documento no corresponde al solicitado' },
-      { id: 5, nombre: 'Documento con información incorrecta' },
-      { id: 6, nombre: 'Documento de baja calidad' },
-      { id: 7, nombre: 'Otro problema' }
-    ];
-
-    opcionesContainer.innerHTML = '';
-
-    opciones.forEach(opcion => {
-      const opcionDiv = document.createElement('div');
-      opcionDiv.className = 'opcion-item-modal mb-2 p-3 border rounded cursor-pointer';
-      opcionDiv.style.cursor = 'pointer';
-      opcionDiv.style.transition = 'all 0.2s ease';
-      opcionDiv.innerHTML = `
-        <div class="d-flex align-items-center">
-          <i class="fas fa-exclamation-circle text-warning me-3"></i>
-          <div class="flex-grow-1">
-            <strong>${opcion.nombre}</strong>
-          </div>
-          <i class="fas fa-chevron-right text-muted"></i>
-        </div>
-      `;
-
-      // Agregar efectos hover
-      opcionDiv.addEventListener('mouseenter', function () {
-        this.style.backgroundColor = '#f8f9fa';
-        this.style.borderColor = '#4a7c59';
+    
+    try {
+      // Mostrar loading
+      opcionesContainer.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando opciones...</div>';
+      
+      // Obtener opciones desde la API
+      const response = await fetch('/workflow/api/opciones-desplegables/', {
+        method: 'GET',
+        headers: {
+          'X-CSRFToken': getCsrfToken()
+        }
       });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        opcionesContainer.innerHTML = '';
+        
+        data.data.forEach(opcion => {
+          const opcionDiv = document.createElement('div');
+          opcionDiv.className = 'opcion-item-modal mb-2 p-3 border rounded cursor-pointer';
+          opcionDiv.style.cursor = 'pointer';
+          opcionDiv.style.transition = 'all 0.2s ease';
+          opcionDiv.innerHTML = `
+            <div class="d-flex align-items-center">
+              <i class="fas fa-exclamation-circle text-warning me-3"></i>
+              <div class="flex-grow-1">
+                <strong>${opcion.nombre}</strong>
+                ${opcion.descripcion ? `<br><small class="text-muted">${opcion.descripcion}</small>` : ''}
+              </div>
+              <i class="fas fa-chevron-right text-muted"></i>
+            </div>
+          `;
 
-      opcionDiv.addEventListener('mouseleave', function () {
-        this.style.backgroundColor = '';
-        this.style.borderColor = '';
-      });
+          // Agregar efectos hover
+          opcionDiv.addEventListener('mouseenter', function () {
+            this.style.backgroundColor = '#f8f9fa';
+            this.style.borderColor = '#4a7c59';
+          });
 
-      // Agregar evento click
-      opcionDiv.addEventListener('click', function () {
-        seleccionarOpcion(opcion.id, opcion.nombre);
-      });
+          opcionDiv.addEventListener('mouseleave', function () {
+            this.style.backgroundColor = '';
+            this.style.borderColor = '';
+          });
 
-      opcionesContainer.appendChild(opcionDiv);
-    });
+          // Agregar evento click
+          opcionDiv.addEventListener('click', function () {
+            seleccionarOpcion(opcion.id, opcion.nombre);
+          });
+
+          opcionesContainer.appendChild(opcionDiv);
+        });
+      } else {
+        opcionesContainer.innerHTML = '<div class="alert alert-warning">Error al cargar las opciones</div>';
+      }
+    } catch (error) {
+      console.error('Error cargando opciones:', error);
+      opcionesContainer.innerHTML = '<div class="alert alert-danger">Error de conexión al cargar las opciones</div>';
+    }
   }
 
   // Función para seleccionar una opción

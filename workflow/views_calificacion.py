@@ -17,11 +17,21 @@ def calificar_documento(request):
         estado = data.get('estado')  # 'bueno' o 'malo'
         opcion_desplegable_id = data.get('opcion_desplegable_id')
         
+        print(f"DEBUG: Calificando documento - requisito_id: {requisito_solicitud_id}, estado: {estado}, opcion_id: {opcion_desplegable_id}")
+        
         # Validar datos
         if not requisito_solicitud_id or estado not in ['bueno', 'malo', 'pendiente']:
             return JsonResponse({'error': 'Datos inválidos'}, status=400)
         
         requisito_solicitud = get_object_or_404(RequisitoSolicitud, id=requisito_solicitud_id)
+        
+        # Validar opcion_desplegable_id si se proporciona
+        opcion_desplegable = None
+        if opcion_desplegable_id and opcion_desplegable_id != '' and opcion_desplegable_id != 'null':
+            try:
+                opcion_desplegable = OpcionDesplegable.objects.get(id=opcion_desplegable_id)
+            except OpcionDesplegable.DoesNotExist:
+                return JsonResponse({'error': f'Opción desplegable con ID {opcion_desplegable_id} no existe'}, status=400)
         
         # Obtener o crear calificación (un usuario solo puede tener una calificación por documento)
         calificacion, created = CalificacionDocumentoBackoffice.objects.update_or_create(
@@ -29,7 +39,7 @@ def calificar_documento(request):
             calificado_por=request.user,
             defaults={
                 'estado': estado,
-                'opcion_desplegable_id': opcion_desplegable_id if opcion_desplegable_id else None
+                'opcion_desplegable': opcion_desplegable
             }
         )
         
@@ -55,6 +65,9 @@ def calificar_documento(request):
         })
         
     except Exception as e:
+        print(f"ERROR en calificar_documento: {str(e)}")
+        import traceback
+        print(f"TRACEBACK: {traceback.format_exc()}")
         return JsonResponse({'error': str(e)}, status=500)
 
 
@@ -223,6 +236,31 @@ def obtener_calificaciones_documento(request, requisito_solicitud_id):
         print(f"DEBUG ERROR TYPE: {type(e)}")
         import traceback
         print(f"DEBUG TRACEBACK: {traceback.format_exc()}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def obtener_opciones_desplegables(request):
+    """Vista AJAX para obtener todas las opciones desplegables activas"""
+    try:
+        opciones = OpcionDesplegable.objects.filter(activo=True).order_by('orden', 'nombre')
+        
+        opciones_data = []
+        for opcion in opciones:
+            opciones_data.append({
+                'id': opcion.id,
+                'nombre': opcion.nombre,
+                'descripcion': opcion.descripcion
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'data': opciones_data
+        })
+        
+    except Exception as e:
+        print(f"ERROR en obtener_opciones_desplegables: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
 
 

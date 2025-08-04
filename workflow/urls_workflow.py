@@ -320,6 +320,7 @@ urlpatterns += [
     path('api/documento/<int:requisito_solicitud_id>/comentarios/', views_calificacion.obtener_comentarios_documento, name='obtener_comentarios_documento'),
     path('api/documento/<int:requisito_solicitud_id>/calificaciones/', views_calificacion.obtener_calificaciones_documento, name='obtener_calificaciones_documento'),
     path('api/documento/subsanar/', views_calificacion.subsanar_documento, name='subsanar_documento'),
+    path('api/opciones-desplegables/', views_calificacion.obtener_opciones_desplegables, name='obtener_opciones_desplegables'),
 ]
 
 
