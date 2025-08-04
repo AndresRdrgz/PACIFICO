@@ -930,6 +930,15 @@
         display: block !important;
     }
 
+    /* Ensure requisitos section is hidden by default */
+    #requisitosSection {
+        display: none !important;
+    }
+
+    #requisitosSection.show {
+        display: block !important;
+    }
+
     /* Auto-populated field styling */
     .auto-populated-field {
         background-color: #f8fff8 !important;
@@ -1200,13 +1209,14 @@
         const validation = await validateCotizacionDuplicate(cotizacionId, pipelineId);
         
         if (validation.isDuplicate) {
-            const userConfirmed = confirm(
-                `Esta cotización ya está siendo utilizada en otra solicitud (${validation.existingSolicitud?.codigo || 'Sin código'}).\n\n` +
-                `¿Está seguro de que desea continuar creando una solicitud duplicada?`
+            // Show error message and prevent creation
+            alert(
+                `Error: Esta cotización ya está siendo utilizada en otra solicitud (${validation.existingSolicitud?.codigo || 'Sin código'}).\n\n` +
+                `No es posible crear un nuevo negocio con una cotización que ya está vinculada a otro negocio.`
             );
             
             return { 
-                canProceed: userConfirmed, 
+                canProceed: false, 
                 isDuplicate: true,
                 existingSolicitud: validation.existingSolicitud 
             };
