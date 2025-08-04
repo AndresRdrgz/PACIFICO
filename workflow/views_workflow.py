@@ -9073,8 +9073,8 @@ def api_solicitud_brief(request, solicitud_id):
 
         # Datos de entrevista asociada (formulario general)
         entrevista_info = None
-        if hasattr(solicitud, 'formulario_general') and solicitud.formulario_general:
-            entrevista = solicitud.formulario_general
+        if hasattr(solicitud, 'entrevista_cliente') and solicitud.entrevista_cliente:
+            entrevista = solicitud.entrevista_cliente
             # Construir cédula completa
             cedula_completa = ""
             if entrevista.provincia_cedula and entrevista.tipo_letra and entrevista.tomo_cedula and entrevista.partida_cedula:
@@ -14366,7 +14366,7 @@ def asociar_formulario_general(request, solicitud_id):
         entrevista = get_object_or_404(ClienteEntrevista, id=entrevista_id)
         
         # Asociar la entrevista a la solicitud
-        solicitud.formulario_general = entrevista
+        solicitud.entrevista_cliente = entrevista
         solicitud.save()
         
         # Registrar en historial si es necesario
@@ -14415,8 +14415,8 @@ def obtener_formulario_general_asociado(request, solicitud_id):
         # Verificar que la solicitud existe
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         
-        if solicitud.formulario_general:
-            entrevista = solicitud.formulario_general
+        if solicitud.entrevista_cliente:
+            entrevista = solicitud.entrevista_cliente
             entrevista_data = {
                 'id': entrevista.id,
                 'nombre': entrevista.nombre or '',

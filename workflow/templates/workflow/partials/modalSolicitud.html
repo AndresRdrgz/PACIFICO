@@ -521,6 +521,8 @@
         font-size: 14px;
         color: white;
         text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        flex-shrink: 0; /* Evitar que se comprima */
+        overflow: visible; /* Permitir que el badge se vea fuera del contenedor */
     }
 
     .icon-alert.urgente {
@@ -537,11 +539,15 @@
     .icon-alert.asociar-entrevista {
         background: linear-gradient(135deg, #17a2b8, #138496);
         box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
+        position: relative;
+        overflow: visible;
     }
 
     .icon-alert.asociar-entrevista.asociada {
         background: linear-gradient(135deg, #28a745, #20c997);
         box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+        position: relative;
+        overflow: visible;
     }
 
     @keyframes pulseSubtle {
@@ -578,20 +584,47 @@
 
     .count-badge, .icon-alert .status-badge {
         position: absolute;
-        top: -4px;
-        right: -4px;
+        top: -6px;
+        right: -6px;
         background: white;
         color: #333;
         font-size: 10px;
         font-weight: bold;
-        width: 16px;
-        height: 16px;
+        width: 18px;
+        height: 18px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        border: 1px solid rgba(255,255,255,0.8);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        border: 2px solid rgba(255,255,255,1);
+        line-height: 1;
+        z-index: 10;
+        transform: translateX(0) translateY(0);
+    }
+
+    /* Corrección específica para el badge de asociar entrevista */
+    #estadoEntrevistaBadge {
+        position: absolute !important;
+        top: -8px !important;
+        right: -8px !important;
+        background: white !important;
+        color: #333 !important;
+        font-size: 10px !important;
+        font-weight: bold !important;
+        width: 18px !important;
+        height: 18px !important;
+        border-radius: 50% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+        border: 2px solid rgba(255,255,255,1) !important;
+        line-height: 1 !important;
+        z-index: 15 !important;
+        transform: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
     .icon-alert .status-badge.asociada {
@@ -8282,6 +8315,24 @@
         } else {
             console.error('Documentos urgentes tab not found!');
         }
+
+        // Event listener for formulario general tab activation
+        const formularioGeneralTab = document.getElementById('formulario-general-tab');
+        if (formularioGeneralTab) {
+            formularioGeneralTab.addEventListener('shown.bs.tab', function (event) {
+                console.log('📋 Formulario General tab activated');
+                
+                // Verificar estado de entrevista cuando se abre el tab
+                if (window.currentModalData && window.currentModalData.solicitud) {
+                    console.log('📋 Verificando estado de entrevista en tab...');
+                    verificarEstadoEntrevista(window.currentModalData.solicitud);
+                } else {
+                    console.log('⚠️ No hay datos de solicitud disponibles para verificar entrevista');
+                }
+            });
+        } else {
+            console.error('Formulario general tab not found!');
+        }
     });
 
     // ========================================
@@ -8643,8 +8694,9 @@
                 
                 // Recargar el modal principal para mostrar los datos actualizados
                 setTimeout(() => {
-                    loadSolicitudModal(window.currentModalData.solicitud.id);
-                }, 1000);
+                    // Solo actualizar el estado visual del tab
+                    verificarEstadoEntrevista(window.currentModalData.solicitud);
+                }, 500);
             } else {
                 throw new Error(data.error || 'Error al asociar entrevista');
             }
@@ -8670,15 +8722,16 @@
             return;
         }
         
-        // Realizar la desasociación via AJAX
-        fetch('/workflow/desasociar-entrevista/', {
+        // Realizar la desasociación via AJAX usando el endpoint existente
+        fetch('/workflow/asociar-entrevista/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCsrfToken()
             },
             body: JSON.stringify({
-                solicitud_id: window.currentModalData.solicitud.id
+                solicitud_id: window.currentModalData.solicitud.id,
+                accion: 'desasociar'
             })
         })
         .then(response => response.json())
@@ -8700,22 +8753,50 @@
     }
 
     function actualizarEstadoEntrevista(tieneEntrevista) {
+        console.log('🔄 actualizarEstadoEntrevista llamada con:', tieneEntrevista);
+        
         const iconAsociar = document.getElementById('iconAsociarEntrevista');
         const iconoElement = document.getElementById('iconAsociarEntrevistaIcon');
         const badgeElement = document.getElementById('estadoEntrevistaBadge');
         
+        console.log('🔍 Elementos encontrados:', {
+            iconAsociar: !!iconAsociar,
+            iconoElement: !!iconoElement,
+            badgeElement: !!badgeElement
+        });
+        
         if (tieneEntrevista) {
-            iconAsociar.classList.add('asociada');
-            iconAsociar.title = 'Entrevista asociada - Click para ver detalles';
-            iconoElement.className = 'fas fa-check';
-            badgeElement.textContent = '✓';
-            badgeElement.classList.add('asociada');
+            console.log('✅ Configurando estado ASOCIADA');
+            if (iconAsociar) {
+                iconAsociar.classList.add('asociada');
+                iconAsociar.title = 'Entrevista asociada - Click para ver detalles';
+                console.log('✅ IconAsociar configurado como asociada');
+            }
+            if (iconoElement) {
+                iconoElement.className = 'fas fa-check';
+                console.log('✅ IconoElement cambiado a fa-check');
+            }
+            if (badgeElement) {
+                badgeElement.textContent = '✓';
+                badgeElement.classList.add('asociada');
+                console.log('✅ BadgeElement cambiado a ✓ y clase asociada agregada');
+            }
         } else {
-            iconAsociar.classList.remove('asociada');
-            iconAsociar.title = 'Asociar entrevista de cliente';
-            iconoElement.className = 'fas fa-link';
-            badgeElement.textContent = '!';
-            badgeElement.classList.remove('asociada');
+            console.log('❌ Configurando estado SIN ASOCIAR');
+            if (iconAsociar) {
+                iconAsociar.classList.remove('asociada');
+                iconAsociar.title = 'Asociar entrevista de cliente';
+                console.log('❌ IconAsociar configurado sin asociar');
+            }
+            if (iconoElement) {
+                iconoElement.className = 'fas fa-link';
+                console.log('❌ IconoElement cambiado a fa-link');
+            }
+            if (badgeElement) {
+                badgeElement.textContent = '!';
+                badgeElement.classList.remove('asociada');
+                console.log('❌ BadgeElement cambiado a ! y clase asociada removida');
+            }
         }
     }
 
@@ -8748,6 +8829,9 @@
             return;
         }
         
+        console.log('🔍 Verificando estado de entrevista para solicitud:', solicitud);
+        console.log('🔍 Datos de entrevista_cliente:', solicitud.entrevista_cliente);
+        
         // Mostrar siempre el botón de asociar entrevista
         const alertContainer = document.getElementById('documentosIconsAlert');
         if (alertContainer) {
@@ -8756,6 +8840,7 @@
         
         // Verificar si tiene entrevista asociada
         const tieneEntrevista = solicitud.entrevista_cliente && solicitud.entrevista_cliente.id;
+        console.log('🎯 ¿Tiene entrevista asociada?', tieneEntrevista);
         
         // Actualizar el estado del botón
         actualizarEstadoEntrevista(tieneEntrevista);
@@ -8768,14 +8853,16 @@
         // Actualizar el contenido del tab
         if (tieneEntrevista) {
             const entrevista = solicitud.entrevista_cliente;
+            console.log('🎯 Entrevista encontrada:', entrevista);
             mostrarEstadoConEntrevista({
                 nombre: entrevista.nombre_completo || 'No disponible',
                 cedula: entrevista.cedula || 'No disponible',
                 email: entrevista.email || 'No disponible',
                 telefono: entrevista.telefono || 'No disponible',
-                fecha: entrevista.fecha_creacion || 'No disponible'
+                fecha: entrevista.fecha_entrevista || 'No disponible'
             });
         } else {
+            console.log('❌ No hay entrevista asociada');
             mostrarEstadoSinEntrevista();
             // Iniciar búsqueda automática por cédula cuando se carga el tab
             buscarEntrevistasPorCedulaEnTab(solicitud.cliente_cedula_completa);
@@ -9005,13 +9092,32 @@
             if (data.success) {
                 showNotification('Entrevista asociada exitosamente', 'success');
                 
-                // Actualizar el estado del botón y tab
+                // Actualizar los datos de la solicitud con la entrevista asociada
+                if (window.currentModalData && window.currentModalData.solicitud) {
+                    window.currentModalData.solicitud.entrevista_cliente = data.entrevista;
+                    console.log('✅ Datos de solicitud actualizados con entrevista:', data.entrevista);
+                }
+                
+                // Actualizar el estado del botón de asociar entrevista
                 actualizarEstadoEntrevista(true);
                 
-                // Recargar el modal principal para mostrar los datos actualizados
+                // Mostrar el estado con entrevista asociada en el tab
                 setTimeout(() => {
-                    loadSolicitudModal(window.currentModalData.solicitud.id);
-                }, 1000);
+                    if (data.entrevista) {
+                        mostrarEstadoConEntrevista({
+                            nombre: data.entrevista.nombre_completo || 'No disponible',
+                            cedula: data.entrevista.cedula || 'No disponible',
+                            email: 'Asociada exitosamente',
+                            telefono: data.entrevista.celular || '',
+                            fecha: data.entrevista.fecha_creacion || new Date().toLocaleDateString()
+                        });
+                        
+                        // Ocultar la sección de búsqueda y selección
+                        document.getElementById('entrevistaSeleccionadaTab').style.display = 'none';
+                        document.getElementById('resultadosEntrevistasTab').innerHTML = '';
+                        document.getElementById('buscarEntrevistaTab').value = '';
+                    }
+                }, 500);
             } else {
                 throw new Error(data.error || 'Error al asociar entrevista');
             }
