@@ -4256,7 +4256,7 @@
 
                     if (data.success) {
                         // Llenar la lista de requisitos faltantes
-                        window.llenarListaRequisitosFaltantes(data.requisitos, data.total_requisitos, data.requisitos_completos);
+                        window.llenarListaRequisitosFaltantes(data.requisitos, data.total_requisitos, data.requisitos_completos, data);
 
                         // Configurar event listeners del modal
                         window.configurarEventListenersModal(solicitudId, nuevaEtapaId, callbackExito, callbackCancelacion);
@@ -4287,7 +4287,7 @@
         }
 
         // Función unificada para llenar la lista de requisitos en el modal
-        window.llenarListaRequisitosFaltantes = function (requisitos, totalRequisitos, requisitosCompletos) {
+        window.llenarListaRequisitosFaltantes = function (requisitos, totalRequisitos, requisitosCompletos, data) {
             const listaContainer = document.getElementById('listaRequisitosFaltantes');
             const btnValidar = document.getElementById('btnValidarYContinuar');
 
@@ -4304,61 +4304,127 @@
             // Store the data globally for use by verification function
             window.currentRequisitosData = {
                 requisitos: requisitos,
+                requisitos_obligatorios: data.requisitos_obligatorios || [],
+                requisitos_opcionales: data.requisitos_opcionales || [],
                 total_requisitos: totalRequisitos,
-                requisitos_completos: requisitosCompletos
+                total_requisitos_obligatorios: data.total_requisitos_obligatorios || 0,
+                total_requisitos_opcionales: data.total_requisitos_opcionales || 0,
+                requisitos_completos: requisitosCompletos,
+                requisitos_obligatorios_completos: data.requisitos_obligatorios_completos || 0,
+                total_obligatorios_faltantes: data.total_obligatorios_faltantes || 0
             };
 
             // Limpiar contenedor
             listaContainer.innerHTML = '';
 
-            // Si todos los requisitos están completos, mostrar mensaje de éxito
-            if (requisitosCompletos === totalRequisitos) {
-                btnValidar.innerHTML = `<i class="fas fa-check me-2"></i>Todos los Requisitos Completos - Continuar`;
-                btnValidar.className = 'btn btn-success';
-                btnValidar.disabled = false;
-                listaContainer.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>Todos los requisitos están completos</div>';
-                return;
-            }
+            // Check if all mandatory requirements are complete
+            const allMandatoryComplete = data.total_obligatorios_faltantes === 0;
 
-            // Validar que requisitos sea un array
-            if (!Array.isArray(requisitos)) {
-                console.error('❌ requisitos no es un array:', requisitos);
-                listaContainer.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>Error al cargar requisitos</div>';
-                btnValidar.disabled = true;
-                return;
-            }
-
-            // Actualizar el botón con el conteo correcto
-            btnValidar.innerHTML = `<i class="fas fa-check me-2"></i>Validar y Continuar (${requisitosCompletos}/${totalRequisitos})`;
-            if (requisitosCompletos === totalRequisitos) {
+            // Update button based on mandatory requirements
+            if (allMandatoryComplete) {
+                btnValidar.innerHTML = `<i class="fas fa-check me-2"></i>Requisitos Obligatorios Completos - Continuar`;
                 btnValidar.className = 'btn btn-success';
                 btnValidar.disabled = false;
             } else {
+                btnValidar.innerHTML = `<i class="fas fa-check me-2"></i>Validar y Continuar (${data.requisitos_obligatorios_completos}/${data.total_requisitos_obligatorios} obligatorios)`;
                 btnValidar.className = 'btn btn-primary';
                 btnValidar.disabled = true;
             }
 
-            if (requisitos.length === 0) {
-                listaContainer.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>Todos los requisitos están completos</div>';
+            // Separar requisitos en obligatorios y opcionales
+            const requisitosObligatorios = data.requisitos_obligatorios || [];
+            const requisitosOpcionales = data.requisitos_opcionales || [];
+
+            // Si hay requisitos obligatorios, mostrar sección
+            if (requisitosObligatorios.length > 0) {
+                const seccionObligatoriosHtml = `
+                    <div class="seccion-requisitos">
+                        <div class="seccion-titulo obligatorio">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                                    <h6 class="mb-0 fw-bold">Requisitos Obligatorios</h6>
+                                </div>
+                                <span class="badge badge-obligatorio">${data.requisitos_obligatorios_completos}/${data.total_requisitos_obligatorios}</span>
+                            </div>
+                            <small class="text-muted d-block mt-1">Estos documentos son necesarios para continuar</small>
+                        </div>
+                        <div id="requisitos-obligatorios-lista"></div>
+                    </div>
+                `;
+                listaContainer.insertAdjacentHTML('beforeend', seccionObligatoriosHtml);
+                
+                // Agregar requisitos obligatorios
+                const listaObligatorios = document.getElementById('requisitos-obligatorios-lista');
+                requisitosObligatorios.forEach(requisito => {
+                    const requisitoHtml = buildRequisitoHtml(requisito, true);
+                    listaObligatorios.insertAdjacentHTML('beforeend', requisitoHtml);
+                });
+            }
+
+            // Si hay requisitos opcionales, mostrar sección
+            if (requisitosOpcionales.length > 0) {
+                const requisitosOpcionalesCompletos = requisitosOpcionales.filter(req => req.esta_cumplido).length;
+                const seccionOpcionalesHtml = `
+                    <div class="seccion-requisitos">
+                        <div class="seccion-titulo opcional">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-plus-circle text-secondary me-2"></i>
+                                    <h6 class="mb-0 fw-bold">Requisitos Opcionales</h6>
+                                </div>
+                                <span class="badge badge-opcional">${requisitosOpcionalesCompletos}/${data.total_requisitos_opcionales}</span>
+                            </div>
+                            <small class="text-muted d-block mt-1">Documentos adicionales que pueden facilitar el proceso</small>
+                        </div>
+                        <div id="requisitos-opcionales-lista"></div>
+                    </div>
+                `;
+                listaContainer.insertAdjacentHTML('beforeend', seccionOpcionalesHtml);
+                
+                // Agregar requisitos opcionales
+                const listaOpcionales = document.getElementById('requisitos-opcionales-lista');
+                requisitosOpcionales.forEach(requisito => {
+                    const requisitoHtml = buildRequisitoHtml(requisito, false);
+                    listaOpcionales.insertAdjacentHTML('beforeend', requisitoHtml);
+                });
+            }
+
+            // Si no hay requisitos de ningún tipo
+            if (requisitosObligatorios.length === 0 && requisitosOpcionales.length === 0) {
+                listaContainer.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>No hay requisitos específicos para esta transición</div>';
+                btnValidar.innerHTML = `<i class="fas fa-check me-2"></i>Continuar`;
+                btnValidar.className = 'btn btn-success';
+                btnValidar.disabled = false;
                 return;
             }
 
-            requisitos.forEach(requisito => {
-                const isCompleto = requisito.esta_cumplido;
-                const tituloClass = isCompleto ? 'text-success' : 'text-danger';
-                const tituloIcon = isCompleto ? 'fa-check-circle' : 'fa-exclamation-triangle';
-                const badgeClass = isCompleto ? 'bg-success' : 'bg-danger';
-                const badgeText = isCompleto ? 'Completo' : 'Faltante';
-                const cardClass = isCompleto ? 'border-success' : 'border-danger';
+            // Configurar event listeners para los inputs de archivo
+            window.configurarEventListenersArchivos();
 
-                const requisitoHtml = `
-            <div class="card mb-3 requisito-card ${cardClass}" data-requisito-id="${requisito.id}">
+            // Verificar estado inicial de requisitos
+            window.verificarTodosRequisitosCompletos();
+        }
+
+        // Función auxiliar para construir HTML de un requisito
+        function buildRequisitoHtml(requisito, esObligatorio) {
+            const isCompleto = requisito.esta_cumplido;
+            const tituloClass = isCompleto ? 'text-success' : (esObligatorio ? 'text-danger' : 'text-secondary');
+            const tituloIcon = isCompleto ? 'fa-check-circle' : (esObligatorio ? 'fa-exclamation-triangle' : 'fa-plus-circle');
+            const badgeClass = isCompleto ? 'bg-success' : (esObligatorio ? 'bg-danger' : 'bg-secondary');
+            const badgeText = isCompleto ? 'Completo' : (esObligatorio ? 'Faltante' : 'Opcional');
+            const cardClass = isCompleto ? 'border-success' : (esObligatorio ? 'border-danger' : 'border-secondary');
+            const cardExtraClass = esObligatorio ? '' : 'opcional';
+
+            return `
+            <div class="card mb-3 requisito-card ${cardClass} ${cardExtraClass}" data-requisito-id="${requisito.id}">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <div>
                             <h6 class="card-title ${tituloClass} mb-1">
                                 <i class="fas ${tituloIcon} me-2"></i>
                                 ${requisito.nombre}
+                                ${esObligatorio ? '' : '<span class="badge bg-secondary ms-2" style="font-size: 0.7rem;">Opcional</span>'}
                             </h6>
                             ${requisito.descripcion ? `<p class="text-muted small mb-2">${requisito.descripcion}</p>` : ''}
                             ${requisito.mensaje_personalizado ? `<p class="text-info small mb-2"><i class="fas fa-info-circle me-1"></i>${requisito.mensaje_personalizado}</p>` : ''}
@@ -4397,7 +4463,7 @@
                             <div class="mb-3">
                                 <label class="form-label">
                                     ${requisito.archivo_actual ? 'Reemplazar archivo' : 'Subir archivo'} 
-                                    <span class="text-danger">*</span>
+                                    ${esObligatorio ? '<span class="text-danger">*</span>' : '<span class="text-secondary">(opcional)</span>'}
                                 </label>
                                 <input type="file" class="form-control requisito-file-input" 
                                        data-requisito-id="${requisito.id}" 
@@ -4417,15 +4483,6 @@
                 </div>
             </div>
         `;
-
-                listaContainer.insertAdjacentHTML('beforeend', requisitoHtml);
-            });
-
-            // Configurar event listeners para los inputs de archivo
-            window.configurarEventListenersArchivos();
-
-            // Verificar estado inicial de requisitos
-            window.verificarTodosRequisitosCompletos();
         }
 
         // Función para mostrar upload para reemplazar archivo
@@ -4706,59 +4763,61 @@
                 return false;
             }
 
-            const totalRequisitos = requisitosData.total_requisitos;
-            const requisitosCompletos = requisitosData.requisitos_completos;
+            // Focus on mandatory requirements only for validation
+            const totalRequisitosObligatorios = requisitosData.total_requisitos_obligatorios || 0;
+            const requisitosObligatoriosCompletos = requisitosData.requisitos_obligatorios_completos || 0;
+            const totalObligatoriosFaltantes = requisitosData.total_obligatorios_faltantes || 0;
 
-            // Count files selected for incomplete requirements
-            let archivosSeleccionadosParaIncompletos = 0;
-            const requisitosIncompletos = requisitosData.requisitos.filter(req => !req.esta_cumplido);
+            // Count files selected for incomplete mandatory requirements
+            let archivosSeleccionadosParaObligatoriosIncompletos = 0;
+            const requisitosObligatoriosIncompletos = (requisitosData.requisitos_obligatorios || []).filter(req => !req.esta_cumplido);
 
-            requisitosIncompletos.forEach(requisito => {
+            requisitosObligatoriosIncompletos.forEach(requisito => {
                 const fileInput = document.querySelector(`.requisito-file-input[data-requisito-id="${requisito.id}"]`);
                 if (fileInput && fileInput.files && fileInput.files.length > 0) {
                     // Check if file input is visible (not hidden due to completion)
                     const isVisible = fileInput.offsetParent !== null ||
                         getComputedStyle(fileInput).display !== 'none';
                     if (isVisible) {
-                        archivosSeleccionadosParaIncompletos++;
+                        archivosSeleccionadosParaObligatoriosIncompletos++;
                     }
                 }
             });
 
-            console.log('🔍 Verificando requisitos:', {
-                totalRequisitos,
-                requisitosCompletos,
-                archivosSeleccionadosParaIncompletos,
-                requisitosIncompletos: requisitosIncompletos.length,
-                requisitosData: requisitosData
+            console.log('🔍 Verificando requisitos obligatorios:', {
+                totalRequisitosObligatorios,
+                requisitosObligatoriosCompletos,
+                totalObligatoriosFaltantes,
+                archivosSeleccionadosParaObligatoriosIncompletos,
+                requisitosObligatoriosIncompletos: requisitosObligatoriosIncompletos.length
             });
 
-            // Early return for no requirements
-            if (totalRequisitos === 0) {
+            // Early return for no mandatory requirements
+            if (totalRequisitosObligatorios === 0) {
                 btnValidar.innerHTML = '<i class="fas fa-check me-2"></i>Continuar';
                 btnValidar.className = 'btn btn-success';
                 btnValidar.disabled = false;
                 return true;
             }
 
-            // All requirements completed
-            if (totalRequisitos === requisitosCompletos && totalRequisitos > 0) {
-                btnValidar.innerHTML = '<i class="fas fa-check me-2"></i>Todos los Requisitos Completos - Continuar';
+            // All mandatory requirements completed
+            if (totalObligatoriosFaltantes === 0) {
+                btnValidar.innerHTML = '<i class="fas fa-check me-2"></i>Requisitos Obligatorios Completos - Continuar';
                 btnValidar.className = 'btn btn-success';
                 btnValidar.disabled = false;
                 return true;
             }
 
-            // Files selected for incomplete requirements
-            if (archivosSeleccionadosParaIncompletos > 0) {
-                btnValidar.innerHTML = `<i class="fas fa-upload me-2"></i>Validar y Continuar (${requisitosCompletos}/${totalRequisitos})`;
+            // Files selected for incomplete mandatory requirements
+            if (archivosSeleccionadosParaObligatoriosIncompletos > 0) {
+                btnValidar.innerHTML = `<i class="fas fa-upload me-2"></i>Validar y Continuar (${requisitosObligatoriosCompletos}/${totalRequisitosObligatorios} obligatorios)`;
                 btnValidar.className = 'btn btn-primary';
                 btnValidar.disabled = false;
                 return false; // Not all complete, but can proceed with upload
             }
 
-            // No files selected and requirements missing
-            btnValidar.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Validar y Continuar (${requisitosCompletos}/${totalRequisitos})`;
+            // No files selected and mandatory requirements missing
+            btnValidar.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Completar Requisitos Obligatorios (${requisitosObligatoriosCompletos}/${totalRequisitosObligatorios})`;
             btnValidar.className = 'btn btn-warning';
             btnValidar.disabled = true;
             return false;

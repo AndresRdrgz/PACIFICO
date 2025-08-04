@@ -1673,11 +1673,11 @@
                             <i class="fas fa-paperclip"></i>
                         </div>
                         <div class="adjuntos-title">
-                            <h3 class="section-title">Adjuntos</h3>
+                            <h3 class="section-title">Adjuntos (Consulta)</h3>
                             
                         </div>
-                        {% if solicitud.requisitos.all %}
-                            {% with requisitos_con_archivos=solicitud.requisitos.all|length %}
+                        {% if requisitos_consulta %}
+                            {% with requisitos_con_archivos=requisitos_consulta|length %}
                                 {% if requisitos_con_archivos > 0 %}
                                     <div class="adjuntos-actions">
                                         <button type="button" class="btn btn-light btn-sm" id="btn-download-merged-pdf" title="Descargar todos los documentos en un solo PDF">
@@ -1689,8 +1689,8 @@
                         {% endif %}
                     </div>
                     <div class="adjuntos-content">
-                        {% if solicitud.requisitos.all %}
-                            {% for requisito_solicitud in solicitud.requisitos.all %}
+                        {% if requisitos_consulta %}
+                            {% for requisito_solicitud in requisitos_consulta %}
                                 <div class="adjunto-item" {% if requisito_solicitud.archivo %}title="{{ requisito_solicitud.archivo|get_file_name }}"{% endif %}>
                                     <div class="adjunto-icon">
                                         <i class="{{ requisito_solicitud.archivo|get_file_icon }}"></i>
@@ -1698,6 +1698,12 @@
                                     <div class="adjunto-details">
                                         <div class="adjunto-name">
                                             {{ requisito_solicitud.requisito.nombre }}
+                                            {% comment %}Show mandatory/optional badge based on transition configuration{% endcomment %}
+                                            {% if requisito_solicitud.es_obligatorio %}
+                                                <span class="badge bg-danger badge-sm ms-1">Obligatorio</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary badge-sm ms-1">Opcional</span>
+                                            {% endif %}
                                             {% if requisito_solicitud.archivo %}
                                                 <span class="adjunto-extension">({{ requisito_solicitud.archivo|get_file_extension }})</span>
                                                 <span class="adjunto-size">{{ requisito_solicitud.archivo|get_file_size }}</span>
@@ -1727,7 +1733,7 @@
                         {% else %}
                             <div class="alert alert-light text-center">
                                 <i class="fas fa-inbox me-2"></i>
-                                <small>Sin adjuntos disponibles</small>
+                                <small>Sin requisitos configurados para transición a Consulta</small>
                             </div>
                         {% endif %}
                     </div>

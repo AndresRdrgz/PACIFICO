@@ -21,6 +21,13 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib.utils import ImageReader
 from PIL import Image
+# PDF Generation imports
+try:
+    from xhtml2pdf import pisa
+    XHTML2PDF_AVAILABLE = True
+except ImportError:
+    pisa = None
+    XHTML2PDF_AVAILABLE = False
 from .modelsWorkflow import (
     Pipeline, Etapa, SubEstado, TransicionEtapa, PermisoEtapa, 
     Solicitud, HistorialSolicitud, Requisito, RequisitoPipeline, 
@@ -10188,15 +10195,18 @@ def api_obtener_requisitos_faltantes_detallado(request, solicitud_id):
                 'error': 'No existe una transición válida hacia esta etapa'
             }, status=400)
         
-        # Obtener TODOS los requisitos obligatorios para esta transición
+        # Obtener TODOS los requisitos para esta transición (obligatorios y opcionales)
         requisitos_transicion = RequisitoTransicion.objects.filter(
-            transicion=transicion,
-            obligatorio=True
+            transicion=transicion
         ).select_related('requisito')
         
         requisitos_detallados = []
+        requisitos_obligatorios = []
+        requisitos_opcionales = []
         total_requisitos = 0
         requisitos_completos = 0
+        requisitos_obligatorios_completos = 0
+        
         for req_transicion in requisitos_transicion:
             total_requisitos += 1
             
@@ -10213,13 +10223,16 @@ def api_obtener_requisitos_faltantes_detallado(request, solicitud_id):
             esta_completo = bool(requisito_solicitud and (requisito_solicitud.archivo or requisito_solicitud.cumplido))
             if esta_completo:
                 requisitos_completos += 1
+                if req_transicion.obligatorio:
+                    requisitos_obligatorios_completos += 1
             
             # Incluir TODOS los requisitos, no solo los faltantes
-            requisitos_detallados.append({
+            requisito_data = {
                 'id': req_transicion.requisito.id,
                 'nombre': req_transicion.requisito.nombre,
                 'descripcion': req_transicion.requisito.descripcion,
                 'mensaje_personalizado': req_transicion.mensaje_personalizado,
+                'obligatorio': req_transicion.obligatorio,
                 'tiene_archivo': bool(requisito_solicitud and requisito_solicitud.archivo),
                 'esta_cumplido': esta_completo,
                 'requisito_solicitud_id': requisito_solicitud.id if requisito_solicitud else None,
@@ -10228,7 +10241,20 @@ def api_obtener_requisitos_faltantes_detallado(request, solicitud_id):
                     'url': requisito_solicitud.archivo.url if requisito_solicitud and requisito_solicitud.archivo else None
                 } if requisito_solicitud and requisito_solicitud.archivo else None,
                 'observaciones': requisito_solicitud.observaciones if requisito_solicitud else ''
-            })
+            }
+            
+            requisitos_detallados.append(requisito_data)
+            
+            # Separar en obligatorios y opcionales
+            if req_transicion.obligatorio:
+                requisitos_obligatorios.append(requisito_data)
+            else:
+                requisitos_opcionales.append(requisito_data)
+        
+        # Calculate mandatory requirements count
+        total_requisitos_obligatorios = len(requisitos_obligatorios)
+        requisitos_obligatorios_faltantes = [req for req in requisitos_obligatorios if not req['esta_cumplido']]
+        total_obligatorios_faltantes = len(requisitos_obligatorios_faltantes)
         
         return JsonResponse({
             'success': True,
@@ -10239,10 +10265,17 @@ def api_obtener_requisitos_faltantes_detallado(request, solicitud_id):
                 'etapa_destino': nueva_etapa.nombre
             },
             'requisitos': requisitos_detallados,
+            'requisitos_obligatorios': requisitos_obligatorios,
+            'requisitos_opcionales': requisitos_opcionales,
             'total_requisitos': total_requisitos,
+            'total_requisitos_obligatorios': total_requisitos_obligatorios,
+            'total_requisitos_opcionales': len(requisitos_opcionales),
             'requisitos_completos': requisitos_completos,
+            'requisitos_obligatorios_completos': requisitos_obligatorios_completos,
             'requisitos_faltantes': [req for req in requisitos_detallados if not req['esta_cumplido']],
+            'requisitos_obligatorios_faltantes': requisitos_obligatorios_faltantes,
             'total_faltantes': total_requisitos - requisitos_completos,
+            'total_obligatorios_faltantes': total_obligatorios_faltantes,
             'puede_continuar_sin_requisitos': request.user.is_superuser or request.user.is_staff
         })
         
@@ -10808,6 +10841,48 @@ def detalle_solicitud_analisis(request, solicitud_id):
     cliente = solicitud.cliente if hasattr(solicitud, 'cliente') else None
     cotizacion = solicitud.cotizacion if hasattr(solicitud, 'cotizacion') else None
     historial = solicitud.historial.all().order_by('-fecha_inicio')
+    
+    # Get requisitos específicos para la transición hacia "Consulta"
+    # Buscar la etapa "Consulta" 
+    etapa_consulta = solicitud.pipeline.etapas.filter(nombre__icontains='Consulta').first()
+    requisitos_consulta = []
+    requisitos_consulta_info = []  # Información detallada de requisitos con obligatorio/opcional
+    
+    if etapa_consulta:
+        # Buscar transiciones que van hacia "Consulta"
+        transiciones_a_consulta = TransicionEtapa.objects.filter(
+            pipeline=solicitud.pipeline,
+            etapa_destino=etapa_consulta
+        )
+        
+        # Obtener RequisitoTransicion con información de obligatorio/opcional
+        requisitos_transicion = RequisitoTransicion.objects.filter(
+            transicion__in=transiciones_a_consulta
+        ).select_related('requisito', 'transicion')
+        
+        # Crear diccionario de requisitos con su estado obligatorio/opcional
+        requisitos_info_map = {}
+        for req_trans in requisitos_transicion:
+            requisitos_info_map[req_trans.requisito.id] = {
+                'obligatorio': req_trans.obligatorio,
+                'mensaje_personalizado': req_trans.mensaje_personalizado,
+                'transicion_nombre': req_trans.transicion.nombre
+            }
+        
+        # Obtener requisitos de la solicitud que están configurados para transiciones a Consulta
+        requisitos_ids = list(requisitos_info_map.keys())
+        requisitos_consulta = solicitud.requisitos.filter(
+            requisito_id__in=requisitos_ids
+        ).select_related('requisito')
+        
+        # Agregar información de obligatorio/opcional a cada requisito
+        for req_sol in requisitos_consulta:
+            if req_sol.requisito.id in requisitos_info_map:
+                req_sol.es_obligatorio = requisitos_info_map[req_sol.requisito.id]['obligatorio']
+                req_sol.mensaje_personalizado = requisitos_info_map[req_sol.requisito.id]['mensaje_personalizado']
+                req_sol.transicion_nombre = requisitos_info_map[req_sol.requisito.id]['transicion_nombre']
+    
+    # Mantener requisitos originales para compatibilidad, pero agregar requisitos_consulta
     requisitos = solicitud.requisitos.all().select_related('requisito')
     comentarios = solicitud.comentarios.all().order_by('-fecha_creacion')
     etapas_pipeline = solicitud.pipeline.etapas.all().order_by('orden')
@@ -10882,6 +10957,7 @@ def detalle_solicitud_analisis(request, solicitud_id):
         'cotizacion': cotizacion,
         'historial': historial,
         'requisitos': requisitos,
+        'requisitos_consulta': requisitos_consulta,  # Requisitos específicos para transición a Consulta
         'comentarios': comentarios,
         'etapas_pipeline': etapas_pipeline,
         'transiciones_disponibles': transiciones_disponibles,
@@ -15891,14 +15967,20 @@ def api_pdf_resultado_consulta(request, solicitud_id):
     API para generar PDF con el resultado de la consulta de análisis usando xhtml2pdf
     """
     try:
+        # Check if xhtml2pdf is available
+        if not XHTML2PDF_AVAILABLE:
+            return JsonResponse({
+                "success": False,
+                "error": "xhtml2pdf library is not available. Please install it with: pip install xhtml2pdf"
+            }, status=500)
+        
         # Obtener solicitud
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         
         # Parsear datos del request
         data = json.loads(request.body) if request.body else {}
         
-        # Generar PDF usando xhtml2pdf directamente (como en el sistema de email)
-        from xhtml2pdf import pisa
+        # Import required modules
         from django.template.loader import render_to_string
         from django.utils import timezone
         
@@ -16006,6 +16088,8 @@ def api_pdf_resultado_consulta(request, solicitud_id):
         }, status=400)
     except Exception as e:
         print(f"❌ Error generating PDF: {str(e)}")
+        import traceback
+        traceback.print_exc()  # This will help debug the issue
         return JsonResponse({
             "success": False,
             "error": f"Error interno: {str(e)}"
@@ -16260,14 +16344,20 @@ def api_pdf_resultado_comite(request, solicitud_id):
     API para generar PDF con el resultado del comité de análisis usando xhtml2pdf
     """
     try:
+        # Check if xhtml2pdf is available
+        if not XHTML2PDF_AVAILABLE:
+            return JsonResponse({
+                "success": False,
+                "error": "xhtml2pdf library is not available. Please install it with: pip install xhtml2pdf"
+            }, status=500)
+        
         # Obtener solicitud
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         
         # Parsear datos del request
         data = json.loads(request.body) if request.body else {}
         
-        # Generar PDF usando xhtml2pdf directamente (como en el sistema de email)
-        from xhtml2pdf import pisa
+        # Import required modules
         from django.template.loader import render_to_string
         from django.utils import timezone
         
