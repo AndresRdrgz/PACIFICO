@@ -220,9 +220,22 @@
                             </button>
                         </div>
 
+                        <!-- Botón Actualizar -->
+                        <button type="button" class="btn btn-warning btn-sm" id="btnActualizar"
+                            onclick="actualizarSolicitudes()" title="Actualizar lista de solicitudes"
+                            style="background: #ffc107; border-color: #ffc107; color: #212529; font-weight: 600; border: 2px solid #ffc107; transition: all 0.2s ease;"
+                            onmouseover="this.style.background='#ffca2c'; this.style.borderColor='#ffca2c';"
+                            onmouseout="this.style.background='#ffc107'; this.style.borderColor='#ffc107';">
+                            <i class="fas fa-sync-alt me-1"></i>
+                            Actualizar
+                        </button>
+
                         <!-- Botón Solicitudes Makito -->
-                        <a href="{% url 'workflow:makito_tracking' %}" class="btn btn-primary btn-sm"
-                            title="Tracking de Solicitudes Makito (APC y SURA)">
+                        <a href="{% url 'workflow:makito_tracking' %}" class="btn btn-warning btn-sm"
+                            title="Tracking de Solicitudes Makito (APC y SURA)"
+                            style="background: #ffc107; border-color: #ffc107; color: #212529; font-weight: 600; border: 2px solid #ffc107; transition: all 0.2s ease;"
+                            onmouseover="this.style.background='#ffca2c'; this.style.borderColor='#ffca2c';"
+                            onmouseout="this.style.background='#ffc107'; this.style.borderColor='#ffc107';">
                             <i class="fas fa-robot me-1"></i>
                             Solicitudes Makito
                         </a>
@@ -358,15 +371,21 @@
 
         <!-- Vista Móvil Mejorada: Solo visible en pantallas pequeñas -->
         <div class="vista-movil d-block d-sm-none">
-            <!-- Barra de búsqueda móvil -->
+            <!-- Barra de búsqueda móvil con botón actualizar -->
             <div class="bg-white rounded-lg shadow-sm p-4 mb-4 border">
-                <div class="relative">
-                    <input type="text" id="busquedaMovil"
-                        class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Buscar por código, cliente o cédula...">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center">
-                        <i class="fas fa-search text-gray-400"></i>
+                <div class="d-flex gap-2 align-items-center">
+                    <div class="flex-grow-1 position-relative">
+                        <input type="text" id="busquedaMovil"
+                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Buscar por código, cliente o cédula...">
+                        <div class="position-absolute" style="left: 12px; top: 50%; transform: translateY(-50%);">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </div>
                     </div>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="actualizarSolicitudes()" 
+                        title="Actualizar lista" style="white-space: nowrap; border: 2px solid #6c757d; font-weight: 600;">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
                 </div>
             </div>
 
@@ -1845,6 +1864,15 @@
         // Configurar scroll de tabla
         setupTableScroll();
 
+        // Configurar atajos de teclado
+        document.addEventListener('keydown', function(e) {
+            // F5 o Ctrl+R para actualizar
+            if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
+                e.preventDefault();
+                actualizarSolicitudes();
+            }
+        });
+
         // Ocultar loading
         hideLoading();
 
@@ -2513,6 +2541,32 @@
             // Redirigir con los nuevos parámetros
             var newUrl = window.location.pathname + '?' + urlParams.toString();
             window.location.href = newUrl;
+        };
+
+        // Función para actualizar solicitudes
+        window.actualizarSolicitudes = function () {
+            console.log('🔄 Actualizando lista de solicitudes...');
+            
+            // Mostrar indicador de carga en el botón
+            const btnActualizar = document.getElementById('btnActualizar');
+            if (btnActualizar) {
+                const originalContent = btnActualizar.innerHTML;
+                btnActualizar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Actualizando...';
+                btnActualizar.disabled = true;
+                
+                // Opcional: Mostrar notificación
+                if (typeof window.mostrarNotificacionAdvertencia === 'function') {
+                    window.mostrarNotificacionAdvertencia('Actualizando lista de solicitudes...');
+                }
+                
+                // Recargar la página manteniendo todos los parámetros actuales
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500); // Pequeño delay para mostrar el spinner
+            } else {
+                // Fallback si no se encuentra el botón
+                window.location.reload();
+            }
         };
 
         // Actualizar estado de botones según vista actual
