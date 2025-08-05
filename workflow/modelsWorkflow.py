@@ -444,6 +444,11 @@ class Solicitud(models.Model):
             elif self.cotizacion.tipoPrestamo == 'personal':
                 return "Préstamo Personal"
         return "N/A"
+    
+    @property
+    def requisitos_con_archivos(self):
+        """Obtiene solo los requisitos que tienen archivos cargados"""
+        return self.requisitos.filter(archivo__isnull=False).exclude(archivo='')
         
 
 

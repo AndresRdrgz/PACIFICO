@@ -734,7 +734,7 @@
                                 <div>
                                     <h2 class="mb-1 d-flex align-items-center">
                                         <i class="fas fa-users me-2"></i>
-                                        Comité: {{ solicitud.cliente_nombre|default:"Sin cliente" }}
+                                        Comité: {{ solicitud.cliente_nombre_completo|default:"Sin cliente" }}
                                     </h2>
                                     <div class="mt-1 d-flex align-items-center gap-4" style="font-size: 0.85em; opacity: 0.9;">
                                         {% if solicitud.creada_por %}
@@ -754,6 +754,19 @@
                                             <strong>Monto:</strong> 
                                             <span class="ms-1">{{ solicitud.monto_formateado }}</span>
                                         </div>
+                                        {% if solicitud.cotizacion and solicitud.cotizacion.observaciones %}
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-comments me-1"></i>
+                                            <strong>Motivo:</strong> 
+                                            <span class="ms-1" id="motivo-texto-corto">{{ solicitud.cotizacion.observaciones|truncatechars:100 }}</span>
+                                            <span class="ms-1" id="motivo-texto-completo" style="display: none;">{{ solicitud.cotizacion.observaciones }}</span>
+                                            {% if solicitud.cotizacion.observaciones|length > 100 %}
+                                            <button type="button" class="btn btn-link btn-sm p-0 ms-1" style="color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.8em;" onclick="toggleMotivoCompleto()" id="btn-toggle-motivo">
+                                                <i class="fas fa-chevron-down"></i><span> Ver más</span>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -1158,14 +1171,10 @@
                                     <div class="section-header-content">
                                         <i class="fas fa-paperclip text-success"></i>
                                         <h3 class="section-title">Documentos Adjuntos</h3>
-                                        {% if solicitud.requisitos.all %}
-                                            {% with requisitos_con_archivos=solicitud.requisitos.all|length %}
-                                                {% if requisitos_con_archivos > 0 %}
-                                                    <button type="button" class="btn btn-primary btn-sm ms-2" id="btn-download-merged-pdf" title="Descargar todos los documentos en un solo PDF" onclick="event.stopPropagation();">
-                                                        <i class="fas fa-download me-1"></i>Descargar Consolidado
-                                                    </button>
-                                                {% endif %}
-                                            {% endwith %}
+                                        {% if solicitud.requisitos_con_archivos %}
+                                            <button type="button" class="btn btn-primary btn-sm ms-2" id="btn-download-merged-pdf" title="Descargar todos los documentos en un solo PDF" onclick="event.stopPropagation();">
+                                                <i class="fas fa-download me-1"></i>Descargar Consolidado
+                                            </button>
                                         {% endif %}
                                     </div>
                                     <div class="section-toggle">
@@ -1174,42 +1183,40 @@
                                 </div>
                                 <div class="section-content">
                                     <div class="adjuntos-content">
-                                        {% if solicitud.requisitos.all %}
-                                            {% for requisito_solicitud in solicitud.requisitos.all %}
-                                                <div class="adjunto-item" {% if requisito_solicitud.archivo %}title="{{ requisito_solicitud.archivo|get_file_name }}"{% endif %}>
-                                                    <div class="adjunto-icon">
-                                                        <i class="{{ requisito_solicitud.archivo|get_file_icon }}"></i>
-                                                    </div>
-                                                    <div class="adjunto-details">
-                                                        <div class="adjunto-name">
-                                                            {{ requisito_solicitud.requisito.nombre }}
-                                                            {% if requisito_solicitud.archivo %}
+                                        {% with requisitos_con_archivos=solicitud.requisitos_con_archivos %}
+                                            {% if requisitos_con_archivos %}
+                                                {% for requisito_solicitud in requisitos_con_archivos %}
+                                                    <div class="adjunto-item" title="{{ requisito_solicitud.archivo|get_file_name }}">
+                                                        <div class="adjunto-icon">
+                                                            <i class="{{ requisito_solicitud.archivo|get_file_icon }}"></i>
+                                                        </div>
+                                                        <div class="adjunto-details">
+                                                            <div class="adjunto-name">
+                                                                {{ requisito_solicitud.requisito.nombre }}
                                                                 <span class="adjunto-extension">({{ requisito_solicitud.archivo|get_file_extension }})</span>
                                                                 <span class="adjunto-size">{{ requisito_solicitud.archivo|get_file_size }}</span>
+                                                            </div>
+                                                            {% if requisito_solicitud.observaciones %}
+                                                                <div class="adjunto-observaciones">
+                                                                    <strong>Observaciones:</strong> {{ requisito_solicitud.observaciones }}
+                                                                </div>
                                                             {% endif %}
                                                         </div>
-                                                        {% if requisito_solicitud.observaciones %}
-                                                            <div class="adjunto-observaciones">
-                                                                <strong>Observaciones:</strong> {{ requisito_solicitud.observaciones }}
-                                                            </div>
-                                                        {% endif %}
-                                                    </div>
-                                                    {% if requisito_solicitud.archivo %}
                                                         <div class="adjunto-actions">
                                                             <a href="{{ requisito_solicitud.archivo.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
                                                                 <i class="fas fa-eye me-1"></i>Ver
                                                             </a>
                                                         </div>
-                                                    {% endif %}
+                                                    </div>
+                                                {% endfor %}
+                                            {% else %}
+                                                <div class="text-center py-4">
+                                                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                                    <h5 class="text-muted">No hay documentos adjuntos</h5>
+                                                    <p class="text-muted">Esta solicitud no tiene documentos adjuntos cargados.</p>
                                                 </div>
-                                            {% endfor %}
-                                        {% else %}
-                                            <div class="text-center py-4">
-                                                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                                                <h5 class="text-muted">No hay documentos adjuntos</h5>
-                                                <p class="text-muted">Esta solicitud no tiene documentos adjuntos.</p>
-                                            </div>
-                                        {% endif %}
+                                            {% endif %}
+                                        {% endwith %}
                                     </div>
                                 </div>
                             </div>
@@ -1488,7 +1495,7 @@
                         <div class="d-flex align-items-center">
                             <i class="fas fa-info-circle me-2"></i>
                             <div>
-                                <strong>Solicitud:</strong> {{ solicitud.codigo }} - {{ solicitud.cliente_nombre|default:"Sin cliente" }}
+                                <strong>Solicitud:</strong> {{ solicitud.codigo }} - {{ solicitud.cliente_nombre_completo|default:"Sin cliente" }}
                                 <br>
                                 <strong>Monto:</strong> {{ solicitud.monto_formateado }}
                             </div>
@@ -1663,6 +1670,27 @@
         } else {
             content.classList.add('collapsed');
             header.classList.add('collapsed');
+        }
+    }
+    
+    // Función para toggle del motivo completo
+    function toggleMotivoCompleto() {
+        const textoCorto = document.getElementById('motivo-texto-corto');
+        const textoCompleto = document.getElementById('motivo-texto-completo');
+        const btnToggle = document.getElementById('btn-toggle-motivo');
+        
+        if (textoCorto && textoCompleto && btnToggle) {
+            if (textoCorto.style.display !== 'none') {
+                // Mostrar texto completo
+                textoCorto.style.display = 'none';
+                textoCompleto.style.display = 'inline';
+                btnToggle.innerHTML = '<i class="fas fa-chevron-up"></i><span> Ver menos</span>';
+            } else {
+                // Mostrar texto corto
+                textoCorto.style.display = 'inline';
+                textoCompleto.style.display = 'none';
+                btnToggle.innerHTML = '<i class="fas fa-chevron-down"></i><span> Ver más</span>';
+            }
         }
     }
     
