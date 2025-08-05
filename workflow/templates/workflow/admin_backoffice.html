@@ -1,0 +1,964 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+
+{% block title %}Admin Back Office - Gestión de Plantillas{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        border-radius: 10px;
+    }
+    
+    .admin-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+        overflow: hidden;
+    }
+    
+    .admin-card-header {
+        background: linear-gradient(90deg, #4CAF50 0%, #45a049 100%);
+        color: white;
+        padding: 1rem 1.5rem;
+        font-weight: 600;
+        display: flex;
+        justify-content: between;
+        align-items: center;
+    }
+    
+    .admin-table {
+        width: 100%;
+        margin: 0;
+    }
+    
+    .admin-table th {
+        background-color: #f8f9fa;
+        padding: 12px;
+        font-weight: 600;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .admin-table td {
+        padding: 12px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .admin-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .btn-admin {
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-admin-primary {
+        background: #007bff;
+        color: white;
+    }
+    
+    .btn-admin-primary:hover {
+        background: #0056b3;
+        color: white;
+    }
+    
+    .btn-admin-success {
+        background: #28a745;
+        color: white;
+    }
+    
+    .btn-admin-success:hover {
+        background: #1e7e34;
+        color: white;
+    }
+    
+    .btn-admin-warning {
+        background: #ffc107;
+        color: #212529;
+    }
+    
+    .btn-admin-warning:hover {
+        background: #e0a800;
+        color: #212529;
+    }
+    
+    .btn-admin-danger {
+        background: #dc3545;
+        color: white;
+    }
+    
+    .btn-admin-danger:hover {
+        background: #c82333;
+        color: white;
+    }
+    
+    .badge-admin {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .badge-admin-active {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .badge-admin-inactive {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .search-container {
+        margin-bottom: 1rem;
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+    
+    .search-input {
+        flex: 1;
+        padding: 10px 15px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+    
+    .tabs-container {
+        margin-bottom: 2rem;
+    }
+    
+    .nav-tabs-admin {
+        border-bottom: 2px solid #dee2e6;
+        margin-bottom: 2rem;
+    }
+    
+    .nav-tabs-admin .nav-link {
+        padding: 12px 24px;
+        border: none;
+        color: #6c757d;
+        font-weight: 500;
+        border-radius: 0;
+        background: none;
+    }
+    
+    .nav-tabs-admin .nav-link.active {
+        color: #495057;
+        background: none;
+        border-bottom: 3px solid #007bff;
+    }
+    
+    .nav-tabs-admin .nav-link:hover {
+        border-color: transparent;
+        color: #007bff;
+    }
+    
+    .modal-admin .modal-content {
+        border-radius: 10px;
+        border: none;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+    
+    .modal-admin .modal-header {
+        background: linear-gradient(90deg, #007bff 0%, #0056b3 100%);
+        color: white;
+        border-radius: 10px 10px 0 0;
+    }
+    
+    .form-group-admin {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group-admin label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    
+    .form-control-admin {
+        width: 100%;
+        padding: 10px 15px;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: border-color 0.3s ease;
+    }
+    
+    .form-control-admin:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="admin-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-2">
+                    <i class="fas fa-cogs me-3"></i>
+                    Admin Back Office
+                </h1>
+                <p class="mb-0 opacity-75">Gestión de plantillas y configuraciones del módulo Back Office</p>
+            </div>
+            <div>
+                <a href="/workflow/bandejas/" class="btn btn-light">
+                    <i class="fas fa-arrow-left me-2"></i>Volver a Bandejas
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs-container">
+        <ul class="nav nav-tabs nav-tabs-admin" id="adminTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="plantillas-tab" data-bs-toggle="tab" data-bs-target="#plantillas" type="button" role="tab">
+                    <i class="fas fa-file-alt me-2"></i>Plantillas de Orden de Expediente
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="catalogo-tab" data-bs-toggle="tab" data-bs-target="#catalogo" type="button" role="tab">
+                    <i class="fas fa-list me-2"></i>Catálogo Pendientes Antes Firma
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="adminTabContent">
+        <!-- Plantillas de Orden de Expediente -->
+        <div class="tab-pane fade show active" id="plantillas" role="tabpanel">
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <div class="d-flex justify-content-between align-items-center w-100">
+                        <h5 class="mb-0">
+                            <i class="fas fa-file-alt me-2"></i>
+                            Plantillas de Orden de Expediente
+                        </h5>
+                        <button type="button" class="btn-admin btn-admin-success" id="btn-nueva-plantilla">
+                            <i class="fas fa-plus"></i>Nueva Plantilla
+                        </button>
+                    </div>
+                </div>
+                <div class="p-3">
+                    <!-- Filtros y búsqueda -->
+                    <div class="search-container">
+                        <input type="text" class="search-input" id="search-plantillas" placeholder="Buscar plantillas...">
+                        <select class="form-control-admin" id="filter-pipeline-plantillas" style="width: 200px;">
+                            <option value="">Todos los pipelines</option>
+                        </select>
+                        <select class="form-control-admin" id="filter-activo-plantillas" style="width: 150px;">
+                            <option value="">Todos</option>
+                            <option value="true">Activos</option>
+                            <option value="false">Inactivos</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Tabla -->
+                    <div class="table-responsive">
+                        <table class="admin-table table">
+                            <thead>
+                                <tr>
+                                    <th>Pipeline</th>
+                                    <th>Sección</th>
+                                    <th>Orden Sección</th>
+                                    <th>Documento</th>
+                                    <th>Orden</th>
+                                    <th>Obligatorio</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="plantillas-tbody">
+                                <!-- Se llena via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Estado vacío -->
+                    <div class="empty-state" id="plantillas-empty" style="display: none;">
+                        <i class="fas fa-file-alt"></i>
+                        <h5>No hay plantillas</h5>
+                        <p>Crea tu primera plantilla de orden de expediente</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Catálogo Pendientes Antes Firma -->
+        <div class="tab-pane fade" id="catalogo" role="tabpanel">
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <div class="d-flex justify-content-between align-items-center w-100">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>
+                            Catálogo Pendientes Antes Firma
+                        </h5>
+                        <button type="button" class="btn-admin btn-admin-success" id="btn-nuevo-catalogo">
+                            <i class="fas fa-plus"></i>Nuevo Pendiente
+                        </button>
+                    </div>
+                </div>
+                <div class="p-3">
+                    <!-- Filtros y búsqueda -->
+                    <div class="search-container">
+                        <input type="text" class="search-input" id="search-catalogo" placeholder="Buscar pendientes...">
+                        <select class="form-control-admin" id="filter-activo-catalogo" style="width: 150px;">
+                            <option value="">Todos</option>
+                            <option value="true">Activos</option>
+                            <option value="false">Inactivos</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Tabla -->
+                    <div class="table-responsive">
+                        <table class="admin-table table">
+                            <thead>
+                                <tr>
+                                    <th>Orden</th>
+                                    <th>Nombre</th>
+                                    <th>Descripción</th>
+                                    <th>Estado</th>
+                                    <th>Fecha Creación</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="catalogo-tbody">
+                                <!-- Se llena via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Estado vacío -->
+                    <div class="empty-state" id="catalogo-empty" style="display: none;">
+                        <i class="fas fa-list"></i>
+                        <h5>No hay pendientes</h5>
+                        <p>Crea tu primer pendiente del catálogo</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Plantilla -->
+<div class="modal fade modal-admin" id="modalPlantilla" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalPlantillaTitle">Nueva Plantilla</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formPlantilla">
+                    <input type="hidden" id="plantilla-id">
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group-admin">
+                                <label for="plantilla-pipeline">Pipeline *</label>
+                                <select class="form-control-admin" id="plantilla-pipeline" required>
+                                    <option value="">Seleccionar pipeline...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group-admin">
+                                <label for="plantilla-seccion">Sección *</label>
+                                <input type="text" class="form-control-admin" id="plantilla-seccion" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group-admin">
+                                <label for="plantilla-orden-seccion">Orden de Sección *</label>
+                                <input type="number" class="form-control-admin" id="plantilla-orden-seccion" min="1" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group-admin">
+                                <label for="plantilla-orden">Orden del Documento *</label>
+                                <input type="number" class="form-control-admin" id="plantilla-orden" min="1" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group-admin">
+                        <label for="plantilla-nombre">Nombre del Documento *</label>
+                        <input type="text" class="form-control-admin" id="plantilla-nombre" required>
+                    </div>
+                    
+                    <div class="form-group-admin">
+                        <label for="plantilla-descripcion">Descripción</label>
+                        <textarea class="form-control-admin" id="plantilla-descripcion" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="plantilla-obligatorio" checked>
+                                <label class="form-check-label" for="plantilla-obligatorio">
+                                    Documento obligatorio
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="plantilla-activo" checked>
+                                <label class="form-check-label" for="plantilla-activo">
+                                    Activo
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-admin btn-admin-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn-admin btn-admin-primary" id="btn-guardar-plantilla">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Catálogo -->
+<div class="modal fade modal-admin" id="modalCatalogo" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalCatalogoTitle">Nuevo Pendiente</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formCatalogo">
+                    <input type="hidden" id="catalogo-id">
+                    
+                    <div class="form-group-admin">
+                        <label for="catalogo-nombre">Nombre *</label>
+                        <input type="text" class="form-control-admin" id="catalogo-nombre" required>
+                    </div>
+                    
+                    <div class="form-group-admin">
+                        <label for="catalogo-descripcion">Descripción</label>
+                        <textarea class="form-control-admin" id="catalogo-descripcion" rows="4"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group-admin">
+                                <label for="catalogo-orden">Orden</label>
+                                <input type="number" class="form-control-admin" id="catalogo-orden" min="0" value="0">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check mt-4">
+                                <input class="form-check-input" type="checkbox" id="catalogo-activo" checked>
+                                <label class="form-check-label" for="catalogo-activo">
+                                    Activo
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-admin btn-admin-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn-admin btn-admin-primary" id="btn-guardar-catalogo">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% csrf_token %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Variables globales
+    let plantillas = [];
+    let catalogos = [];
+    let pipelines = [];
+    
+    // Inicializar
+    cargarPipelines();
+    cargarPlantillas();
+    cargarCatalogos();
+    
+    // Event listeners
+    document.getElementById('btn-nueva-plantilla').addEventListener('click', abrirModalPlantilla);
+    document.getElementById('btn-nuevo-catalogo').addEventListener('click', abrirModalCatalogo);
+    document.getElementById('btn-guardar-plantilla').addEventListener('click', guardarPlantilla);
+    document.getElementById('btn-guardar-catalogo').addEventListener('click', guardarCatalogo);
+    
+    // Filtros
+    document.getElementById('search-plantillas').addEventListener('input', filtrarPlantillas);
+    document.getElementById('filter-pipeline-plantillas').addEventListener('change', filtrarPlantillas);
+    document.getElementById('filter-activo-plantillas').addEventListener('change', filtrarPlantillas);
+    
+    document.getElementById('search-catalogo').addEventListener('input', filtrarCatalogos);
+    document.getElementById('filter-activo-catalogo').addEventListener('change', filtrarCatalogos);
+    
+    // Funciones para Plantillas
+    async function cargarPipelines() {
+        try {
+            const response = await fetch('/workflow/api/pipelines/', {
+                headers: {
+                    'X-CSRFToken': getCsrfToken()
+                }
+            });
+            
+            if (response.ok) {
+                pipelines = await response.json();
+                actualizarSelectPipelines();
+            }
+        } catch (error) {
+            console.error('Error cargando pipelines:', error);
+        }
+    }
+    
+    function actualizarSelectPipelines() {
+        const selectModal = document.getElementById('plantilla-pipeline');
+        const selectFiltro = document.getElementById('filter-pipeline-plantillas');
+        
+        // Limpiar opciones
+        selectModal.innerHTML = '<option value="">Seleccionar pipeline...</option>';
+        selectFiltro.innerHTML = '<option value="">Todos los pipelines</option>';
+        
+        // Agregar opciones
+        pipelines.forEach(pipeline => {
+            selectModal.innerHTML += `<option value="${pipeline.id}">${pipeline.nombre}</option>`;
+            selectFiltro.innerHTML += `<option value="${pipeline.id}">${pipeline.nombre}</option>`;
+        });
+    }
+    
+    async function cargarPlantillas() {
+        try {
+            const response = await fetch('/workflow/api/admin-backoffice/plantillas/', {
+                headers: {
+                    'X-CSRFToken': getCsrfToken()
+                }
+            });
+            
+            if (response.ok) {
+                plantillas = await response.json();
+                mostrarPlantillas(plantillas);
+            }
+        } catch (error) {
+            console.error('Error cargando plantillas:', error);
+        }
+    }
+    
+    function mostrarPlantillas(datos) {
+        const tbody = document.getElementById('plantillas-tbody');
+        const empty = document.getElementById('plantillas-empty');
+        
+        if (datos.length === 0) {
+            tbody.innerHTML = '';
+            empty.style.display = 'block';
+            return;
+        }
+        
+        empty.style.display = 'none';
+        tbody.innerHTML = datos.map(plantilla => `
+            <tr>
+                <td>${plantilla.pipeline_nombre}</td>
+                <td>${plantilla.seccion}</td>
+                <td>${plantilla.orden_seccion}</td>
+                <td>${plantilla.nombre_documento}</td>
+                <td>${plantilla.orden}</td>
+                <td>
+                    <span class="badge-admin ${plantilla.obligatorio ? 'badge-admin-active' : 'badge-admin-inactive'}">
+                        ${plantilla.obligatorio ? 'Sí' : 'No'}
+                    </span>
+                </td>
+                <td>
+                    <span class="badge-admin ${plantilla.activo ? 'badge-admin-active' : 'badge-admin-inactive'}">
+                        ${plantilla.activo ? 'Activo' : 'Inactivo'}
+                    </span>
+                </td>
+                <td>
+                    <button type="button" class="btn-admin btn-admin-warning btn-sm" onclick="editarPlantilla(${plantilla.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button type="button" class="btn-admin btn-admin-danger btn-sm" onclick="eliminarPlantilla(${plantilla.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    
+    function filtrarPlantillas() {
+        const search = document.getElementById('search-plantillas').value.toLowerCase();
+        const pipeline = document.getElementById('filter-pipeline-plantillas').value;
+        const activo = document.getElementById('filter-activo-plantillas').value;
+        
+        let filtrados = plantillas.filter(plantilla => {
+            const matchSearch = !search || 
+                plantilla.nombre_documento.toLowerCase().includes(search) ||
+                plantilla.seccion.toLowerCase().includes(search) ||
+                plantilla.pipeline_nombre.toLowerCase().includes(search);
+            
+            const matchPipeline = !pipeline || plantilla.pipeline == pipeline;
+            const matchActivo = !activo || plantilla.activo.toString() === activo;
+            
+            return matchSearch && matchPipeline && matchActivo;
+        });
+        
+        mostrarPlantillas(filtrados);
+    }
+    
+    function abrirModalPlantilla(id = null) {
+        const modal = new bootstrap.Modal(document.getElementById('modalPlantilla'));
+        const title = document.getElementById('modalPlantillaTitle');
+        
+        if (id) {
+            title.textContent = 'Editar Plantilla';
+            cargarDatosPlantilla(id);
+        } else {
+            title.textContent = 'Nueva Plantilla';
+            limpiarFormularioPlantilla();
+        }
+        
+        modal.show();
+    }
+    
+    function limpiarFormularioPlantilla() {
+        document.getElementById('plantilla-id').value = '';
+        document.getElementById('plantilla-pipeline').value = '';
+        document.getElementById('plantilla-seccion').value = '';
+        document.getElementById('plantilla-orden-seccion').value = '';
+        document.getElementById('plantilla-orden').value = '';
+        document.getElementById('plantilla-nombre').value = '';
+        document.getElementById('plantilla-descripcion').value = '';
+        document.getElementById('plantilla-obligatorio').checked = true;
+        document.getElementById('plantilla-activo').checked = true;
+    }
+    
+    function cargarDatosPlantilla(id) {
+        const plantilla = plantillas.find(p => p.id == id);
+        if (plantilla) {
+            document.getElementById('plantilla-id').value = plantilla.id;
+            document.getElementById('plantilla-pipeline').value = plantilla.pipeline;
+            document.getElementById('plantilla-seccion').value = plantilla.seccion;
+            document.getElementById('plantilla-orden-seccion').value = plantilla.orden_seccion;
+            document.getElementById('plantilla-orden').value = plantilla.orden;
+            document.getElementById('plantilla-nombre').value = plantilla.nombre_documento;
+            document.getElementById('plantilla-descripcion').value = plantilla.descripcion || '';
+            document.getElementById('plantilla-obligatorio').checked = plantilla.obligatorio;
+            document.getElementById('plantilla-activo').checked = plantilla.activo;
+        }
+    }
+    
+    async function guardarPlantilla() {
+        const id = document.getElementById('plantilla-id').value;
+        const datos = {
+            pipeline: document.getElementById('plantilla-pipeline').value,
+            seccion: document.getElementById('plantilla-seccion').value,
+            orden_seccion: document.getElementById('plantilla-orden-seccion').value,
+            orden: document.getElementById('plantilla-orden').value,
+            nombre_documento: document.getElementById('plantilla-nombre').value,
+            descripcion: document.getElementById('plantilla-descripcion').value,
+            obligatorio: document.getElementById('plantilla-obligatorio').checked,
+            activo: document.getElementById('plantilla-activo').checked
+        };
+        
+        try {
+            const url = id ? `/workflow/api/admin-backoffice/plantillas/${id}/` : '/workflow/api/admin-backoffice/plantillas/';
+            const method = id ? 'PUT' : 'POST';
+            
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify(datos)
+            });
+            
+            if (response.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('modalPlantilla')).hide();
+                cargarPlantillas();
+                mostrarMensaje('Plantilla guardada exitosamente', 'success');
+            } else {
+                const error = await response.json();
+                mostrarMensaje(error.error || 'Error al guardar plantilla', 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            mostrarMensaje('Error al guardar plantilla', 'error');
+        }
+    }
+    
+    // Funciones para Catálogo
+    async function cargarCatalogos() {
+        try {
+            const response = await fetch('/workflow/api/admin-backoffice/catalogos/', {
+                headers: {
+                    'X-CSRFToken': getCsrfToken()
+                }
+            });
+            
+            if (response.ok) {
+                catalogos = await response.json();
+                mostrarCatalogos(catalogos);
+            }
+        } catch (error) {
+            console.error('Error cargando catálogos:', error);
+        }
+    }
+    
+    function mostrarCatalogos(datos) {
+        const tbody = document.getElementById('catalogo-tbody');
+        const empty = document.getElementById('catalogo-empty');
+        
+        if (datos.length === 0) {
+            tbody.innerHTML = '';
+            empty.style.display = 'block';
+            return;
+        }
+        
+        empty.style.display = 'none';
+        tbody.innerHTML = datos.map(catalogo => `
+            <tr>
+                <td>${catalogo.orden}</td>
+                <td>${catalogo.nombre}</td>
+                <td>${catalogo.descripcion || '-'}</td>
+                <td>
+                    <span class="badge-admin ${catalogo.activo ? 'badge-admin-active' : 'badge-admin-inactive'}">
+                        ${catalogo.activo ? 'Activo' : 'Inactivo'}
+                    </span>
+                </td>
+                <td>${new Date(catalogo.fecha_creacion).toLocaleDateString()}</td>
+                <td>
+                    <button type="button" class="btn-admin btn-admin-warning btn-sm" onclick="editarCatalogo(${catalogo.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button type="button" class="btn-admin btn-admin-danger btn-sm" onclick="eliminarCatalogo(${catalogo.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    
+    function filtrarCatalogos() {
+        const search = document.getElementById('search-catalogo').value.toLowerCase();
+        const activo = document.getElementById('filter-activo-catalogo').value;
+        
+        let filtrados = catalogos.filter(catalogo => {
+            const matchSearch = !search || 
+                catalogo.nombre.toLowerCase().includes(search) ||
+                (catalogo.descripcion && catalogo.descripcion.toLowerCase().includes(search));
+            
+            const matchActivo = !activo || catalogo.activo.toString() === activo;
+            
+            return matchSearch && matchActivo;
+        });
+        
+        mostrarCatalogos(filtrados);
+    }
+    
+    function abrirModalCatalogo(id = null) {
+        const modal = new bootstrap.Modal(document.getElementById('modalCatalogo'));
+        const title = document.getElementById('modalCatalogoTitle');
+        
+        if (id) {
+            title.textContent = 'Editar Pendiente';
+            cargarDatosCatalogo(id);
+        } else {
+            title.textContent = 'Nuevo Pendiente';
+            limpiarFormularioCatalogo();
+        }
+        
+        modal.show();
+    }
+    
+    function limpiarFormularioCatalogo() {
+        document.getElementById('catalogo-id').value = '';
+        document.getElementById('catalogo-nombre').value = '';
+        document.getElementById('catalogo-descripcion').value = '';
+        document.getElementById('catalogo-orden').value = '0';
+        document.getElementById('catalogo-activo').checked = true;
+    }
+    
+    function cargarDatosCatalogo(id) {
+        const catalogo = catalogos.find(c => c.id == id);
+        if (catalogo) {
+            document.getElementById('catalogo-id').value = catalogo.id;
+            document.getElementById('catalogo-nombre').value = catalogo.nombre;
+            document.getElementById('catalogo-descripcion').value = catalogo.descripcion || '';
+            document.getElementById('catalogo-orden').value = catalogo.orden;
+            document.getElementById('catalogo-activo').checked = catalogo.activo;
+        }
+    }
+    
+    async function guardarCatalogo() {
+        const id = document.getElementById('catalogo-id').value;
+        const datos = {
+            nombre: document.getElementById('catalogo-nombre').value,
+            descripcion: document.getElementById('catalogo-descripcion').value,
+            orden: document.getElementById('catalogo-orden').value,
+            activo: document.getElementById('catalogo-activo').checked
+        };
+        
+        try {
+            const url = id ? `/workflow/api/admin-backoffice/catalogos/${id}/` : '/workflow/api/admin-backoffice/catalogos/';
+            const method = id ? 'PUT' : 'POST';
+            
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify(datos)
+            });
+            
+            if (response.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('modalCatalogo')).hide();
+                cargarCatalogos();
+                mostrarMensaje('Pendiente guardado exitosamente', 'success');
+            } else {
+                const error = await response.json();
+                mostrarMensaje(error.error || 'Error al guardar pendiente', 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            mostrarMensaje('Error al guardar pendiente', 'error');
+        }
+    }
+    
+    // Funciones globales (accesibles desde onclick)
+    window.editarPlantilla = function(id) {
+        abrirModalPlantilla(id);
+    };
+    
+    window.eliminarPlantilla = async function(id) {
+        if (confirm('¿Estás seguro de que deseas eliminar esta plantilla?')) {
+            try {
+                const response = await fetch(`/workflow/api/admin-backoffice/plantillas/${id}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+                
+                if (response.ok) {
+                    cargarPlantillas();
+                    mostrarMensaje('Plantilla eliminada exitosamente', 'success');
+                } else {
+                    mostrarMensaje('Error al eliminar plantilla', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarMensaje('Error al eliminar plantilla', 'error');
+            }
+        }
+    };
+    
+    window.editarCatalogo = function(id) {
+        abrirModalCatalogo(id);
+    };
+    
+    window.eliminarCatalogo = async function(id) {
+        if (confirm('¿Estás seguro de que deseas eliminar este pendiente?')) {
+            try {
+                const response = await fetch(`/workflow/api/admin-backoffice/catalogos/${id}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+                
+                if (response.ok) {
+                    cargarCatalogos();
+                    mostrarMensaje('Pendiente eliminado exitosamente', 'success');
+                } else {
+                    mostrarMensaje('Error al eliminar pendiente', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarMensaje('Error al eliminar pendiente', 'error');
+            }
+        }
+    };
+    
+    // Funciones utilitarias
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    }
+    
+    function mostrarMensaje(mensaje, tipo) {
+        // Crear toast
+        const toastHtml = `
+            <div class="toast align-items-center text-white bg-${tipo === 'success' ? 'success' : 'danger'} border-0" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-${tipo === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+                        ${mensaje}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        `;
+        
+        // Agregar al contenedor
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+        
+        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+        
+        // Mostrar toast
+        const toastElement = toastContainer.lastElementChild;
+        const toast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: 3000
+        });
+        toast.show();
+        
+        // Remover elemento después de que se oculte
+        toastElement.addEventListener('hidden.bs.toast', function () {
+            this.remove();
+        });
+    }
+});
+</script>
+{% endblock %}
