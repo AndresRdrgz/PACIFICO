@@ -4,6 +4,8 @@ from . import api
 from . import views_workflow
 from . import views_negocios
 from . import dashboard_views
+from .api_etapas_temp import api_etapas_disponibles as temp_api_etapas_disponibles
+from .api_cambiar_etapa_backoffice import api_cambiar_etapa_backoffice
 
 from . import views_formulario
 from . import views_comite
@@ -105,6 +107,8 @@ urlpatterns = [
     # Subestados and Transiciones API URLs
     path('api/subestados-disponibles/<int:solicitud_id>/', views_workflow.api_subestados_disponibles, name='api_subestados_disponibles'),
     path('api/transiciones-disponibles/<int:solicitud_id>/', views_workflow.api_transiciones_disponibles, name='api_transiciones_disponibles'),
+    path('api/etapas-disponibles/<int:solicitud_id>/', temp_api_etapas_disponibles, name='api_etapas_disponibles'),
+    path('api/solicitudes/<int:solicitud_id>/cambiar-etapa-backoffice/', api_cambiar_etapa_backoffice, name='api_cambiar_etapa_backoffice'),
     path('api/avanzar-subestado/', views_workflow.api_avanzar_subestado, name='api_avanzar_subestado'),
     path('api/ejecutar-transicion/', views_workflow.api_ejecutar_transicion, name='api_ejecutar_transicion'),
     path('api/devolver-bandeja-grupal/', views_workflow.api_devolver_bandeja_grupal, name='api_devolver_bandeja_grupal'),

@@ -510,9 +510,15 @@
               </button>
               
               <!-- Botón de avance - siempre habilitado, sin validación de documentos -->
-                              <button id="btn-avanzar-subestado" type="button" class="btn btn-success btn-lg ms-2">
+              <button id="btn-avanzar-subestado" type="button" class="btn btn-success btn-lg ms-2">
                 <i class="fas fa-arrow-right me-2"></i>
                 <span id="btn-avanzar-texto">Avanzar</span>
+              </button>
+              
+              <!-- Botón Cambiar de Etapa - para saltar a cualquier etapa posterior a backoffice -->
+              <button id="btn-cambiar-etapa" type="button" class="btn btn-primary btn-lg ms-2" onclick="mostrarModalCambiarEtapa()">
+                <i class="fas fa-exchange-alt me-2"></i>
+                <span>Cambiar de Etapa</span>
               </button>
               
               <!-- Indicador de estado de validación -->
@@ -1377,6 +1383,201 @@ function confirmarAvanceTramite() {
     });
 }
 
+// ========================================
+// FUNCIONES PARA CAMBIAR DE ETAPA - TRAMITE
+// ========================================
+
+// Variables globales para cambio de etapa
+let etapaSeleccionadaTramite = null;
+window.usuarioSeleccionadoEtapaTramite = null;
+
+// Función para mostrar modal Cambiar de Etapa
+function mostrarModalCambiarEtapa() {
+    console.log('🚀 Abriendo modal Cambiar de Etapa - Trámite');
+    
+    const modalElement = document.getElementById('modalCambiarEtapa');
+    if (!modalElement) {
+        console.error('❌ Modal Cambiar de Etapa no encontrado');
+        mostrarMensajeTramite('Error: Modal no encontrado', 'error');
+        return;
+    }
+    
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+    
+    // Actualizar información de la solicitud en el modal
+    actualizarInformacionSolicitudModal();
+    
+    // Cargar etapas disponibles
+    cargarEtapasDisponiblesTramite();
+    
+    // No se necesita configurar eventos de asignación ya que se eliminó esa sección
+}
+
+// Función para actualizar información de la solicitud en el modal
+function actualizarInformacionSolicitudModal() {
+    // Actualizar código de solicitud
+    const codigoElement = document.getElementById('cambiar-etapa-codigo-solicitud');
+    if (codigoElement) {
+        codigoElement.textContent = '{{ solicitud.codigo }}';
+    }
+    
+    // Actualizar etapa actual
+    const etapaActualElement = document.getElementById('cambiar-etapa-actual');
+    if (etapaActualElement) {
+        etapaActualElement.textContent = '{{ solicitud.etapa_actual.nombre }}';
+    }
+    
+    // Actualizar subestado actual
+    const subestadoActualElement = document.getElementById('cambiar-subestado-actual');
+    if (subestadoActualElement) {
+        subestadoActualElement.textContent = '{{ solicitud.subestado_actual.nombre }}';
+    }
+}
+
+// Función para cargar etapas disponibles (posteriores a backoffice)
+function cargarEtapasDisponiblesTramite() {
+    const container = document.getElementById('etapas-disponibles-container');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="text-center"><div class="spinner-border text-primary"></div><p class="mt-2">Cargando etapas...</p></div>';
+    
+    fetch(`/workflow/api/etapas-disponibles/${SOLICITUD_ID}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarEtapasDisponiblesTramite(data.etapas);
+            } else {
+                container.innerHTML = '<div class="alert alert-danger">Error al cargar etapas</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            container.innerHTML = '<div class="alert alert-danger">Error de conexión</div>';
+        });
+}
+
+// Función para mostrar etapas disponibles
+function mostrarEtapasDisponiblesTramite(etapas) {
+    const container = document.getElementById('etapas-disponibles-container');
+    
+    if (etapas.length === 0) {
+        container.innerHTML = '<div class="alert alert-info">No hay etapas disponibles para el cambio.</div>';
+        return;
+    }
+    
+    let html = '<div class="row g-2">';
+    etapas.forEach((etapa, index) => {
+        const colClass = etapas.length <= 4 ? 'col-md-6' : 'col-md-4';
+        html += `
+            <div class="${colClass}">
+                <div class="card etapa-card h-100" style="border: 2px solid #e9ecef; border-radius: 12px; transition: all 0.3s ease; cursor: pointer;">
+                    <div class="card-body p-3">
+                        <input type="radio" name="etapa-destino" id="etapa-tramite-${index}" value="${etapa.id}" class="form-check-input me-2">
+                        <label for="etapa-tramite-${index}" class="form-check-label" style="cursor: pointer;">
+                            <strong>${etapa.nombre}</strong>
+                            <br><small class="text-muted">${etapa.descripcion || 'Sin descripción'}</small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+    
+    // Event listeners
+    setTimeout(() => {
+        document.querySelectorAll('.etapa-card').forEach((card, cardIndex) => {
+            const radio = card.querySelector('input[type="radio"]');
+            const etapa = etapas[cardIndex];
+            
+            radio.addEventListener('change', () => {
+                if (radio.checked) {
+                    seleccionarEtapaTramite(etapa.id, etapa.nombre);
+                }
+            });
+            
+            card.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'INPUT') {
+                    radio.checked = true;
+                    radio.dispatchEvent(new Event('change'));
+                }
+            });
+        });
+    }, 100);
+}
+
+// Función para seleccionar etapa
+function seleccionarEtapaTramite(etapaId, etapaNombre) {
+    etapaSeleccionadaTramite = { id: parseInt(etapaId), nombre: etapaNombre };
+    validarFormularioCambiarEtapaTramite();
+}
+
+// Función eliminada: configurarEventosAsignacionEtapaTramite (ya no se necesita)
+
+// Funciones eliminadas: cargarUsuariosDisponiblesEtapaTramite, mostrarUsuariosEnTablaEtapaTramite, seleccionarUsuarioEtapaTramite (ya no se necesitan)
+
+// Función para validar formulario de cambio de etapa
+function validarFormularioCambiarEtapaTramite() {
+    const btnConfirmar = document.getElementById('btn-confirmar-cambiar-etapa');
+    let valido = !!etapaSeleccionadaTramite;
+    if (btnConfirmar) {
+        btnConfirmar.disabled = !valido;
+        btnConfirmar.style.opacity = valido ? '1' : '0.5';
+    }
+    return valido;
+}
+
+// Función para confirmar cambio de etapa
+function confirmarCambiarEtapa() {
+    if (!validarFormularioCambiarEtapaTramite()) {
+        mostrarMensajeTramite('Por favor complete todos los campos requeridos', 'warning');
+        return;
+    }
+    
+    const datos = {
+        solicitud_id: SOLICITUD_ID,
+        etapa_destino_id: etapaSeleccionadaTramite?.id || null
+    };
+    
+    const btnConfirmar = document.getElementById('btn-confirmar-cambiar-etapa');
+    btnConfirmar.disabled = true;
+    btnConfirmar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+    
+    fetch(`/workflow/api/solicitudes/${SOLICITUD_ID}/cambiar-etapa-backoffice/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(datos)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalCambiarEtapa'));
+            if (modal) modal.hide();
+            
+            mostrarMensajeTramite(`Cambiando a etapa: ${etapaSeleccionadaTramite.nombre}`, 'success');
+            setTimeout(() => {
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    window.location.reload();
+                }
+            }, 1500);
+        } else {
+            throw new Error(data.error || data.message || 'Error al procesar el cambio de etapa');
+        }
+    })
+    .catch(error => {
+        mostrarMensajeTramite('Error al procesar el cambio de etapa: ' + error.message, 'error');
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerHTML = '<i class="fas fa-check me-1"></i>Confirmar Cambio de Etapa';
+    });
+}
+
 </script>
 
 <!-- Modal para Avanzar Subestado - Trámite -->
@@ -1487,6 +1688,54 @@ function confirmarAvanceTramite() {
         </button>
         <button type="button" class="btn btn-success" id="btn-confirmar-avance-tramite" onclick="confirmarAvanceTramite()" disabled style="opacity: 0.5;">
           <i class="fas fa-check me-1"></i>Confirmar Avance
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Cambiar de Etapa -->
+<div class="modal fade" id="modalCambiarEtapa" tabindex="-1" aria-labelledby="modalCambiarEtapaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #fff;">
+        <h5 class="modal-title" id="modalCambiarEtapaLabel">
+          <i class="fas fa-exchange-alt me-2"></i>Cambiar de Etapa
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Información de la solicitud -->
+        <div class="alert" style="background: linear-gradient(90deg, #e0f2fe 0%, #f0fdfa 100%); color: #1e40af; border: none;">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Solicitud:</strong> <span id="cambiar-etapa-codigo-solicitud">{{ solicitud.codigo }}</span>
+          <br>
+          <strong>Etapa Actual:</strong> <span id="cambiar-etapa-actual">{{ solicitud.etapa_actual.nombre }}</span>
+          <br>
+          <strong>Subestado Actual:</strong> <span id="cambiar-subestado-actual">{{ solicitud.subestado_actual.nombre }}</span>
+        </div>
+
+        <!-- Selección de etapa destino -->
+        <div class="mb-4">
+          <h6 class="fw-bold" style="color: #1e40af;">
+            <i class="fas fa-list me-2"></i>Seleccionar etapa destino:
+          </h6>
+          <div id="etapas-disponibles-container">
+            <div class="text-center">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+              </div>
+              <p class="mt-2">Cargando etapas disponibles...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="background: #f0fdfa;">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>Cancelar
+        </button>
+        <button type="button" class="btn btn-primary" id="btn-confirmar-cambiar-etapa" onclick="confirmarCambiarEtapa()" disabled style="opacity: 0.5;">
+          <i class="fas fa-check me-1"></i>Confirmar Cambio de Etapa
         </button>
       </div>
     </div>
