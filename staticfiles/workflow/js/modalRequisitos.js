@@ -9,7 +9,7 @@
 class ModalRequisitos {
     constructor() {
         console.log('🏗️ Inicializando ModalRequisitos...');
-        
+
         this.currentSolicitudId = null;
         this.currentNuevaEtapaId = null;
         this.currentCallbackExito = null;
@@ -17,7 +17,7 @@ class ModalRequisitos {
         this.requisitosData = null;
         this.uploadQueue = [];
         this.isProcessing = false;
-        
+
         // Verificar que el modal existe
         const modalElement = document.getElementById('modalRequisitosFaltantes');
         if (modalElement) {
@@ -25,7 +25,7 @@ class ModalRequisitos {
         } else {
             console.error('❌ Modal element NO encontrado en constructor');
         }
-        
+
         this.initializeEventListeners();
     }
 
@@ -34,7 +34,7 @@ class ModalRequisitos {
      */
     initializeEventListeners() {
         console.log('🔧 Inicializando event listeners del modal...');
-        
+
         // Event listener para el cierre del modal
         const modal = document.getElementById('modalRequisitosFaltantes');
         if (modal) {
@@ -136,7 +136,7 @@ class ModalRequisitos {
     async cargarRequisitos() {
         try {
             const response = await fetch(`/workflow/api/solicitudes/${this.currentSolicitudId}/requisitos-faltantes-detallado/?nueva_etapa_id=${this.currentNuevaEtapaId}`);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -149,7 +149,7 @@ class ModalRequisitos {
                 this.llenarListaRequisitos(data);
                 this.actualizarResumen(data);
                 this.actualizarEstadoModal(data);
-                
+
                 // Mostrar el modal después de cargar los datos
                 this.mostrarModalElement();
             } else {
@@ -167,25 +167,86 @@ class ModalRequisitos {
      * Llenar lista de requisitos en el modal
      */
     llenarListaRequisitos(data) {
+        console.log('📝 Llenando lista de requisitos con data:', data);
+        
         const listaContainer = document.getElementById('listaRequisitosFaltantes');
         if (!listaContainer) return;
 
         listaContainer.innerHTML = '';
 
-        if (data.requisitos.length === 0) {
+        // Separar requisitos obligatorios y opcionales
+        const requisitosObligatorios = data.requisitos_obligatorios || [];
+        const requisitosOpcionales = data.requisitos_opcionales || [];
+
+        console.log('🔍 DEBUG: Análisis de requisitos recibidos:');
+        console.log('  - Obligatorios:', requisitosObligatorios.length, requisitosObligatorios);
+        console.log('  - Opcionales:', requisitosOpcionales.length, requisitosOpcionales);
+        
+        // Verificar el campo 'obligatorio' en cada requisito
+        requisitosObligatorios.forEach((req, index) => {
+            console.log(`  Obligatorio ${index + 1}: ID=${req.id}, nombre="${req.nombre}", obligatorio=${req.obligatorio}`);
+        });
+        
+        requisitosOpcionales.forEach((req, index) => {
+            console.log(`  Opcional ${index + 1}: ID=${req.id}, nombre="${req.nombre}", obligatorio=${req.obligatorio}`);
+        });
+
+        // Si no hay requisitos obligatorios ni opcionales
+        if (requisitosObligatorios.length === 0 && requisitosOpcionales.length === 0) {
             listaContainer.innerHTML = `
                 <div class="alert alert-success">
                     <i class="fas fa-check-circle me-2"></i>
-                    No hay requisitos obligatorios para esta transición
+                    No hay requisitos para esta transición
                 </div>
             `;
             return;
         }
 
-        data.requisitos.forEach(requisito => {
-            const requisitoHtml = this.generarHtmlRequisito(requisito);
-            listaContainer.insertAdjacentHTML('beforeend', requisitoHtml);
-        });
+        // Sección de requisitos obligatorios
+        if (requisitosObligatorios.length > 0) {
+            const obligatoriosCompletos = requisitosObligatorios.filter(req => req.esta_cumplido).length;
+
+            listaContainer.insertAdjacentHTML('beforeend', `
+                <div class="seccion-requisitos">
+                    <div class="seccion-titulo obligatorio">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                                <h6 class="mb-0 fw-bold">Requisitos Obligatorios</h6>
+                            </div>
+                            <span class="badge badge-obligatorio">${obligatoriosCompletos}/${requisitosObligatorios.length}</span>
+                        </div>
+                        <small class="text-muted d-block mt-1">Estos documentos son necesarios para continuar</small>
+                    </div>
+                    <div id="requisitos-obligatorios-lista">
+                        ${requisitosObligatorios.map(req => this.generarHtmlRequisito(req)).join('')}
+                    </div>
+                </div>
+            `);
+        }
+
+        // Sección de requisitos opcionales
+        if (requisitosOpcionales.length > 0) {
+            const opcionalesCompletos = requisitosOpcionales.filter(req => req.esta_cumplido).length;
+
+            listaContainer.insertAdjacentHTML('beforeend', `
+                <div class="seccion-requisitos">
+                    <div class="seccion-titulo opcional">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-plus-circle text-secondary me-2"></i>
+                                <h6 class="mb-0 fw-bold">Requisitos Opcionales</h6>
+                            </div>
+                            <span class="badge badge-opcional">${opcionalesCompletos}/${requisitosOpcionales.length}</span>
+                        </div>
+                        <small class="text-muted d-block mt-1">Documentos adicionales que pueden facilitar el proceso</small>
+                    </div>
+                    <div id="requisitos-opcionales-lista">
+                        ${requisitosOpcionales.map(req => this.generarHtmlRequisito(req)).join('')}
+                    </div>
+                </div>
+            `);
+        }
 
         // Configurar event listeners para los inputs de archivo
         this.configurarEventListenersArchivos();
@@ -200,8 +261,19 @@ class ModalRequisitos {
         const icono = this.obtenerIconoEstado(estado);
         const mensaje = this.obtenerMensajeEstado(estado);
 
+        // Agregar clase 'opcional' si el requisito no es obligatorio
+        const claseOpcional = !requisito.obligatorio ? ' opcional' : '';
+
+        console.log(`🏗️ Generando HTML para requisito ID=${requisito.id}:`, {
+            nombre: requisito.nombre,
+            obligatorio: requisito.obligatorio,
+            claseOpcional: claseOpcional,
+            estado: estado,
+            estadoClass: estadoClass
+        });
+
         return `
-            <div class="requisito-item ${estadoClass}" data-requisito-id="${requisito.id}">
+            <div class="requisito-item ${estadoClass}${claseOpcional}" data-requisito-id="${requisito.id}">
                 <div class="validation-status ${estadoClass}">
                     <i class="fas ${icono}"></i>
                 </div>
@@ -211,11 +283,11 @@ class ModalRequisitos {
                         <i class="fas ${icono}"></i>
                     </div>
                     <div class="requisito-info">
-                        <h6>${requisito.nombre}</h6>
+                        <h6>${requisito.nombre} ${!requisito.obligatorio ? '<span class="badge bg-secondary ms-1" style="font-size: 0.7rem;">Opcional</span>' : ''}</h6>
                         ${requisito.descripcion ? `<p>${requisito.descripcion}</p>` : ''}
                     </div>
                     <div class="text-end">
-                        <span class="badge ${this.obtenerClaseBadge(estado)}">${mensaje}</span>
+                        <span class="badge ${this.obtenerClaseBadge(estado, requisito.obligatorio)}">${mensaje}</span>
                     </div>
                 </div>
 
@@ -287,7 +359,18 @@ class ModalRequisitos {
     /**
      * Obtener clase para el badge
      */
-    obtenerClaseBadge(estado) {
+    obtenerClaseBadge(estado, esObligatorio = true) {
+        if (!esObligatorio) {
+            // Para requisitos opcionales
+            const clasesOpcionales = {
+                'completado': 'bg-info',
+                'pendiente': 'bg-secondary',
+                'faltante': 'bg-secondary'
+            };
+            return clasesOpcionales[estado] || 'bg-secondary';
+        }
+
+        // Para requisitos obligatorios
         const clases = {
             'completado': 'bg-success',
             'pendiente': 'bg-warning',
@@ -316,12 +399,15 @@ class ModalRequisitos {
                 </div>
             `;
         } else {
+            const esObligatorio = requisito.obligatorio;
+            const marcadorObligatorio = esObligatorio ? '<span class="text-danger">*</span>' : '<span class="text-secondary">(opcional)</span>';
+
             return `
                 <div class="upload-section" id="upload-section-${requisito.id}">
                     <div class="mb-3">
                         <label class="form-label">
                             ${estado === 'pendiente' ? 'Reemplazar archivo' : 'Subir archivo'} 
-                            <span class="text-danger">*</span>
+                            ${marcadorObligatorio}
                         </label>
                         <input type="file" class="form-control requisito-file-input" 
                                data-requisito-id="${requisito.id}" 
@@ -384,19 +470,35 @@ class ModalRequisitos {
      * Actualizar estado del modal
      */
     actualizarEstadoModal(data) {
-        const total = data.total_requisitos;
-        const completos = data.requisitos_completos;
-        const faltantes = total - completos;
+        // Usar solo los requisitos obligatorios para determinar el estado
+        const totalObligatorios = data.total_requisitos_obligatorios || 0;
+        const completosObligatorios = data.requisitos_obligatorios_completos || 0;
+        const faltantesObligatorios = totalObligatorios - completosObligatorios;
+
+        console.log('📊 actualizarEstadoModal - Estado de requisitos obligatorios:', {
+            totalObligatorios,
+            completosObligatorios,
+            faltantesObligatorios,
+            'data.total_requisitos': data.total_requisitos,
+            'data.requisitos_completos': data.requisitos_completos
+        });
+
+        console.log('📋 actualizarEstadoModal - Data completa recibida:', data);
 
         const btnValidar = document.getElementById('btnValidarYContinuar');
-        if (!btnValidar) return;
+        if (!btnValidar) {
+            console.log('❌ btnValidarYContinuar not found!');
+            return;
+        }
 
-        if (faltantes === 0) {
-            // Todos los requisitos están completos
+        if (faltantesObligatorios === 0) {
+            // Todos los requisitos obligatorios están completos
+            console.log('✅ actualizarEstadoModal: Todos los requisitos obligatorios completos, llamando actualizarModalCompleto()');
             this.actualizarModalCompleto();
         } else {
-            // Hay requisitos faltantes
-            this.actualizarModalFaltantes(faltantes, total);
+            // Hay requisitos obligatorios faltantes
+            console.log('❌ actualizarEstadoModal: Faltan requisitos obligatorios, llamando actualizarModalFaltantes()');
+            this.actualizarModalFaltantes(faltantesObligatorios, totalObligatorios);
         }
     }
 
@@ -412,11 +514,11 @@ class ModalRequisitos {
 
         if (header) header.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
         if (icon) icon.className = 'fas fa-check-circle me-2';
-        if (title) title.textContent = 'Todos los Requisitos Completos';
+        if (title) title.textContent = 'Requisitos Obligatorios Completos';
         if (subtitle) subtitle.textContent = 'Puedes continuar a la siguiente etapa';
 
         // Mostrar mensaje de éxito
-        this.mostrarMensajeInfo('success', 'Requisitos Completos', 'Todos los requisitos están completos y listos para continuar.');
+        this.mostrarMensajeInfo('success', 'Requisitos Obligatorios Completos', 'Todos los requisitos obligatorios están completos y listos para continuar.');
 
         // Actualizar botón
         const btnValidar = document.getElementById('btnValidarYContinuar');
@@ -430,7 +532,7 @@ class ModalRequisitos {
     /**
      * Actualizar modal cuando hay requisitos faltantes
      */
-    actualizarModalFaltantes(faltantes, total) {
+    actualizarModalFaltantes(faltantesObligatorios, totalObligatorios) {
         // Mantener header rojo
         const header = document.getElementById('modalHeader');
         const icon = document.getElementById('modalIcon');
@@ -440,15 +542,15 @@ class ModalRequisitos {
         if (header) header.style.background = 'linear-gradient(135deg, #dc3545 0%, #fd7e14 100%)';
         if (icon) icon.className = 'fas fa-exclamation-triangle me-2';
         if (title) title.textContent = 'Requisitos Faltantes';
-        if (subtitle) subtitle.textContent = `Faltan ${faltantes} de ${total} requisitos`;
+        if (subtitle) subtitle.textContent = `Faltan ${faltantesObligatorios} de ${totalObligatorios} requisitos obligatorios`;
 
         // Mostrar mensaje de advertencia
-        this.mostrarMensajeInfo('warning', 'Requisitos Pendientes', `Debes completar ${faltantes} requisitos antes de continuar.`);
+        this.mostrarMensajeInfo('warning', 'Requisitos Obligatorios Pendientes', `Debes completar ${faltantesObligatorios} requisitos obligatorios antes de continuar.`);
 
         // Actualizar botón
         const btnValidar = document.getElementById('btnValidarYContinuar');
         if (btnValidar) {
-            btnValidar.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Validar y Continuar (${total - faltantes}/${total})`;
+            btnValidar.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Validar y Continuar (${totalObligatorios - faltantesObligatorios}/${totalObligatorios})`;
             btnValidar.className = 'btn btn-warning';
             btnValidar.disabled = true;
         }
@@ -522,7 +624,7 @@ class ModalRequisitos {
         // Validar tipo de archivo
         const tiposPermitidos = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.gif'];
         const extension = '.' + file.name.split('.').pop().toLowerCase();
-        
+
         if (!tiposPermitidos.includes(extension)) {
             this.showToast(`Tipo de archivo no permitido: ${extension}`, 'error');
             return false;
@@ -542,35 +644,68 @@ class ModalRequisitos {
      * Verificar estado de todos los requisitos
      */
     verificarEstadoRequisitos() {
-        const totalRequisitos = document.querySelectorAll('.requisito-item').length;
-        const requisitosCompletos = document.querySelectorAll('.requisito-item.completado').length;
-        const archivosSeleccionados = document.querySelectorAll('.requisito-file-input[type="file"]:not([style*="display: none"])').length;
+        // Contar SOLO los requisitos obligatorios
+        const requisitosObligatorios = document.querySelectorAll('.requisito-item:not(.opcional)');
+        const totalRequisitosObligatorios = requisitosObligatorios.length;
+        const requisitosObligatoriosCompletos = document.querySelectorAll('.requisito-item:not(.opcional).completado').length;
 
-        console.log('🔍 Estado de requisitos:', { totalRequisitos, requisitosCompletos, archivosSeleccionados });
+        // Debug: mostrar elementos encontrados
+        console.log('🔍 DEBUG verificarEstadoRequisitos:');
+        console.log('  - Todos los requisito-item:', document.querySelectorAll('.requisito-item').length);
+        console.log('  - Requisitos con clase opcional:', document.querySelectorAll('.requisito-item.opcional').length);
+        console.log('  - Requisitos SIN clase opcional (obligatorios):', totalRequisitosObligatorios);
+        console.log('  - Requisitos obligatorios completos:', requisitosObligatoriosCompletos);
+        
+        // Mostrar detalles de cada elemento
+        document.querySelectorAll('.requisito-item').forEach((item, index) => {
+            const isOpcional = item.classList.contains('opcional');
+            const isCompletado = item.classList.contains('completado');
+            const requisitoId = item.getAttribute('data-requisito-id');
+            console.log(`    Requisito ${index + 1}: ID=${requisitoId}, opcional=${isOpcional}, completado=${isCompletado}, classes=[${item.className}]`);
+        });
+
+        // Contar archivos seleccionados para requisitos obligatorios pendientes
+        let archivosObligatoriosSeleccionados = 0;
+        requisitosObligatorios.forEach(item => {
+            if (!item.classList.contains('completado')) {
+                const fileInput = item.querySelector('.requisito-file-input[type="file"]');
+                if (fileInput && fileInput.files && fileInput.files.length > 0) {
+                    archivosObligatoriosSeleccionados++;
+                }
+            }
+        });
+
+        console.log('🔍 Estado de requisitos obligatorios:', {
+            totalRequisitosObligatorios,
+            requisitosObligatoriosCompletos,
+            archivosObligatoriosSeleccionados
+        });
 
         const btnValidar = document.getElementById('btnValidarYContinuar');
         if (!btnValidar) return;
 
-        if (totalRequisitos === 0) {
+        if (totalRequisitosObligatorios === 0) {
+            // No hay requisitos obligatorios, puede continuar
             btnValidar.innerHTML = '<i class="fas fa-check me-2"></i>Continuar';
             btnValidar.className = 'btn btn-success';
             btnValidar.disabled = false;
-        } else if (totalRequisitos === requisitosCompletos) {
-            btnValidar.innerHTML = '<i class="fas fa-check me-2"></i>Todos los Requisitos Completos - Continuar';
+        } else if (totalRequisitosObligatorios === requisitosObligatoriosCompletos) {
+            // Todos los requisitos obligatorios están completos
+            btnValidar.innerHTML = '<i class="fas fa-check me-2"></i>Requisitos Obligatorios Completos - Continuar';
             btnValidar.className = 'btn btn-success';
             btnValidar.disabled = false;
-        } else if (archivosSeleccionados > 0) {
-            btnValidar.innerHTML = `<i class="fas fa-upload me-2"></i>Validar y Continuar (${requisitosCompletos}/${totalRequisitos})`;
+        } else if (archivosObligatoriosSeleccionados > 0) {
+            // Hay archivos seleccionados para requisitos obligatorios pendientes
+            btnValidar.innerHTML = `<i class="fas fa-upload me-2"></i>Validar y Continuar (${requisitosObligatoriosCompletos}/${totalRequisitosObligatorios})`;
             btnValidar.className = 'btn btn-primary';
             btnValidar.disabled = false;
         } else {
-            btnValidar.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Validar y Continuar (${requisitosCompletos}/${totalRequisitos})`;
+            // Faltan requisitos obligatorios
+            btnValidar.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Validar y Continuar (${requisitosObligatoriosCompletos}/${totalRequisitosObligatorios})`;
             btnValidar.className = 'btn btn-warning';
             btnValidar.disabled = true;
         }
-    }
-
-    /**
+    }    /**
      * Manejar clic en botón validar
      */
     async handleValidarClick() {
@@ -582,7 +717,7 @@ class ModalRequisitos {
         try {
             // Preparar archivos para subir
             const archivosParaSubir = this.prepararArchivosParaSubir();
-            
+
             if (archivosParaSubir.length > 0) {
                 await this.subirArchivos(archivosParaSubir);
             }
@@ -624,15 +759,15 @@ class ModalRequisitos {
      */
     async subirArchivos(archivos) {
         console.log(`📤 Subiendo ${archivos.length} archivos...`);
-        
+
         this.mostrarEstadoValidacion('Subiendo archivos...', 0);
 
         for (let i = 0; i < archivos.length; i++) {
             const archivo = archivos[i];
             const progreso = ((i + 1) / archivos.length) * 100;
-            
+
             this.mostrarEstadoValidacion(`Subiendo archivo ${i + 1} de ${archivos.length}...`, progreso);
-            
+
             try {
                 await this.subirArchivoIndividual(archivo);
             } catch (error) {
@@ -677,12 +812,12 @@ class ModalRequisitos {
      * Validar requisitos en el backend
      */
     async validarRequisitosBackend() {
-        console.log('🔍 Validando requisitos en el backend...');
-        
-        this.mostrarEstadoValidacion('Validando requisitos...', 50);
+        console.log('🔍 Validando requisitos obligatorios en el backend...');
+
+        this.mostrarEstadoValidacion('Validando requisitos obligatorios...', 50);
 
         const response = await fetch(`/workflow/api/solicitudes/${this.currentSolicitudId}/requisitos-faltantes-detallado/?nueva_etapa_id=${this.currentNuevaEtapaId}`);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -692,13 +827,14 @@ class ModalRequisitos {
             throw new Error(data.error || 'Error al validar requisitos');
         }
 
-        const faltantes = data.requisitos_faltantes || [];
-        if (faltantes.length > 0) {
-            throw new Error(`Aún faltan ${faltantes.length} requisitos: ${faltantes.map(r => r.nombre).join(', ')}`);
+        // Solo verificar requisitos obligatorios faltantes
+        const faltantesObligatorios = data.requisitos_obligatorios_faltantes || [];
+        if (faltantesObligatorios.length > 0) {
+            throw new Error(`Aún faltan ${faltantesObligatorios.length} requisitos obligatorios: ${faltantesObligatorios.map(r => r.nombre).join(', ')}`);
         }
 
         this.mostrarEstadoValidacion('Validación completada', 100);
-        console.log('✅ Validación completada exitosamente');
+        console.log('✅ Validación de requisitos obligatorios completada exitosamente');
     }
 
     /**
@@ -709,15 +845,15 @@ class ModalRequisitos {
         if (!requisitoItem) return;
 
         requisitoItem.className = `requisito-item ${estado}`;
-        
+
         const statusElement = requisitoItem.querySelector('.validation-status');
         const badgeElement = requisitoItem.querySelector('.badge');
-        
+
         if (statusElement) {
             statusElement.className = `validation-status ${estado}`;
             statusElement.innerHTML = `<i class="fas ${this.obtenerIconoEstado(estado)}"></i>`;
         }
-        
+
         if (badgeElement) {
             badgeElement.className = `badge ${this.obtenerClaseBadge(estado)}`;
             badgeElement.textContent = this.obtenerMensajeEstado(estado);
@@ -850,27 +986,27 @@ class ModalRequisitos {
 // Función para inicializar el sistema cuando el DOM esté listo
 function initializeModalRequisitos() {
     console.log('🚀 Inicializando sistema ModalRequisitos...');
-    
+
     // Verificar que Bootstrap esté disponible
     if (typeof bootstrap === 'undefined') {
         console.error('❌ Bootstrap no está disponible');
         return;
     }
-    
+
     // Verificar que el modal existe
     const modalElement = document.getElementById('modalRequisitosFaltantes');
     if (!modalElement) {
         console.error('❌ Modal element no encontrado durante inicialización');
         return;
     }
-    
+
     // Inicializar instancia global
     window.modalRequisitos = new ModalRequisitos();
     console.log('✅ ModalRequisitos inicializado correctamente');
 }
 
 // Funciones de compatibilidad para el código existente
-window.mostrarModalRequisitosFaltantes = function(solicitudId, nuevaEtapaId, nombreEtapa, callbackExito, callbackCancelacion) {
+window.mostrarModalRequisitosFaltantes = function (solicitudId, nuevaEtapaId, nombreEtapa, callbackExito, callbackCancelacion) {
     if (window.modalRequisitos) {
         window.modalRequisitos.mostrarModal(solicitudId, nuevaEtapaId, nombreEtapa, callbackExito, callbackCancelacion);
     } else {
@@ -878,7 +1014,7 @@ window.mostrarModalRequisitosFaltantes = function(solicitudId, nuevaEtapaId, nom
     }
 };
 
-window.cerrarModalRequisitos = function() {
+window.cerrarModalRequisitos = function () {
     if (window.modalRequisitos) {
         window.modalRequisitos.cerrarModal();
     } else {
@@ -895,9 +1031,9 @@ if (document.readyState === 'loading') {
 }
 
 // Función de prueba para verificar el modal
-window.testModalRequisitos = function() {
+window.testModalRequisitos = function () {
     console.log('🧪 Probando modal de requisitos...');
-    
+
     if (window.modalRequisitos) {
         // Simular datos de prueba
         const testData = {
@@ -926,14 +1062,14 @@ window.testModalRequisitos = function() {
             total_requisitos: 2,
             requisitos_completos: 1
         };
-        
+
         // Simular el modal con datos de prueba
         window.modalRequisitos.requisitosData = testData;
         window.modalRequisitos.llenarListaRequisitos(testData);
         window.modalRequisitos.actualizarResumen(testData);
         window.modalRequisitos.actualizarEstadoModal(testData);
         window.modalRequisitos.mostrarModalElement();
-        
+
         console.log('✅ Modal de prueba mostrado');
     } else {
         console.error('❌ ModalRequisitos no está disponible');

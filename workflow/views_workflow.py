@@ -8035,6 +8035,22 @@ def vista_mixta_bandejas(request):
     # Agregar información de vencimiento y enriquecimiento a cada solicitud
     def agregar_info_vencimiento(solicitudes):
         for solicitud in solicitudes:
+            # Obtener fecha de inicio en la etapa actual desde HistorialSolicitud
+            if solicitud.etapa_actual:
+                historial_actual = HistorialSolicitud.objects.filter(
+                    solicitud=solicitud,
+                    etapa=solicitud.etapa_actual,
+                    fecha_fin__isnull=True
+                ).order_by('-fecha_inicio').first()
+                
+                if historial_actual:
+                    solicitud.fecha_inicio_etapa = historial_actual.fecha_inicio
+                else:
+                    # Si no hay historial actual, usar la fecha de última actualización como fallback
+                    solicitud.fecha_inicio_etapa = solicitud.fecha_ultima_actualizacion
+            else:
+                solicitud.fecha_inicio_etapa = None
+            
             # Información de SLA
             if solicitud.etapa_actual and solicitud.etapa_actual.sla:
                 fecha_vencimiento = solicitud.fecha_ultima_actualizacion + solicitud.etapa_actual.sla
