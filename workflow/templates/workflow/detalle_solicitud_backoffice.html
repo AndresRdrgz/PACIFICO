@@ -251,6 +251,61 @@
   opacity: 1;
 }
 
+/* Estilos para información prominente del cliente */
+.client-info-prominent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.client-name {
+  font-size: 1.1rem;
+  color: #ffffff !important;
+  display: flex;
+  align-items: center;
+  font-weight: 700;
+}
+
+.client-name strong {
+  font-size: 1.15rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #ffffff !important;
+  font-weight: 700;
+}
+
+.client-id {
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  color: #ffffff !important;
+}
+
+.client-id span {
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #ffffff !important;
+}
+
+/* Estilos para mini-badges de SLA */
+.mini-badge-danger {
+  background: linear-gradient(135deg, #dc3545, #c82333) !important;
+  color: white !important;
+  animation: pulse-danger 2s infinite;
+}
+
+.mini-badge-success {
+  background: linear-gradient(135deg, #198754, #157347) !important;
+  color: white !important;
+}
+
+@keyframes pulse-danger {
+  0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+}
+
 .tab-blocked-tooltip::after {
   content: '';
   position: absolute;
@@ -403,20 +458,6 @@
   opacity: 0.9;
 }
 
-.client-name {
-  color: #495057;
-}
-
-.client-name strong {
-  color: #343a40;
-  font-weight: 600;
-}
-
-.client-cedula {
-  color: #495057;
-  font-weight: 500;
-}
-
 .header-info-badge {
   display: inline-block;
 }
@@ -442,24 +483,62 @@
       <div class="card processes-card">
         <div class="card-header processes-header">
           <div class="d-flex align-items-center justify-content-between">
-            <!-- Sección Izquierda: Icono y Títulos -->
+            <!-- Sección Izquierda: Icono, Títulos y Cliente -->
             <div class="d-flex align-items-center">
               <div class="process-icon-container">
-                <i class="fas fa-tasks"></i>
+                <i class="fas fa-tasks text-white"></i>
               </div>
               <div class="ms-3">
-                <h5 class="mb-0 process-title">Procesos de Back Office</h5>
-                <small class="process-subtitle">Gestión completa del flujo de trabajo</small>
+                <h5 class="mb-0 process-title text-white fw-bold">Procesos de Back Office</h5>
+                <small class="process-subtitle text-white-50">Gestión completa del flujo de trabajo</small>
+              </div>
+              
+              <!-- Información prominente del cliente -->
+              <div class="ms-4 ps-4 border-start border-primary border-2">
+                <div class="client-info-prominent">
+                  {% if solicitud.cliente_nombre_completo or solicitud.cotizacion.nombreCliente %}
+                                    <div class="client-name">
+                    <i class="fas fa-user-circle text-white me-2"></i>
+                    <strong>{{ solicitud.cliente_nombre_completo|default:solicitud.cotizacion.nombreCliente }}</strong>
+                  </div>
+                  {% endif %}
+
+                  {% if solicitud.cotizacion.cedulaCliente %}
+                  <div class="client-id">
+                    <i class="fas fa-id-card text-white me-2"></i>
+                    <span>{{ solicitud.cotizacion.cedulaCliente }}</span>
+                  </div>
+                  {% endif %}
+                </div>
               </div>
             </div>
 
             <!-- Sección Central: Información del Negocio -->
             <div class="d-flex align-items-center justify-content-center flex-wrap gap-2">
-              {% if solicitud.cliente_nombre_completo or solicitud.cotizacion.nombreCliente %}
+              <!-- Oficial creador -->
+              {% if solicitud.creada_por %}
               <span class="mini-badge mini-badge-primary">
-                <i class="fas fa-user"></i>
-                {{ solicitud.cliente_nombre_completo|default:solicitud.cotizacion.nombreCliente }}
+                <i class="fas fa-user-tie"></i>
+                {{ solicitud.creada_por.get_full_name|default:solicitud.creada_por.username }}
               </span>
+              {% endif %}
+              
+              <!-- Estado SLA -->
+              {% if solicitud.etapa_actual and solicitud.etapa_actual.sla %}
+              {% load workflow_filters %}
+              {% with horas_transcurridas=solicitud|dias_en_etapa sla_horas=solicitud.etapa_actual.sla|sla_to_horas sla_80=solicitud.etapa_actual.sla|sla_to_horas|sla_80_percent %}
+              {% if horas_transcurridas > sla_horas %}
+                <span class="mini-badge mini-badge-danger">
+                  <i class="fas fa-exclamation-triangle"></i>
+                  SLA Vencido ({{ solicitud|tiempo_en_subestado_texto }})
+                </span>
+              {% elif horas_transcurridas > sla_80 %}
+                <span class="mini-badge mini-badge-warning">
+                  <i class="fas fa-clock"></i>
+                  SLA Próximo ({{ solicitud|tiempo_en_subestado_texto }})
+                </span>
+              {% endif %}
+              {% endwith %}
               {% endif %}
               
               {% if solicitud.cotizacion.montoPrestamo %}

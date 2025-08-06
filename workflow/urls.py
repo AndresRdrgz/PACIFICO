@@ -4,6 +4,10 @@ from . import api
 from . import views_workflow
 from . import views_negocios
 from . import dashboard_views
+from .api_etapas_temp import api_etapas_disponibles as temp_api_etapas_disponibles
+from .api_cambiar_etapa_backoffice import api_cambiar_etapa_backoffice
+from .api_exportar_backoffice import api_exportar_backoffice
+from . import api_admin_backoffice
 
 from . import views_formulario
 from . import views_comite
@@ -105,6 +109,9 @@ urlpatterns = [
     # Subestados and Transiciones API URLs
     path('api/subestados-disponibles/<int:solicitud_id>/', views_workflow.api_subestados_disponibles, name='api_subestados_disponibles'),
     path('api/transiciones-disponibles/<int:solicitud_id>/', views_workflow.api_transiciones_disponibles, name='api_transiciones_disponibles'),
+    path('api/etapas-disponibles/<int:solicitud_id>/', temp_api_etapas_disponibles, name='api_etapas_disponibles'),
+    path('api/solicitudes/<int:solicitud_id>/cambiar-etapa-backoffice/', api_cambiar_etapa_backoffice, name='api_cambiar_etapa_backoffice'),
+    path('api/exportar-backoffice/', api_exportar_backoffice, name='api_exportar_backoffice'),
     path('api/avanzar-subestado/', views_workflow.api_avanzar_subestado, name='api_avanzar_subestado'),
     path('api/ejecutar-transicion/', views_workflow.api_ejecutar_transicion, name='api_ejecutar_transicion'),
     path('api/devolver-bandeja-grupal/', views_workflow.api_devolver_bandeja_grupal, name='api_devolver_bandeja_grupal'),
@@ -240,4 +247,18 @@ urlpatterns = [
     path('api/orden-expediente/agregar-comentario/', views_workflow.agregar_comentario_documento, name='agregar_comentario_documento'),
     path('api/orden-expediente/obtener-comentario/<int:documento_id>/', views_workflow.obtener_comentario_documento, name='obtener_comentario_documento'),
     path('api/orden-expediente/marcar-todos/', views_workflow.marcar_todos_documentos, name='marcar_todos_documentos'),
+    
+    # Admin Back Office
+    path('admin-backoffice/', api_admin_backoffice.admin_backoffice_view, name='admin_backoffice'),
+    
+    # APIs para Admin Back Office - Pipelines
+    path('api/pipelines/', api_admin_backoffice.api_pipelines, name='api_pipelines'),
+    
+    # APIs para Admin Back Office - Plantillas
+    path('api/admin-backoffice/plantillas/', api_admin_backoffice.api_plantillas_crud, name='api_plantillas_crud'),
+    path('api/admin-backoffice/plantillas/<int:plantilla_id>/', api_admin_backoffice.api_plantillas_crud_detail, name='api_plantillas_crud_detail'),
+    
+    # APIs para Admin Back Office - Catálogos
+    path('api/admin-backoffice/catalogos/', api_admin_backoffice.api_catalogos_crud, name='api_catalogos_crud'),
+    path('api/admin-backoffice/catalogos/<int:catalogo_id>/', api_admin_backoffice.api_catalogos_crud_detail, name='api_catalogos_crud_detail'),
 ]

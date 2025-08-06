@@ -592,6 +592,7 @@
 {% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="workflow-container mt-0 pt-0">
     <!-- Header Estático - Modern Design -->
     <div class="workflow-header card mb-3">
@@ -682,6 +683,14 @@
                     <button type="button" class="modern-btn modern-btn-success" id="export-supervisor-data">
                         <i class="fas fa-download me-1"></i>Exportar Datos
                     </button>
+                    <button type="button" class="modern-btn modern-btn-info" id="export-backoffice-data">
+                        <i class="fas fa-file-excel me-1"></i>Exportar Back Office
+                    </button>
+                    {% if user.is_superuser %}
+                    <button type="button" class="modern-btn modern-btn-warning" id="admin-backoffice-btn">
+                        <i class="fas fa-cogs me-1"></i>Admin Back Office
+                    </button>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -2675,6 +2684,22 @@
             });
         }
 
+        // Función para exportar datos de Back Office
+        const exportBackofficeData = document.getElementById('export-backoffice-data');
+        if (exportBackofficeData) {
+            exportBackofficeData.addEventListener('click', function () {
+                exportarDatosBackOffice();
+            });
+        }
+
+        // Función para Admin Back Office
+        const adminBackofficeBtn = document.getElementById('admin-backoffice-btn');
+        if (adminBackofficeBtn) {
+            adminBackofficeBtn.addEventListener('click', function () {
+                window.location.href = '/workflow/admin-backoffice/';
+            });
+        }
+
         function exportarDatosSupervisor() {
             const supervisorFilas = document.querySelectorAll('.supervisor-row');
             const datos = [];
@@ -2688,22 +2713,38 @@
             // Datos de cada fila
             supervisorFilas.forEach(fila => {
                 if (fila.style.display !== 'none') {
-                    const codigo = fila.querySelector('td:nth-child(1) strong').textContent;
-                    const cliente = fila.querySelector('td:nth-child(2) strong').textContent;
-                    const pipeline = fila.querySelector('td:nth-child(3) .badge').textContent;
-                    const etapa = fila.querySelector('td:nth-child(4) .badge').textContent;
-                    const asignado = fila.querySelector('td:nth-child(5) .badge').textContent;
-                    const sla = fila.querySelector('td:nth-child(6) span').textContent.trim();
-                    const fechaCreacion = fila.querySelector('td:nth-child(7) small').textContent;
-                    const ultimaActualizacion = fila.querySelector('td:nth-child(8) small').textContent;
-                    const creadoPor = fila.querySelector('td:nth-child(9) small').textContent;
-                    const monto = fila.querySelector('td:nth-child(10) strong').textContent;
-                    const tipo = fila.dataset.tipo === 'grupal' ? 'Bandeja Grupal' : 'Asignada';
+                    try {
+                        const codigoEl = fila.querySelector('td:nth-child(1) strong');
+                        const clienteEl = fila.querySelector('td:nth-child(2) strong');
+                        const pipelineEl = fila.querySelector('td:nth-child(3) .badge');
+                        const etapaEl = fila.querySelector('td:nth-child(4) .badge');
+                        const asignadoEl = fila.querySelector('td:nth-child(5) .badge');
+                        const slaEl = fila.querySelector('td:nth-child(6) span');
+                        const fechaCreacionEl = fila.querySelector('td:nth-child(7) small');
+                        const ultimaActualizacionEl = fila.querySelector('td:nth-child(8) small');
+                        const creadoPorEl = fila.querySelector('td:nth-child(9) small');
+                        const montoEl = fila.querySelector('td:nth-child(10) strong');
 
-                    datos.push([
-                        codigo, cliente, pipeline, etapa, asignado, sla,
-                        fechaCreacion, ultimaActualizacion, creadoPor, monto, tipo
-                    ]);
+                        const codigo = codigoEl ? codigoEl.textContent : 'N/A';
+                        const cliente = clienteEl ? clienteEl.textContent : 'N/A';
+                        const pipeline = pipelineEl ? pipelineEl.textContent : 'N/A';
+                        const etapa = etapaEl ? etapaEl.textContent : 'N/A';
+                        const asignado = asignadoEl ? asignadoEl.textContent : 'N/A';
+                        const sla = slaEl ? slaEl.textContent.trim() : 'N/A';
+                        const fechaCreacion = fechaCreacionEl ? fechaCreacionEl.textContent : 'N/A';
+                        const ultimaActualizacion = ultimaActualizacionEl ? ultimaActualizacionEl.textContent : 'N/A';
+                        const creadoPor = creadoPorEl ? creadoPorEl.textContent : 'N/A';
+                        const monto = montoEl ? montoEl.textContent : 'N/A';
+                        const tipo = fila.dataset.tipo === 'grupal' ? 'Bandeja Grupal' : 'Asignada';
+
+                        datos.push([
+                            codigo, cliente, pipeline, etapa, asignado, sla,
+                            fechaCreacion, ultimaActualizacion, creadoPor, monto, tipo
+                        ]);
+                    } catch (error) {
+                        console.error('Error procesando fila supervisor:', error, fila);
+                        // Continuar con la siguiente fila
+                    }
                 }
             });
 
@@ -2721,6 +2762,57 @@
                 link.click();
                 document.body.removeChild(link);
             }
+        }
+
+        // Función para obtener CSRF token
+        function getCsrfToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]').value;
+        }
+
+        function exportarDatosBackOffice() {
+            // Mostrar indicador de carga
+            const button = document.getElementById('export-backoffice-data');
+            const originalHTML = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Generando Excel...';
+
+            // Llamar al endpoint para generar el Excel
+            fetch('/workflow/api/exportar-backoffice/', {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error al generar el archivo');
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                // Crear link de descarga
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `estadisticas_backoffice_${new Date().toISOString().split('T')[0]}.xlsx`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+                
+                // Mostrar mensaje de éxito
+                mostrarNotificacion('Excel generado exitosamente', 'success');
+            })
+            .catch(error => {
+                console.error('Error al exportar datos de Back Office:', error);
+                mostrarNotificacion('Error al generar el archivo Excel', 'error');
+            })
+            .finally(() => {
+                // Restaurar botón
+                button.disabled = false;
+                button.innerHTML = originalHTML;
+            });
         }
 
         // Event listeners para botones en la tabla de supervisor

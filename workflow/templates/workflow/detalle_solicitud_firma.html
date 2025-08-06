@@ -196,6 +196,43 @@
 .btn-captura-action i {
   font-size: 16px;
 }
+
+/* Estilos para información prominente del cliente */
+.client-info-prominent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.client-name {
+  font-size: 1.1rem;
+  color: #ffffff !important;
+  display: flex;
+  align-items: center;
+  font-weight: 700;
+}
+
+.client-name strong {
+  font-size: 1.15rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #ffffff !important;
+  font-weight: 700;
+}
+
+.client-id {
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  color: #ffffff !important;
+}
+
+.client-id span {
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #ffffff !important;
+}
 </style>
 {% endblock %}
 
@@ -208,25 +245,39 @@
       <div class="card border-0 shadow-sm mb-4">
         <div class="card-header processes-header">
           <div class="d-flex align-items-center justify-content-between">
-            <!-- Sección Izquierda: Icono y Títulos -->
+            <!-- Sección Izquierda: Icono, Títulos y Cliente -->
             <div class="d-flex align-items-center">
               <div class="process-icon-container">
-                <i class="fas fa-tasks"></i>
+                <i class="fas fa-tasks text-white"></i>
               </div>
               <div class="ms-3">
-                <h5 class="mb-0 process-title">Procesos de Back Office</h5>
-                <small class="process-subtitle">Gestión completa del flujo de trabajo</small>
+                <h5 class="mb-0 process-title text-white fw-bold">Procesos de Back Office</h5>
+                <small class="process-subtitle text-white-50">Gestión completa del flujo de trabajo</small>
+              </div>
+              
+              <!-- Información prominente del cliente -->
+              <div class="ms-4 ps-4 border-start border-primary border-2">
+                <div class="client-info-prominent">
+                  {% if solicitud.cliente_nombre_completo or solicitud.cotizacion.nombreCliente %}
+                  <div class="client-name">
+                    <i class="fas fa-user-circle text-white me-2"></i>
+                    <strong>{{ solicitud.cliente_nombre_completo|default:solicitud.cotizacion.nombreCliente }}</strong>
+                  </div>
+                  {% endif %}
+
+                  {% if solicitud.cotizacion.cedulaCliente %}
+                  <div class="client-id">
+                    <i class="fas fa-id-card text-white me-2"></i>
+                    <span>{{ solicitud.cotizacion.cedulaCliente }}</span>
+                  </div>
+                  {% endif %}
+                </div>
               </div>
             </div>
 
             <!-- Sección Central: Información del Negocio -->
             <div class="d-flex align-items-center justify-content-center flex-wrap gap-2">
-              {% if solicitud.cliente_nombre_completo or solicitud.cotizacion.nombreCliente %}
-              <span class="mini-badge mini-badge-primary">
-                <i class="fas fa-user"></i>
-                {{ solicitud.cliente_nombre_completo|default:solicitud.cotizacion.nombreCliente }}
-              </span>
-              {% endif %}
+
               
               {% if solicitud.cotizacion.montoPrestamo %}
               <span class="mini-badge mini-badge-warning">

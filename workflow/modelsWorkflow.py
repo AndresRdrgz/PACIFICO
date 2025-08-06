@@ -541,8 +541,19 @@ class ReconsideracionSolicitud(models.Model):
 # --------------------------------------
 
 class Requisito(models.Model):
+    TIPO_ESPECIAL_CHOICES = [
+        ('agenda_firma', 'Agenda de Firma'),
+    ]
+    
     nombre = models.CharField(max_length=150)
     descripcion = models.TextField(blank=True)
+    tipo_especial = models.CharField(
+        max_length=50, 
+        blank=True, 
+        null=True, 
+        choices=TIPO_ESPECIAL_CHOICES,
+        help_text="Tipo especial de requisito (agenda_firma, etc.)"
+    )
 
     def __str__(self):
         return self.nombre

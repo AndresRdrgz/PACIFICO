@@ -316,3 +316,108 @@ def sla_bg_class(sla_color):
 def has_group(user, group_name):
     """Verifica si un usuario pertenece a un grupo específico"""
     return user.groups.filter(name=group_name).exists()
+
+@register.filter
+def dias_en_etapa(solicitud):
+    """Calcular las horas transcurridas desde que llegó al subestado actual de back office"""
+    if not solicitud or not solicitud.subestado_actual:
+        return 0
+    
+    # Buscar en el historial de back office la entrada más reciente al subestado actual
+    # que no tenga fecha de salida (es decir, el subestado actual)
+    from workflow.models import HistorialBackoffice
+    
+    historial_entrada = HistorialBackoffice.objects.filter(
+        solicitud=solicitud,
+        subestado_destino=solicitud.subestado_actual,
+        fecha_salida_subestado__isnull=True  # Sin fecha de salida = subestado actual
+    ).order_by('-fecha_entrada_subestado').first()
+    
+    if historial_entrada and historial_entrada.fecha_entrada_subestado:
+        tiempo_transcurrido = timezone.now() - historial_entrada.fecha_entrada_subestado
+        horas_transcurridas = int(tiempo_transcurrido.total_seconds() // 3600)
+        return horas_transcurridas
+    
+    # Fallback 1: Buscar en HistorialSolicitud
+    historial_solicitud = solicitud.historial.filter(
+        subestado=solicitud.subestado_actual,
+        fecha_fin__isnull=True
+    ).order_by('-fecha_inicio').first()
+    
+    if historial_solicitud and historial_solicitud.fecha_inicio:
+        tiempo_transcurrido = timezone.now() - historial_solicitud.fecha_inicio
+        horas_transcurridas = int(tiempo_transcurrido.total_seconds() // 3600)
+        return horas_transcurridas
+    
+    # Fallback 2: usar fecha_ultima_actualizacion
+    if solicitud.fecha_ultima_actualizacion:
+        tiempo_transcurrido = timezone.now() - solicitud.fecha_ultima_actualizacion
+        horas_transcurridas = int(tiempo_transcurrido.total_seconds() // 3600)
+        return horas_transcurridas
+    
+    return 0
+
+@register.filter
+def sla_to_horas(sla):
+    """Convertir un timedelta SLA a horas enteras"""
+    if not sla:
+        return 0
+    
+    if hasattr(sla, 'total_seconds'):
+        return int(sla.total_seconds() // 3600)
+    
+    return 0
+
+@register.filter
+def mul(value, arg):
+    """Multiplicar un valor por un argumento"""
+    try:
+        return float(value) * float(arg)
+    except (ValueError, TypeError):
+        return 0
+
+@register.filter
+def sla_80_percent(sla_horas):
+    """Calcular el 80% del SLA en horas"""
+    try:
+        return int(float(sla_horas) * 0.8)
+    except (ValueError, TypeError):
+        return 0
+
+@register.filter
+def tiempo_en_subestado_texto(solicitud):
+    """Obtener el tiempo transcurrido en el subestado actual en formato texto legible"""
+    if not solicitud or not solicitud.subestado_actual:
+        return "0 min"
+    
+    from workflow.models import HistorialBackoffice
+    
+    # Buscar la entrada más reciente al subestado actual
+    historial_entrada = HistorialBackoffice.objects.filter(
+        solicitud=solicitud,
+        subestado_destino=solicitud.subestado_actual,
+        fecha_salida_subestado__isnull=True
+    ).order_by('-fecha_entrada_subestado').first()
+    
+    if historial_entrada and historial_entrada.fecha_entrada_subestado:
+        fecha_entrada = historial_entrada.fecha_entrada_subestado
+    else:
+        # Fallback: usar fecha_ultima_actualizacion
+        fecha_entrada = solicitud.fecha_ultima_actualizacion
+    
+    if not fecha_entrada:
+        return "0 min"
+    
+    # Calcular diferencia
+    tiempo_transcurrido = timezone.now() - fecha_entrada
+    total_minutos = int(tiempo_transcurrido.total_seconds() // 60)
+    
+    # Formatear como el JavaScript existente
+    if total_minutos >= 1440:  # >= 1 día
+        dias = total_minutos // 1440
+        return f"{dias} día{'s' if dias > 1 else ''}"
+    elif total_minutos >= 60:  # >= 1 hora
+        horas = total_minutos // 60
+        return f"{horas} hora{'s' if horas > 1 else ''}"
+    else:  # minutos
+        return f"{total_minutos} minuto{'s' if total_minutos > 1 else ''}"
