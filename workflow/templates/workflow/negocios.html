@@ -2432,6 +2432,8 @@
                 var etapaActual = select.getAttribute('data-etapa-actual') || select.dataset.etapaActual;
                 var nuevaEtapaId = select.value;
                 var nombreEtapa = select.options[select.selectedIndex]?.text || '';
+                // Limpiar el nombre de la etapa removiendo el texto de requisitos faltantes
+                nombreEtapa = nombreEtapa.replace(/\s*\(\d+\s+requisitos?\s+faltantes?\)\s*$/i, '').trim();
 
                 console.log('🔥 CAMBIO DE ETAPA DETECTADO:');
                 console.log('- Solicitud ID:', solicitudId);
@@ -4207,6 +4209,13 @@
             console.log('🔍 Mostrando modal de requisitos faltantes');
             console.log('📋 Parámetros recibidos:', { solicitudId, nuevaEtapaId, nombreEtapa, callbackExito: typeof callbackExito, callbackCancelacion: typeof callbackCancelacion });
 
+            // Guardar contexto global para uso en modal de agenda de firma
+            window.currentSolicitudId = solicitudId;
+            window.currentNuevaEtapaId = nuevaEtapaId;
+            window.currentNombreEtapa = nombreEtapa;
+            window.currentCallbackExito = callbackExito;
+            window.currentCallbackCancelacion = callbackCancelacion;
+
             // Validar parámetros con early return
             if (!solicitudId || !nuevaEtapaId || !nombreEtapa) {
                 console.error('❌ Parámetros inválidos:', { solicitudId, nuevaEtapaId, nombreEtapa });
@@ -4234,7 +4243,7 @@
             if (listaContainer) listaContainer.innerHTML = '';
             if (loadingElement) loadingElement.style.display = 'block';
 
-            // Actualizar título del modal
+            // Actualizar título del modal (se actualizará con requisitos obligatorios después)
             const etapaDestinoElement = document.getElementById('etapaDestinoNombre');
             if (etapaDestinoElement) {
                 etapaDestinoElement.textContent = nombreEtapa;
@@ -4255,6 +4264,17 @@
                     if (loadingElement) loadingElement.style.display = 'none';
 
                     if (data.success) {
+                        // Actualizar título del modal con requisitos obligatorios faltantes
+                        const etapaDestinoElement = document.getElementById('etapaDestinoNombre');
+                        if (etapaDestinoElement) {
+                            const obligatoriosFaltantes = data.total_obligatorios_faltantes || 0;
+                            if (obligatoriosFaltantes > 0) {
+                                etapaDestinoElement.textContent = `${nombreEtapa} (${obligatoriosFaltantes} requisito${obligatoriosFaltantes > 1 ? 's' : ''} obligatorio${obligatoriosFaltantes > 1 ? 's' : ''} faltante${obligatoriosFaltantes > 1 ? 's' : ''})`;
+                            } else {
+                                etapaDestinoElement.textContent = nombreEtapa;
+                            }
+                        }
+                        
                         // Llenar la lista de requisitos faltantes
                         window.llenarListaRequisitosFaltantes(data.requisitos, data.total_requisitos, data.requisitos_completos, data);
 
@@ -4416,6 +4436,11 @@
             const cardClass = isCompleto ? 'border-success' : (esObligatorio ? 'border-danger' : 'border-secondary');
             const cardExtraClass = esObligatorio ? '' : 'opcional';
 
+            // Lógica especial para requisito de agenda de firma
+            if (requisito.tipo_especial === 'agenda_firma') {
+                return buildAgendaFirmaHtml(requisito, esObligatorio, isCompleto, tituloClass, tituloIcon, badgeClass, badgeText, cardClass, cardExtraClass);
+            }
+
             return `
             <div class="card mb-3 requisito-card ${cardClass} ${cardExtraClass}" data-requisito-id="${requisito.id}">
                 <div class="card-body">
@@ -4483,6 +4508,81 @@
                 </div>
             </div>
         `;
+        }
+
+        // Función específica para generar HTML del requisito de agenda de firma
+        function buildAgendaFirmaHtml(requisito, esObligatorio, isCompleto, tituloClass, tituloIcon, badgeClass, badgeText, cardClass, cardExtraClass) {
+            const agendaFirma = requisito.agenda_firma || {};
+            
+            return `
+            <div class="card mb-3 requisito-card ${cardClass} ${cardExtraClass}" data-requisito-id="${requisito.id}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="card-title ${tituloClass} mb-1">
+                                <i class="fas ${tituloIcon} me-2"></i>
+                                ${requisito.nombre}
+                                ${esObligatorio ? '' : '<span class="badge bg-secondary ms-2" style="font-size: 0.7rem;">Opcional</span>'}
+                            </h6>
+                            ${requisito.descripcion ? `<p class="text-muted small mb-2">${requisito.descripcion}</p>` : ''}
+                            ${requisito.mensaje_personalizado ? `<p class="text-info small mb-2"><i class="fas fa-info-circle me-1"></i>${requisito.mensaje_personalizado}</p>` : ''}
+                        </div>
+                        <div class="text-end">
+                            <span class="badge ${badgeClass}">${badgeText}</span>
+                        </div>
+                    </div>
+                    
+                    ${isCompleto && agendaFirma.tiene_cita ? `
+                        <div class="alert alert-success mb-3" style="border-radius: 12px; border: none; background: linear-gradient(135deg, rgba(40, 167, 69, 0.1), rgba(25, 135, 84, 0.15));">
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-calendar-check me-3 mt-1 text-success" style="font-size: 1.5rem;"></i>
+                                <div class="flex-grow-1">
+                                    <h6 class="alert-heading mb-2 text-success fw-bold">
+                                        <i class="fas fa-check-circle me-2"></i>
+                                        Firma Agendada
+                                    </h6>
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <strong>Fecha:</strong><br>
+                                            <span class="text-success">${agendaFirma.fecha_formateada || 'No especificada'}</span>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <strong>Lugar:</strong><br>
+                                            <span class="text-success">${agendaFirma.lugar_firma_display || 'No especificado'}</span>
+                                        </div>
+                                        ${agendaFirma.comentarios ? `
+                                        <div class="col-12 mt-2">
+                                            <strong>Comentarios:</strong><br>
+                                            <span class="text-muted">${agendaFirma.comentarios}</span>
+                                        </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="alert alert-warning mb-3" style="border-radius: 12px; border: none; background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(253, 126, 20, 0.15));">
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-calendar-plus me-3 mt-1 text-warning" style="font-size: 1.5rem;"></i>
+                                <div class="flex-grow-1">
+                                    <h6 class="alert-heading mb-2 text-warning fw-bold">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        Agenda de Firma Pendiente
+                                    </h6>
+                                    <p class="mb-3 text-muted">
+                                        Es necesario agendar una cita de firma para continuar con el proceso.
+                                    </p>
+                                    <button type="button" class="btn btn-warning" onclick="abrirModalAgendaFirma(${requisito.id})">
+                                        <i class="fas fa-calendar-plus me-2"></i>
+                                        Agendar Firma
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `}
+                </div>
+            </div>
+            `;
         }
 
         // Función para mostrar upload para reemplazar archivo
@@ -5137,6 +5237,266 @@
                 }
             }
         }, 1000);
+
+        // Función para abrir modal de agenda de firma
+        window.abrirModalAgendaFirma = async function(requisitoId) {
+        try {
+            console.log('📅 Abriendo modal para agendar firma, requisito ID:', requisitoId);
+            
+            // Obtener información de la solicitud actual desde el contexto global
+            const solicitudId = window.currentSolicitudId || document.querySelector('[data-solicitud-id]')?.getAttribute('data-solicitud-id');
+            if (!solicitudId) {
+                console.error('❌ No se encontró ID de solicitud');
+                if (typeof showToast !== 'undefined') {
+                    showToast('Error: No se pudo identificar la solicitud', 'error');
+                } else {
+                    alert('Error: No se pudo identificar la solicitud');
+                }
+                return;
+            }
+
+            // Crear modal dinámico para agendar firma
+            const modalHtml = `
+                <div class="modal fade" id="modalAgendaFirma" tabindex="-1" aria-labelledby="modalAgendaFirmaLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content" style="border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);">
+                            <!-- Header -->
+                            <div class="modal-header" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); border: none; padding: 24px 32px 20px 32px;">
+                                <h5 class="modal-title text-white fw-bold" id="modalAgendaFirmaLabel">
+                                    <i class="fas fa-calendar-plus me-2"></i>
+                                    Agendar Cita de Firma
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            
+                            <!-- Body -->
+                            <div class="modal-body" style="padding: 32px;">
+                                <form id="formAgendaFirma">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="fechaFirma" class="form-label fw-semibold">
+                                                <i class="fas fa-calendar me-2 text-primary"></i>
+                                                Fecha de la Cita *
+                                            </label>
+                                            <input type="date" class="form-control" id="fechaFirma" name="fecha" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="horaFirma" class="form-label fw-semibold">
+                                                <i class="fas fa-clock me-2 text-primary"></i>
+                                                Hora de la Cita *
+                                            </label>
+                                            <input type="time" class="form-control" id="horaFirma" name="hora" required>
+                                        </div>
+                                        <div class="col-12">
+                                            <label for="lugarFirma" class="form-label fw-semibold">
+                                                <i class="fas fa-map-marker-alt me-2 text-primary"></i>
+                                                Lugar de la Firma *
+                                            </label>
+                                            <select class="form-select" id="lugarFirma" name="lugar_firma" required>
+                                                <option value="">Seleccionar lugar...</option>
+                                                <option value="delivery">Delivery</option>
+                                                <option value="apoyo">Apoyo</option>
+                                                <option value="casa_matriz">Casa Matriz</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
+                                            <label for="comentariosFirma" class="form-label fw-semibold">
+                                                <i class="fas fa-comment me-2 text-secondary"></i>
+                                                Comentarios
+                                            </label>
+                                            <textarea class="form-control" id="comentariosFirma" name="comentarios" rows="3" placeholder="Comentarios adicionales sobre la cita..."></textarea>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <!-- Footer -->
+                            <div class="modal-footer" style="padding: 24px 32px; border: none; background: #f8f9fa;">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                    <i class="fas fa-times me-2"></i>Cancelar
+                                </button>
+                                <button type="button" class="btn btn-primary" id="btnGuardarCitaFirma">
+                                    <i class="fas fa-save me-2"></i>Agendar Cita
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Remover modal existente si existe
+            const existingModal = document.getElementById('modalAgendaFirma');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            // Agregar modal al DOM
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            // Configurar event listener para guardar
+            document.getElementById('btnGuardarCitaFirma').addEventListener('click', async () => {
+                await guardarCitaFirma(solicitudId, requisitoId);
+            });
+
+            // Obtener referencia del modal
+            const modalElement = document.getElementById('modalAgendaFirma');
+            
+            // Mostrar modal
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+
+            // Limpiar modal del DOM cuando se cierre (usar once para evitar duplicados)
+            modalElement.addEventListener('hidden.bs.modal', function cleanupModal() {
+                // Remover event listener para evitar memory leaks
+                modalElement.removeEventListener('hidden.bs.modal', cleanupModal);
+                // Remover modal del DOM de forma segura
+                if (modalElement && modalElement.parentNode) {
+                    modalElement.remove();
+                }
+            }, { once: true });
+
+        } catch (error) {
+            console.error('❌ Error al abrir modal de agenda de firma:', error);
+            if (typeof showToast !== 'undefined') {
+                showToast('Error al abrir el formulario de agenda', 'error');
+            } else {
+                alert('Error al abrir el formulario de agenda');
+            }
+        }
+        };
+
+        // Función para guardar cita de firma
+        async function guardarCitaFirma(solicitudId, requisitoId) {
+            // Obtener referencia del botón y texto original fuera del try
+            const btnGuardar = document.getElementById('btnGuardarCitaFirma');
+            const textoOriginal = btnGuardar ? btnGuardar.innerHTML : '';
+            
+            try {
+                const form = document.getElementById('formAgendaFirma');
+                const formData = new FormData(form);
+                
+                // Validar campos requeridos
+                const fecha = formData.get('fecha');
+                const hora = formData.get('hora');
+                const lugarFirma = formData.get('lugar_firma');
+                
+                if (!fecha || !hora || !lugarFirma) {
+                    if (typeof showToast !== 'undefined') {
+                        showToast('Por favor completa todos los campos obligatorios', 'warning');
+                    } else {
+                        alert('Por favor completa todos los campos obligatorios');
+                    }
+                    return;
+                }
+
+                // Combinar fecha y hora
+                const fechaHora = `${fecha}T${hora}:00`;
+                
+                const data = {
+                    solicitud_id: solicitudId,
+                    fecha_hora: fechaHora,
+                    lugar_firma: lugarFirma,
+                    comentarios: formData.get('comentarios') || ''
+                };
+
+                // Deshabilitar botón mientras se procesa
+                if (btnGuardar) {
+                    btnGuardar.disabled = true;
+                    btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Guardando...';
+                }
+
+            // Enviar solicitud
+            const response = await fetch('/workflow/api/agenda-firma/crear-cita/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+            
+            console.log('📋 Respuesta del servidor al crear cita:', result);
+
+            if (result.success) {
+                if (typeof showToast !== 'undefined') {
+                    showToast('Cita de firma agendada exitosamente', 'success');
+                } else {
+                    alert('Cita de firma agendada exitosamente');
+                }
+                
+                // Cerrar modal de agenda
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalAgendaFirma'));
+                if (modal) {
+                    modal.hide();
+                }
+                
+                // Recargar el modal de requisitos para actualizar el estado
+                setTimeout(() => {
+                    console.log('🔄 Recargando modal de requisitos después de agendar firma');
+                    
+                    // Cerrar modal de agenda primero si aún está abierto
+                    const modalAgenda = document.getElementById('modalAgendaFirma');
+                    if (modalAgenda) {
+                        modalAgenda.remove();
+                    }
+                    
+                    // Verificar que tenemos los datos necesarios
+                    if (window.currentSolicitudId && window.currentNuevaEtapaId && window.currentNombreEtapa) {
+                        console.log('✅ Datos disponibles para recargar modal:', {
+                            solicitudId: window.currentSolicitudId,
+                            nuevaEtapaId: window.currentNuevaEtapaId,
+                            nombreEtapa: window.currentNombreEtapa
+                        });
+                        
+                        // Cerrar modal de requisitos actual si está abierto
+                        const modalRequisitos = document.getElementById('modalRequisitosFaltantes');
+                        if (modalRequisitos) {
+                            const modalInstance = bootstrap.Modal.getInstance(modalRequisitos);
+                            if (modalInstance) {
+                                modalInstance.hide();
+                            }
+                        }
+                        
+                        // Reabrir modal de requisitos con datos actualizados
+                        setTimeout(() => {
+                            window.mostrarModalRequisitosFaltantes(
+                                window.currentSolicitudId,
+                                window.currentNuevaEtapaId,
+                                window.currentNombreEtapa,
+                                window.currentCallbackExito,
+                                window.currentCallbackCancelacion
+                            );
+                        }, 300);
+                    } else {
+                        console.warn('⚠️ No se encontraron datos para recargar el modal de requisitos');
+                        // Como fallback, intentar recargar la página
+                        if (typeof showToast !== 'undefined') {
+                            showToast('Cita agendada. Recarga la página para ver los cambios.', 'info');
+                        }
+                    }
+                }, 300);
+                
+            } else {
+                throw new Error(result.error || 'Error desconocido al agendar la cita');
+            }
+
+            } catch (error) {
+                console.error('❌ Error al guardar cita de firma:', error);
+                if (typeof showToast !== 'undefined') {
+                    showToast('Error al agendar la cita: ' + error.message, 'error');
+                } else {
+                    alert('Error al agendar la cita: ' + error.message);
+                }
+            } finally {
+                // Restaurar botón
+                if (btnGuardar) {
+                    btnGuardar.disabled = false;
+                    btnGuardar.innerHTML = textoOriginal;
+                }
+            }
+        }
 
     })(); // Close IIFE
 </script>

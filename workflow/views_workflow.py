@@ -7752,11 +7752,18 @@ def verificar_requisitos_transicion(solicitud, transicion):
             requisito=req_transicion.requisito
         ).first()
         
-        # Considerar un requisito como cumplido si:
-        # 1. Existe el RequisitoSolicitud Y
-        # 2. (Tiene archivo O está marcado como cumplido)
-        # Esto permite que archivos subidos desde el drawer se consideren válidos
-        esta_cumplido = bool(requisito_solicitud and (requisito_solicitud.archivo or requisito_solicitud.cumplido))
+        # Lógica especial para requisito de agenda de firma
+        if req_transicion.requisito.tipo_especial == 'agenda_firma':
+            # Para agenda de firma, verificar si existe una cita agendada
+            from workflow.modelsWorkflow import AgendaFirma
+            tiene_cita_agendada = AgendaFirma.objects.filter(solicitud=solicitud).exists()
+            esta_cumplido = tiene_cita_agendada
+        else:
+            # Considerar un requisito como cumplido si:
+            # 1. Existe el RequisitoSolicitud Y
+            # 2. (Tiene archivo O está marcado como cumplido)
+            # Esto permite que archivos subidos desde el drawer se consideren válidos
+            esta_cumplido = bool(requisito_solicitud and (requisito_solicitud.archivo or requisito_solicitud.cumplido))
         
         # Si no está cumplido, agregarlo a requisitos faltantes
         if not esta_cumplido:
@@ -10254,11 +10261,18 @@ def api_obtener_requisitos_faltantes_detallado(request, solicitud_id):
                 requisito=req_transicion.requisito
             ).first()
             
-            # Determinar si está completo - considerar archivos subidos desde drawer
-            # Un requisito está completo si:
-            # 1. Existe el RequisitoSolicitud Y 
-            # 2. (Tiene archivo O está marcado como cumplido)
-            esta_completo = bool(requisito_solicitud and (requisito_solicitud.archivo or requisito_solicitud.cumplido))
+            # Lógica especial para requisito de agenda de firma
+            if req_transicion.requisito.tipo_especial == 'agenda_firma':
+                # Para agenda de firma, verificar si existe una cita agendada
+                from workflow.modelsWorkflow import AgendaFirma
+                tiene_cita_agendada = AgendaFirma.objects.filter(solicitud=solicitud).exists()
+                esta_completo = tiene_cita_agendada
+            else:
+                # Determinar si está completo - considerar archivos subidos desde drawer
+                # Un requisito está completo si:
+                # 1. Existe el RequisitoSolicitud Y 
+                # 2. (Tiene archivo O está marcado como cumplido)
+                esta_completo = bool(requisito_solicitud and (requisito_solicitud.archivo or requisito_solicitud.cumplido))
             if esta_completo:
                 requisitos_completos += 1
                 if req_transicion.obligatorio:
@@ -10278,8 +10292,23 @@ def api_obtener_requisitos_faltantes_detallado(request, solicitud_id):
                     'nombre': requisito_solicitud.archivo.name.split('/')[-1] if requisito_solicitud and requisito_solicitud.archivo else None,
                     'url': requisito_solicitud.archivo.url if requisito_solicitud and requisito_solicitud.archivo else None
                 } if requisito_solicitud and requisito_solicitud.archivo else None,
-                'observaciones': requisito_solicitud.observaciones if requisito_solicitud else ''
+                'observaciones': requisito_solicitud.observaciones if requisito_solicitud else '',
+                'tipo_especial': req_transicion.requisito.tipo_especial
             }
+            
+            # Agregar información específica para agenda de firma
+            if req_transicion.requisito.tipo_especial == 'agenda_firma':
+                from workflow.modelsWorkflow import AgendaFirma
+                cita_firma = AgendaFirma.objects.filter(solicitud=solicitud).first()
+                requisito_data['agenda_firma'] = {
+                    'tiene_cita': bool(cita_firma),
+                    'fecha_hora': cita_firma.fecha_hora.isoformat() if cita_firma else None,
+                    'fecha_formateada': cita_firma.fecha_formateada if cita_firma else None,
+                    'lugar_firma': cita_firma.lugar_firma if cita_firma else None,
+                    'lugar_firma_display': cita_firma.lugar_firma_display if cita_firma else None,
+                    'comentarios': cita_firma.comentarios if cita_firma else None,
+                    'cita_id': cita_firma.id if cita_firma else None
+                }
             
             requisitos_detallados.append(requisito_data)
             
@@ -16975,6 +17004,7 @@ def api_crear_cita_firma(request):
     """
     try:
         data = json.loads(request.body)
+        print(f"📅 Creando cita de firma - Datos recibidos: {data}")
         
         # Validar campos requeridos
         solicitud_id = data.get('solicitud_id')
@@ -17014,6 +17044,7 @@ def api_crear_cita_firma(request):
             comentarios=comentarios,
             creado_por=request.user
         )
+        print(f"✅ Cita creada exitosamente - ID: {cita.id}, Solicitud: {solicitud.id}")
         
         return JsonResponse({
             'success': True,

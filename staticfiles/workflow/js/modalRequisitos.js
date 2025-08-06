@@ -9,7 +9,7 @@
 class ModalRequisitos {
     constructor() {
         console.log('🏗️ Inicializando ModalRequisitos...');
-        
+
         this.currentSolicitudId = null;
         this.currentNuevaEtapaId = null;
         this.currentCallbackExito = null;
@@ -17,7 +17,7 @@ class ModalRequisitos {
         this.requisitosData = null;
         this.uploadQueue = [];
         this.isProcessing = false;
-        
+
         // Verificar que el modal existe
         const modalElement = document.getElementById('modalRequisitosFaltantes');
         if (modalElement) {
@@ -25,7 +25,7 @@ class ModalRequisitos {
         } else {
             console.error('❌ Modal element NO encontrado en constructor');
         }
-        
+
         this.initializeEventListeners();
     }
 
@@ -34,7 +34,7 @@ class ModalRequisitos {
      */
     initializeEventListeners() {
         console.log('🔧 Inicializando event listeners del modal...');
-        
+
         // Event listener para el cierre del modal
         const modal = document.getElementById('modalRequisitosFaltantes');
         if (modal) {
@@ -136,7 +136,7 @@ class ModalRequisitos {
     async cargarRequisitos() {
         try {
             const response = await fetch(`/workflow/api/solicitudes/${this.currentSolicitudId}/requisitos-faltantes-detallado/?nueva_etapa_id=${this.currentNuevaEtapaId}`);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -149,7 +149,7 @@ class ModalRequisitos {
                 this.llenarListaRequisitos(data);
                 this.actualizarResumen(data);
                 this.actualizarEstadoModal(data);
-                
+
                 // Mostrar el modal después de cargar los datos
                 this.mostrarModalElement();
             } else {
@@ -300,6 +300,12 @@ class ModalRequisitos {
      * Generar sección de archivo
      */
     generarSeccionArchivo(requisito, estado) {
+        // Lógica especial para agenda de firma
+        if (requisito.tipo_especial === 'agenda_firma') {
+            return this.generarSeccionAgendaFirma(requisito, estado);
+        }
+
+        // Lógica normal para requisitos con archivos
         if (estado === 'completado' && requisito.archivo_actual) {
             return `
                 <div class="file-preview">
@@ -328,6 +334,68 @@ class ModalRequisitos {
                                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
                                aria-label="${estado === 'pendiente' ? 'Reemplazar archivo' : 'Subir archivo'}">
                         <small class="text-muted">El archivo se subirá automáticamente cuando hagas clic en 'Validar y Continuar'</small>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    /**
+     * Generar sección específica para agenda de firma
+     */
+    generarSeccionAgendaFirma(requisito, estado) {
+        const agendaFirma = requisito.agenda_firma || {};
+
+        if (estado === 'completado' && agendaFirma.tiene_cita) {
+            // Mostrar información de la cita agendada
+            return `
+                <div class="alert alert-success mb-3" style="border-radius: 12px; border: none; background: linear-gradient(135deg, rgba(40, 167, 69, 0.1), rgba(25, 135, 84, 0.15));">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-calendar-check me-3 mt-1 text-success" style="font-size: 1.5rem;"></i>
+                        <div class="flex-grow-1">
+                            <h6 class="alert-heading mb-2 text-success fw-bold">
+                                <i class="fas fa-check-circle me-2"></i>
+                                Firma Agendada
+                            </h6>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <strong>Fecha:</strong><br>
+                                    <span class="text-success">${agendaFirma.fecha_formateada || 'No especificada'}</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Lugar:</strong><br>
+                                    <span class="text-success">${agendaFirma.lugar_firma_display || 'No especificado'}</span>
+                                </div>
+                                ${agendaFirma.comentarios ? `
+                                <div class="col-12 mt-2">
+                                    <strong>Comentarios:</strong><br>
+                                    <span class="text-muted">${agendaFirma.comentarios}</span>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            // Mostrar interfaz para agendar firma
+            return `
+                <div class="alert alert-warning mb-3" style="border-radius: 12px; border: none; background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(253, 126, 20, 0.15));">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-calendar-plus me-3 mt-1 text-warning" style="font-size: 1.5rem;"></i>
+                        <div class="flex-grow-1">
+                            <h6 class="alert-heading mb-2 text-warning fw-bold">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Agenda de Firma Pendiente
+                            </h6>
+                            <p class="mb-3 text-muted">
+                                Es necesario agendar una cita de firma para continuar con el proceso.
+                            </p>
+                            <button type="button" class="btn btn-warning" onclick="modalRequisitos.abrirModalAgendaFirma(${requisito.id})">
+                                <i class="fas fa-calendar-plus me-2"></i>
+                                Agendar Firma
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -522,7 +590,7 @@ class ModalRequisitos {
         // Validar tipo de archivo
         const tiposPermitidos = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.gif'];
         const extension = '.' + file.name.split('.').pop().toLowerCase();
-        
+
         if (!tiposPermitidos.includes(extension)) {
             this.showToast(`Tipo de archivo no permitido: ${extension}`, 'error');
             return false;
@@ -582,7 +650,7 @@ class ModalRequisitos {
         try {
             // Preparar archivos para subir
             const archivosParaSubir = this.prepararArchivosParaSubir();
-            
+
             if (archivosParaSubir.length > 0) {
                 await this.subirArchivos(archivosParaSubir);
             }
@@ -624,15 +692,15 @@ class ModalRequisitos {
      */
     async subirArchivos(archivos) {
         console.log(`📤 Subiendo ${archivos.length} archivos...`);
-        
+
         this.mostrarEstadoValidacion('Subiendo archivos...', 0);
 
         for (let i = 0; i < archivos.length; i++) {
             const archivo = archivos[i];
             const progreso = ((i + 1) / archivos.length) * 100;
-            
+
             this.mostrarEstadoValidacion(`Subiendo archivo ${i + 1} de ${archivos.length}...`, progreso);
-            
+
             try {
                 await this.subirArchivoIndividual(archivo);
             } catch (error) {
@@ -678,11 +746,11 @@ class ModalRequisitos {
      */
     async validarRequisitosBackend() {
         console.log('🔍 Validando requisitos en el backend...');
-        
+
         this.mostrarEstadoValidacion('Validando requisitos...', 50);
 
         const response = await fetch(`/workflow/api/solicitudes/${this.currentSolicitudId}/requisitos-faltantes-detallado/?nueva_etapa_id=${this.currentNuevaEtapaId}`);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -709,15 +777,15 @@ class ModalRequisitos {
         if (!requisitoItem) return;
 
         requisitoItem.className = `requisito-item ${estado}`;
-        
+
         const statusElement = requisitoItem.querySelector('.validation-status');
         const badgeElement = requisitoItem.querySelector('.badge');
-        
+
         if (statusElement) {
             statusElement.className = `validation-status ${estado}`;
             statusElement.innerHTML = `<i class="fas ${this.obtenerIconoEstado(estado)}"></i>`;
         }
-        
+
         if (badgeElement) {
             badgeElement.className = `badge ${this.obtenerClaseBadge(estado)}`;
             badgeElement.textContent = this.obtenerMensajeEstado(estado);
@@ -845,32 +913,218 @@ class ModalRequisitos {
             alert(mensaje);
         }
     }
+
+    /**
+     * Abrir modal para agendar firma
+     */
+    async abrirModalAgendaFirma(requisitoId) {
+        try {
+            console.log('📅 Abriendo modal para agendar firma, requisito ID:', requisitoId);
+
+            // Obtener información de la solicitud actual
+            const solicitudId = this.solicitudId;
+            if (!solicitudId) {
+                console.error('❌ No se encontró ID de solicitud');
+                this.showToast('Error: No se pudo identificar la solicitud', 'error');
+                return;
+            }
+
+            // Crear modal dinámico para agendar firma
+            const modalHtml = `
+                <div class="modal fade" id="modalAgendaFirma" tabindex="-1" aria-labelledby="modalAgendaFirmaLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content" style="border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);">
+                            <!-- Header -->
+                            <div class="modal-header" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); border: none; padding: 24px 32px 20px 32px;">
+                                <h5 class="modal-title text-white fw-bold" id="modalAgendaFirmaLabel">
+                                    <i class="fas fa-calendar-plus me-2"></i>
+                                    Agendar Cita de Firma
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            
+                            <!-- Body -->
+                            <div class="modal-body" style="padding: 32px;">
+                                <form id="formAgendaFirma">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="fechaFirma" class="form-label fw-semibold">
+                                                <i class="fas fa-calendar me-2 text-primary"></i>
+                                                Fecha de la Cita *
+                                            </label>
+                                            <input type="date" class="form-control" id="fechaFirma" name="fecha" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="horaFirma" class="form-label fw-semibold">
+                                                <i class="fas fa-clock me-2 text-primary"></i>
+                                                Hora de la Cita *
+                                            </label>
+                                            <input type="time" class="form-control" id="horaFirma" name="hora" required>
+                                        </div>
+                                        <div class="col-12">
+                                            <label for="lugarFirma" class="form-label fw-semibold">
+                                                <i class="fas fa-map-marker-alt me-2 text-primary"></i>
+                                                Lugar de la Firma *
+                                            </label>
+                                            <select class="form-select" id="lugarFirma" name="lugar_firma" required>
+                                                <option value="">Seleccionar lugar...</option>
+                                                <option value="delivery">Delivery</option>
+                                                <option value="apoyo">Apoyo</option>
+                                                <option value="casa_matriz">Casa Matriz</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
+                                            <label for="comentariosFirma" class="form-label fw-semibold">
+                                                <i class="fas fa-comment me-2 text-secondary"></i>
+                                                Comentarios
+                                            </label>
+                                            <textarea class="form-control" id="comentariosFirma" name="comentarios" rows="3" placeholder="Comentarios adicionales sobre la cita..."></textarea>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <!-- Footer -->
+                            <div class="modal-footer" style="padding: 24px 32px; border: none; background: #f8f9fa;">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                    <i class="fas fa-times me-2"></i>Cancelar
+                                </button>
+                                <button type="button" class="btn btn-primary" id="btnGuardarCitaFirma">
+                                    <i class="fas fa-save me-2"></i>Agendar Cita
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Remover modal existente si existe
+            const existingModal = document.getElementById('modalAgendaFirma');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            // Agregar modal al DOM
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            // Configurar event listener para guardar
+            document.getElementById('btnGuardarCitaFirma').addEventListener('click', async () => {
+                await this.guardarCitaFirma(solicitudId, requisitoId);
+            });
+
+            // Mostrar modal
+            const modal = new bootstrap.Modal(document.getElementById('modalAgendaFirma'));
+            modal.show();
+
+            // Limpiar modal del DOM cuando se cierre
+            document.getElementById('modalAgendaFirma').addEventListener('hidden.bs.modal', () => {
+                document.getElementById('modalAgendaFirma').remove();
+            });
+
+        } catch (error) {
+            console.error('❌ Error al abrir modal de agenda de firma:', error);
+            this.showToast('Error al abrir el formulario de agenda', 'error');
+        }
+    }
+
+    /**
+     * Guardar cita de firma
+     */
+    async guardarCitaFirma(solicitudId, requisitoId) {
+        try {
+            const form = document.getElementById('formAgendaFirma');
+            const formData = new FormData(form);
+
+            // Validar campos requeridos
+            const fecha = formData.get('fecha');
+            const hora = formData.get('hora');
+            const lugarFirma = formData.get('lugar_firma');
+
+            if (!fecha || !hora || !lugarFirma) {
+                this.showToast('Por favor completa todos los campos obligatorios', 'warning');
+                return;
+            }
+
+            // Combinar fecha y hora
+            const fechaHora = `${fecha}T${hora}:00`;
+
+            const data = {
+                solicitud_id: solicitudId,
+                fecha_hora: fechaHora,
+                lugar_firma: lugarFirma,
+                comentarios: formData.get('comentarios') || ''
+            };
+
+            // Deshabilitar botón mientras se procesa
+            const btnGuardar = document.getElementById('btnGuardarCitaFirma');
+            const textoOriginal = btnGuardar.innerHTML;
+            btnGuardar.disabled = true;
+            btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Guardando...';
+
+            // Enviar solicitud
+            const response = await fetch('/workflow/api/agenda-firma/crear-cita/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCsrfToken()
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.showToast('Cita de firma agendada exitosamente', 'success');
+
+                // Cerrar modal de agenda
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalAgendaFirma'));
+                modal.hide();
+
+                // Recargar requisitos para actualizar el estado
+                await this.cargarRequisitos();
+
+            } else {
+                throw new Error(result.error || 'Error desconocido al agendar la cita');
+            }
+
+        } catch (error) {
+            console.error('❌ Error al guardar cita de firma:', error);
+            this.showToast('Error al agendar la cita: ' + error.message, 'error');
+        } finally {
+            // Restaurar botón
+            const btnGuardar = document.getElementById('btnGuardarCitaFirma');
+            if (btnGuardar) {
+                btnGuardar.disabled = false;
+                btnGuardar.innerHTML = textoOriginal;
+            }
+        }
+    }
 }
 
 // Función para inicializar el sistema cuando el DOM esté listo
 function initializeModalRequisitos() {
     console.log('🚀 Inicializando sistema ModalRequisitos...');
-    
+
     // Verificar que Bootstrap esté disponible
     if (typeof bootstrap === 'undefined') {
         console.error('❌ Bootstrap no está disponible');
         return;
     }
-    
+
     // Verificar que el modal existe
     const modalElement = document.getElementById('modalRequisitosFaltantes');
     if (!modalElement) {
         console.error('❌ Modal element no encontrado durante inicialización');
         return;
     }
-    
+
     // Inicializar instancia global
     window.modalRequisitos = new ModalRequisitos();
     console.log('✅ ModalRequisitos inicializado correctamente');
 }
 
 // Funciones de compatibilidad para el código existente
-window.mostrarModalRequisitosFaltantes = function(solicitudId, nuevaEtapaId, nombreEtapa, callbackExito, callbackCancelacion) {
+window.mostrarModalRequisitosFaltantes = function (solicitudId, nuevaEtapaId, nombreEtapa, callbackExito, callbackCancelacion) {
     if (window.modalRequisitos) {
         window.modalRequisitos.mostrarModal(solicitudId, nuevaEtapaId, nombreEtapa, callbackExito, callbackCancelacion);
     } else {
@@ -878,7 +1132,7 @@ window.mostrarModalRequisitosFaltantes = function(solicitudId, nuevaEtapaId, nom
     }
 };
 
-window.cerrarModalRequisitos = function() {
+window.cerrarModalRequisitos = function () {
     if (window.modalRequisitos) {
         window.modalRequisitos.cerrarModal();
     } else {
@@ -895,9 +1149,9 @@ if (document.readyState === 'loading') {
 }
 
 // Función de prueba para verificar el modal
-window.testModalRequisitos = function() {
+window.testModalRequisitos = function () {
     console.log('🧪 Probando modal de requisitos...');
-    
+
     if (window.modalRequisitos) {
         // Simular datos de prueba
         const testData = {
@@ -926,14 +1180,14 @@ window.testModalRequisitos = function() {
             total_requisitos: 2,
             requisitos_completos: 1
         };
-        
+
         // Simular el modal con datos de prueba
         window.modalRequisitos.requisitosData = testData;
         window.modalRequisitos.llenarListaRequisitos(testData);
         window.modalRequisitos.actualizarResumen(testData);
         window.modalRequisitos.actualizarEstadoModal(testData);
         window.modalRequisitos.mostrarModalElement();
-        
+
         console.log('✅ Modal de prueba mostrado');
     } else {
         console.error('❌ ModalRequisitos no está disponible');
