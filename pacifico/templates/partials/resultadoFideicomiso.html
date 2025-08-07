@@ -7,9 +7,35 @@
         </span>
         <div class="ml-auto flex space-x-2">
             {% if resultado.numero_cotizacion %}
-                <a href="{% url 'generate_report' resultado.numero_cotizacion %}" class="bg-black text-white px-4 py-2 rounded hover:bg-black inline-block">
-                    Reporte de Consulta 📄
-                </a>
+                {% if form.sector.value and form.politica.value and form.observaciones.value and form.tiempoServicio.value and form.nombreEmpresa.value and form.ingresos.value and form.posicion.value and form.apcScore.value and form.apcPI.value %}
+                    <a href="{% url 'generate_report' resultado.numero_cotizacion %}" class="bg-black text-white px-4 py-2 rounded hover:bg-black inline-block">
+                        Reporte de Consulta 📄
+                    </a>
+                {% else %}
+                    <div class="flex flex-col items-end">
+                        <div class="flex gap-2">
+                            <button type="button" class="bg-black text-white px-4 py-2 rounded opacity-50 cursor-not-allowed" disabled title="Complete Sector, Política y Observaciones para habilitar el reporte.">
+                                Reporte de Consulta 📄
+                            </button>
+                            <button type="button" class="px-3 py-2 rounded bg-[#f57722] text-white shadow hover:bg-[#e46d1f] focus:outline-none focus:ring-2 focus:ring-[#f57722] focus:ring-offset-2 transition" onclick="openCompleteConsultaModal('{{ resultado.numero_cotizacion }}')" aria-label="Abrir modal para completar datos de consulta">
+                                Completar datos
+                            </button>
+                        </div>
+                        <p class="text-xs text-red-600 mt-1 text-right">
+                            Complete
+                            {% if not form.sector.value %}Sector{% endif %}
+                            {% if not form.politica.value %}{% if not form.sector.value %}, {% endif %}Política{% endif %}
+                            {% if not form.observaciones.value %}{% if not form.sector.value or not form.politica.value %}, {% endif %}Observaciones{% endif %}
+                            {% if not form.tiempoServicio.value %}{% if not form.sector.value or not form.politica.value or not form.observaciones.value %}, {% endif %}Tiempo de Servicio{% endif %}
+                            {% if not form.nombreEmpresa.value %}{% if not form.sector.value or not form.politica.value or not form.observaciones.value or not form.tiempoServicio.value %}, {% endif %}Nombre de la Empresa{% endif %}
+                            {% if not form.ingresos.value %}{% if not form.sector.value or not form.politica.value or not form.observaciones.value or not form.tiempoServicio.value or not form.nombreEmpresa.value %}, {% endif %}Ingresos{% endif %}
+                            {% if not form.posicion.value %}{% if not form.sector.value or not form.politica.value or not form.observaciones.value or not form.tiempoServicio.value or not form.nombreEmpresa.value or not form.ingresos.value %}, {% endif %}Posición{% endif %}
+                            {% if not form.apcScore.value %}{% if not form.sector.value or not form.politica.value or not form.observaciones.value or not form.tiempoServicio.value or not form.nombreEmpresa.value or not form.ingresos.value or not form.posicion.value %}, {% endif %}APC Score{% endif %}
+                            {% if not form.apcPI.value %}{% if not form.sector.value or not form.politica.value or not form.observaciones.value or not form.tiempoServicio.value or not form.nombreEmpresa.value or not form.ingresos.value or not form.posicion.value or not form.apcScore.value %}, {% endif %}APC PI{% endif %}
+                            para habilitar el reporte.
+                        </p>
+                    </div>
+                {% endif %}
                 {% if pruebaFuncionalidades %}
                     <a href="{% url 'download_merged_pdf' resultado.numero_cotizacion %}" class="bg-[#f57722] text-white px-4 py-2 rounded border border-black hover:bg-[#f57722] inline-block">
                         <img src="{% static 'pdf.svg' %}" alt="PDF Icon" class="inline-block w-4 h-4 mr-2">
@@ -45,6 +71,379 @@
                             Comisión de Cierre
                         </th>
                         <th scope="col" class="px-6 py-3">
+                    {# Modal to complete missing consulta fields #}
+                    <div id="complete-consulta-modal" class="fixed inset-0 bg-black bg-opacity-60 overflow-y-auto h-full w-full hidden backdrop-blur-sm" style="z-index: 60;" role="dialog" aria-modal="true" aria-labelledby="cc-modal-title">
+                        <div class="relative top-10 mx-auto p-0 w-11/12 md:w-2/3 lg:w-1/2 shadow-2xl rounded-xl bg-white border border-gray-200">
+                            <div class="bg-gradient-to-r from-[#f57722] to-[#e46d1f] px-6 py-4 rounded-t-xl">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                            </svg>
+                                        </div>
+                                        <h3 id="cc-modal-title" class="text-xl font-bold text-white">Completar datos de consulta</h3>
+                                    </div>
+                                    <button type="button" class="text-white hover:text-gray-200 text-2xl font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-white hover:bg-opacity-20 transition" onclick="closeCompleteConsultaModal()" aria-label="Cerrar modal">×</button>
+                                </div>
+                            </div>
+                            <div class="p-6">
+                                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6 rounded-r-md">
+                                    <div class="flex">
+                                        <div class="flex-shrink-0">
+                                            <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                            </svg>
+                                        </div>
+                                        <div class="ml-3">
+                                            <p class="text-sm text-blue-800">
+                                                <span class="font-semibold">Todos los campos son obligatorios.</span> 
+                                                Complete la información faltante para generar el reporte de consulta. Los campos incompletos aparecerán resaltados en rojo.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="form-group">
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700">
+                                            Sector <span class="text-red-500">*</span>
+                                        </label>
+                                        <select id="cc-sector" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#f57722] focus:border-transparent transition-all duration-200 bg-white text-gray-900" aria-required="true">
+                                            <option value="">Seleccionar sector...</option>
+                                            <option value="SECTOR A">Sector A</option>
+                                            <option value="SECTOR B">Sector B</option>
+                                            <option value="SECTOR C">Sector C</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700">
+                                            Política <span class="text-red-500">*</span>
+                                        </label>
+                                        <select id="cc-politica" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#f57722] focus:border-transparent transition-all duration-200 bg-white text-gray-900" aria-required="true"></select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700">
+                                            Tiempo de Servicio <span class="text-red-500">*</span>
+                                        </label>
+                                        <input id="cc-tiempoServicio" type="text" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#f57722] focus:border-transparent transition-all duration-200 bg-white text-gray-900" aria-required="true" placeholder="Ej: 3 años, 6 meses, etc." />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700">
+                                            Nombre de la Empresa <span class="text-red-500">*</span>
+                                        </label>
+                                        <input id="cc-nombreEmpresa" type="text" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#f57722] focus:border-transparent transition-all duration-200 bg-white text-gray-900" aria-required="true" placeholder="Nombre de la empresa" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700">
+                                            Ingresos <span class="text-red-500">*</span>
+                                        </label>
+                                        <input id="cc-ingresos" type="number" step="0.01" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#f57722] focus:border-transparent transition-all duration-200 bg-white text-gray-900" aria-required="true" placeholder="Monto en USD" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700">
+                                            Posición <span class="text-red-500">*</span>
+                                        </label>
+                                        <input id="cc-posicion" type="text" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#f57722] focus:border-transparent transition-all duration-200 bg-white text-gray-900" aria-required="true" placeholder="Cargo o posición" />
+                                    </div>
+                                    <div class="md:col-span-2 form-group">
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700">
+                                            Observaciones <span class="text-red-500">*</span>
+                                        </label>
+                                        <textarea id="cc-observaciones" rows="4" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#f57722] focus:border-transparent transition-all duration-200 bg-white text-gray-900 resize-none" placeholder="Describe el motivo de la consulta y observaciones relevantes..." aria-required="true"></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700">
+                                            APC Score <span class="text-red-500">*</span>
+                                        </label>
+                                        <input id="cc-apcScore" type="number" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#f57722] focus:border-transparent transition-all duration-200 bg-white text-gray-900" aria-required="true" placeholder="Puntuación APC" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700">
+                                            APC PI <span class="text-red-500">*</span>
+                                        </label>
+                                        <input id="cc-apcPI" type="number" step="0.01" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#f57722] focus:border-transparent transition-all duration-200 bg-white text-gray-900" aria-required="true" placeholder="Índice APC PI" />
+                                    </div>
+                                </div>
+                                <div id="cc-error" class="hidden bg-red-50 border-l-4 border-red-400 p-4 mb-4 rounded-r-md">
+                                    <div class="flex">
+                                        <div class="flex-shrink-0">
+                                            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                                            </svg>
+                                        </div>
+                                        <div class="ml-3">
+                                            <p class="text-sm text-red-700 font-medium" id="cc-error-text"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center pt-6 border-t border-gray-200">
+                                    <div class="text-sm text-gray-500">
+                                        <span id="cc-progress-text">0 de 9 campos completados</span>
+                                    </div>
+                                    <div class="flex space-x-3">
+                                        <button type="button" class="px-6 py-3 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-all duration-200" onclick="closeCompleteConsultaModal()">
+                                            Cancelar
+                                        </button>
+                                        <button type="button" id="cc-save-btn" class="px-6 py-3 rounded-lg bg-gradient-to-r from-[#f57722] to-[#e46d1f] text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-400 disabled:to-gray-500 hover:from-[#e46d1f] hover:to-[#d65d1a] focus:outline-none focus:ring-2 focus:ring-[#f57722] focus:ring-offset-2 transition-all duration-200 shadow-lg" onclick="saveCompleteConsulta()" disabled aria-disabled="true">
+                                            <span class="flex items-center">
+                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                </svg>
+                                                Guardar datos
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <script>
+                        let ccNumeroCotizacion = null;
+                        
+                        // Add CSS animations and custom colors
+                        const style = document.createElement('style');
+                        style.textContent = `
+                            @keyframes shake {
+                                0%, 100% { transform: translateX(0); }
+                                25% { transform: translateX(-3px); }
+                                75% { transform: translateX(3px); }
+                            }
+                            .shake {
+                                animation: shake 0.4s ease-in-out;
+                            }
+                            .bg-red-25 {
+                                background-color: #fef7f7;
+                            }
+                        `;
+                        document.head.appendChild(style);
+                        async function openCompleteConsultaModal(numero) {
+                            ccNumeroCotizacion = numero;
+                            // preload selects
+                            const sector = document.getElementById('cc-sector');
+                            const politica = document.getElementById('cc-politica');
+                            const obs = document.getElementById('cc-observaciones');
+                            // Prefill from form if present
+                            try {
+                                if (document.getElementById('id_sector')) {
+                                    sector.value = document.getElementById('id_sector').value || '';
+                                }
+                                if (document.getElementById('id_politica')) {
+                                    const currentPolitica = document.getElementById('id_politica').value;
+                                    await loadPoliticasIntoSelect(politica, currentPolitica);
+                                } else {
+                                    await loadPoliticasIntoSelect(politica, null);
+                                }
+                                if (document.getElementById('id_observaciones')) {
+                                    obs.value = document.getElementById('id_observaciones').value || '';
+                                }
+                                if (document.getElementById('id_tiempoServicio')) document.getElementById('cc-tiempoServicio').value = document.getElementById('id_tiempoServicio').value || '';
+                                if (document.getElementById('id_nombreEmpresa')) document.getElementById('cc-nombreEmpresa').value = document.getElementById('id_nombreEmpresa').value || '';
+                                if (document.getElementById('id_ingresos')) document.getElementById('cc-ingresos').value = document.getElementById('id_ingresos').value || '';
+                                if (document.getElementById('id_posicion')) document.getElementById('cc-posicion').value = document.getElementById('id_posicion').value || '';
+                                if (document.getElementById('id_apcScore')) document.getElementById('cc-apcScore').value = document.getElementById('id_apcScore').value || '';
+                                if (document.getElementById('id_apcPI')) document.getElementById('cc-apcPI').value = document.getElementById('id_apcPI').value || '';
+                            } catch (e) {
+                                await loadPoliticasIntoSelect(politica, null);
+                            }
+                            // setup live validation state and button toggle
+                            setupCcValidation();
+                            document.getElementById('complete-consulta-modal').classList.remove('hidden');
+                        }
+                        function closeCompleteConsultaModal(){
+                            document.getElementById('complete-consulta-modal').classList.add('hidden');
+                            document.getElementById('cc-error').classList.add('hidden');
+                            document.getElementById('cc-error').textContent = '';
+                        }
+                        async function loadPoliticasIntoSelect(selectEl, selectedId){
+                            try {
+                                const res = await fetch('/workflow/api/politicas/');
+                                const data = await res.json();
+                                selectEl.innerHTML = '<option value="">Seleccionar política...</option>';
+                                (data.politicas || []).forEach(p => {
+                                    const opt = document.createElement('option');
+                                    opt.value = p.id;
+                                    opt.textContent = p.titulo;
+                                    if (selectedId && String(selectedId) === String(p.id)) opt.selected = true;
+                                    selectEl.appendChild(opt);
+                                });
+                            } catch (e) {
+                                selectEl.innerHTML = '<option value="">Error cargando políticas</option>';
+                            }
+                        }
+                        function setupCcValidation(){
+                            const ids = ['cc-sector','cc-politica','cc-observaciones','cc-tiempoServicio','cc-nombreEmpresa','cc-ingresos','cc-posicion','cc-apcScore','cc-apcPI'];
+                            ids.forEach(id => {
+                                const el = document.getElementById(id);
+                                if (!el) return;
+                                el.addEventListener('input', validateCcForm);
+                                el.addEventListener('change', validateCcForm);
+                            });
+                            validateCcForm();
+                        }
+                        function setFieldErrorState(el, hasError){
+                            if (!el) return;
+                            const formGroup = el.closest('.form-group');
+                            const label = formGroup?.querySelector('label');
+                            
+                            if (hasError){
+                                // Remove normal styles
+                                el.classList.remove('border-gray-300', 'focus:ring-[#f57722]', 'bg-white');
+                                // Add subtle error styles
+                                el.classList.add('border-red-300', 'bg-red-25', 'focus:ring-red-300', 'focus:border-red-400');
+                                el.setAttribute('aria-invalid','true');
+                                
+                                // Add subtle label styling
+                                if (label) {
+                                    label.classList.add('text-red-600');
+                                }
+                                
+                                // Gentle shake animation
+                                if (formGroup && !formGroup.classList.contains('shake')) {
+                                    formGroup.classList.add('shake');
+                                    setTimeout(() => formGroup.classList.remove('shake'), 400);
+                                }
+                            } else {
+                                // Remove error styles
+                                el.classList.remove('border-red-300', 'bg-red-25', 'focus:ring-red-300', 'focus:border-red-400');
+                                // Restore normal styles
+                                el.classList.add('border-gray-300', 'focus:ring-[#f57722]', 'bg-white');
+                                el.removeAttribute('aria-invalid');
+                                
+                                // Remove label styling
+                                if (label) {
+                                    label.classList.remove('text-red-600');
+                                }
+                            }
+                        }
+                        function validateCcForm(){
+                            const get = id => document.getElementById(id);
+                            const values = {
+                                sector: get('cc-sector')?.value,
+                                politica: get('cc-politica')?.value,
+                                observaciones: (get('cc-observaciones')?.value || '').trim(),
+                                tiempoServicio: (get('cc-tiempoServicio')?.value || '').trim(),
+                                nombreEmpresa: (get('cc-nombreEmpresa')?.value || '').trim(),
+                                ingresos: get('cc-ingresos')?.value,
+                                posicion: (get('cc-posicion')?.value || '').trim(),
+                                apcScore: get('cc-apcScore')?.value,
+                                apcPI: get('cc-apcPI')?.value,
+                            };
+                            const missing = [];
+                            const totalFields = 9;
+                            let completedFields = 0;
+                            
+                            const pushIfEmpty = (cond, label, el) => { 
+                                if (cond){ 
+                                    missing.push(label); 
+                                    setFieldErrorState(el, true);
+                                } else { 
+                                    setFieldErrorState(el, false);
+                                    completedFields++;
+                                } 
+                            };
+                            
+                            pushIfEmpty(!values.sector, 'sector', get('cc-sector'));
+                            pushIfEmpty(!values.politica, 'política', get('cc-politica'));
+                            pushIfEmpty(!values.observaciones, 'observaciones', get('cc-observaciones'));
+                            pushIfEmpty(!values.tiempoServicio, 'tiempo de servicio', get('cc-tiempoServicio'));
+                            pushIfEmpty(!values.nombreEmpresa, 'nombre de la empresa', get('cc-nombreEmpresa'));
+                            pushIfEmpty(!values.ingresos && values.ingresos !== 0, 'ingresos', get('cc-ingresos'));
+                            pushIfEmpty(!values.posicion, 'posición', get('cc-posicion'));
+                            pushIfEmpty(values.apcScore === '' || values.apcScore === null || values.apcScore === undefined, 'APC score', get('cc-apcScore'));
+                            pushIfEmpty(values.apcPI === '' || values.apcPI === null || values.apcPI === undefined, 'APC PI', get('cc-apcPI'));
+                            
+                            const saveBtn = document.getElementById('cc-save-btn');
+                            const errorEl = document.getElementById('cc-error');
+                            const errorTextEl = document.getElementById('cc-error-text');
+                            const progressEl = document.getElementById('cc-progress-text');
+                            
+                            // Update progress indicator
+                            if (progressEl) {
+                                progressEl.textContent = `${completedFields} de ${totalFields} campos completados`;
+                            }
+                            
+                            if (missing.length){
+                                saveBtn?.setAttribute('disabled','');
+                                saveBtn?.setAttribute('aria-disabled','true');
+                                if (errorTextEl) {
+                                    errorTextEl.textContent = `Campos faltantes: ${missing.join(', ')}`;
+                                }
+                                errorEl?.classList.remove('hidden');
+                            } else {
+                                saveBtn?.removeAttribute('disabled');
+                                saveBtn?.setAttribute('aria-disabled','false');
+                                errorEl?.classList.add('hidden');
+                                if (errorTextEl) {
+                                    errorTextEl.textContent = '';
+                                }
+                            }
+                        }
+                        async function saveCompleteConsulta(){
+                            const sector = document.getElementById('cc-sector').value;
+                            const politica = document.getElementById('cc-politica').value;
+                            const observaciones = document.getElementById('cc-observaciones').value.trim();
+                            const tiempoServicio = document.getElementById('cc-tiempoServicio').value.trim();
+                            const nombreEmpresa = document.getElementById('cc-nombreEmpresa').value.trim();
+                            const ingresos = document.getElementById('cc-ingresos').value;
+                            const posicion = document.getElementById('cc-posicion').value.trim();
+                            const apcScore = document.getElementById('cc-apcScore').value;
+                            const apcPI = document.getElementById('cc-apcPI').value;
+                            const errorEl = document.getElementById('cc-error');
+                            const missing = [];
+                            if (!sector) missing.push('sector');
+                            if (!politica) missing.push('política');
+                            if (!observaciones) missing.push('observaciones');
+                            if (!tiempoServicio) missing.push('tiempo de servicio');
+                            if (!nombreEmpresa) missing.push('nombre de la empresa');
+                            if (!ingresos) missing.push('ingresos');
+                            if (!posicion) missing.push('posición');
+                            if (apcScore === '') missing.push('APC score');
+                            if (apcPI === '') missing.push('APC PI');
+                            if (missing.length) {
+                                errorEl.textContent = 'Faltan: ' + missing.join(', ');
+                                errorEl.classList.remove('hidden');
+                                return;
+                            }
+                            errorEl.classList.add('hidden');
+                            try {
+                                const res = await fetch(`/cotizacion/${ccNumeroCotizacion}/update_consulta_fields/`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRFToken': getCsrfToken(),
+                                    },
+                                    body: JSON.stringify({ sector, politica, observaciones, tiempoServicio, nombreEmpresa, ingresos, posicion, apcScore, apcPI })
+                                });
+                                const data = await res.json();
+                                if (!data.ok) throw new Error(data.error || 'Error al guardar');
+                                // Reflect values in the page form if present
+                                if (document.getElementById('id_sector')) document.getElementById('id_sector').value = sector;
+                                if (document.getElementById('id_politica')) document.getElementById('id_politica').value = politica;
+                                if (document.getElementById('id_observaciones')) document.getElementById('id_observaciones').value = observaciones;
+                                if (document.getElementById('id_tiempoServicio')) document.getElementById('id_tiempoServicio').value = tiempoServicio;
+                                if (document.getElementById('id_nombreEmpresa')) document.getElementById('id_nombreEmpresa').value = nombreEmpresa;
+                                if (document.getElementById('id_ingresos')) document.getElementById('id_ingresos').value = ingresos;
+                                if (document.getElementById('id_posicion')) document.getElementById('id_posicion').value = posicion;
+                                if (document.getElementById('id_apcScore')) document.getElementById('id_apcScore').value = apcScore;
+                                if (document.getElementById('id_apcPI')) document.getElementById('id_apcPI').value = apcPI;
+                                // Enable the report link by reloading this header block
+                                location.reload();
+                            } catch (e) {
+                                errorEl.textContent = e.message;
+                                errorEl.classList.remove('hidden');
+                            }
+                        }
+                        function getCsrfToken(){
+                            const name = 'csrftoken=';
+                            const cookies = document.cookie.split(';');
+                            for (let c of cookies){
+                                c = c.trim();
+                                if (c.startsWith(name)) return c.substring(name.length);
+                            }
+                            return '';
+                        }
+                    </script>
                             Plazo
                         </th>
                         <th scope="col" class="px-6 py-3">

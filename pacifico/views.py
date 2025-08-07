@@ -131,6 +131,89 @@ def terminate_all_sessions(request):
     messages.success(request, 'All sessions have been terminated and users have been logged out.')
     return redirect('active_sessions')
 
+@login_required
+def update_consulta_fields(request, numero_cotizacion):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+
+    cotizacion = get_object_or_404(Cotizacion, NumeroCotizacion=numero_cotizacion)
+
+    try:
+        data = json.loads(request.body.decode('utf-8')) if request.body else request.POST
+    except Exception:
+        data = request.POST
+
+    sector = data.get('sector')
+    politica_id = data.get('politica')
+    observaciones = data.get('observaciones')
+    tiempo_servicio = data.get('tiempoServicio')
+    nombre_empresa = data.get('nombreEmpresa')
+    ingresos = data.get('ingresos')
+    posicion = data.get('posicion')
+    apc_score = data.get('apcScore')
+    apc_pi = data.get('apcPI')
+
+    # Basic validation
+    missing = []
+    if not sector:
+        missing.append('sector')
+    if not politica_id:
+        missing.append('politica')
+    if not observaciones:
+        missing.append('observaciones')
+    # New required fields
+    if not tiempo_servicio:
+        missing.append('tiempoServicio')
+    if not nombre_empresa:
+        missing.append('nombreEmpresa')
+    if not ingresos:
+        missing.append('ingresos')
+    if not posicion:
+        missing.append('posicion')
+    if apc_score in (None, ""):
+        missing.append('apcScore')
+    if apc_pi in (None, ""):
+        missing.append('apcPI')
+
+    if missing:
+        return JsonResponse({'ok': False, 'missing': missing, 'error': 'Campos requeridos faltantes'}, status=400)
+
+    # Update model
+    from .models import Politicas
+    try:
+        politica = Politicas.objects.get(pk=politica_id)
+    except Politicas.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Política inválida'}, status=400)
+
+    # Type conversions with validation
+    from decimal import Decimal as _Dec
+    def to_int(val, field):
+        try:
+            return int(str(val).strip())
+        except Exception:
+            raise ValueError(f"{field} inválido")
+    def to_dec(val, field):
+        try:
+            return _Dec(str(val).strip())
+        except Exception:
+            raise ValueError(f"{field} inválido")
+
+    try:
+        cotizacion.sector = sector
+        cotizacion.politica = politica
+        cotizacion.observaciones = observaciones
+        cotizacion.tiempoServicio = tiempo_servicio.strip()  # Keep as text, just strip whitespace
+        cotizacion.nombreEmpresa = nombre_empresa
+        cotizacion.ingresos = to_dec(ingresos, 'Ingresos')
+        cotizacion.posicion = posicion
+        cotizacion.apcScore = to_int(apc_score, 'APC Score')
+        cotizacion.apcPI = to_dec(apc_pi, 'APC PI')
+        cotizacion.save(update_fields=['sector', 'politica', 'observaciones', 'tiempoServicio', 'nombreEmpresa', 'ingresos', 'posicion', 'apcScore', 'apcPI'])
+    except ValueError as ve:
+        return JsonResponse({'ok': False, 'error': str(ve)}, status=400)
+
+    return JsonResponse({'ok': True})
+
 def aseguradora_create(request):
     if request.method == 'POST':
         form = AseguradoraForm(request.POST)

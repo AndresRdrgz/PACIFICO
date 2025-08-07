@@ -3268,10 +3268,11 @@
         align-items: flex-end;
         overflow-x: auto;
         padding: 1.5rem 0.5rem;
-        justify-content: center;
+        justify-content: flex-start; /* left-align so auto-scroll positions correctly */
         gap: 0.5rem;
         scrollbar-width: thin;
         scrollbar-color: #009c3c #f1f1f1;
+        scroll-behavior: smooth; /* smooth scroll to current etapa on open */
     }
 
     .workflow-roadmap::-webkit-scrollbar {
@@ -5172,9 +5173,25 @@
     }
 
     function renderWorkflowRoadmap(etapas) {
+        // Derive the index of the current etapa
+        const currentIndex = Math.max(0, etapas.findIndex(e => e.actual));
+
+        // Visibility policy:
+        // - Show all etapas that are completed
+        // - Show the current etapa (with the lightning bolt)
+        // - Show at most the immediate next etapa after current for context
+        // - Hide past etapas that were NOT traversed (not completed and index < current)
+        const visibleEtapas = etapas.filter((e, i) => {
+            if (e.completada || e.actual) return true;
+            return i === currentIndex + 1; // show just next
+        });
+        const startIdx = etapas.indexOf(visibleEtapas[0]);
+
         let roadmapHtml = '<div class="workflow-roadmap">';
 
-        etapas.forEach(function (etapa, idx) {
+        visibleEtapas.forEach(function (etapa, localIdx) {
+            // Map localIdx to the global index for numbering
+            const globalIdx = startIdx + localIdx;
             let stepClass = 'workflow-step';
             if (etapa.completada) stepClass += ' completed';
             if (etapa.actual) stepClass += ' current';
@@ -5182,7 +5199,7 @@
 
             let icon = etapa.completada ? '<i class="fas fa-check"></i>' :
                 etapa.actual ? '<i class="fas fa-bolt"></i>' :
-                    `<span>${idx + 1}</span>`;
+                    `<span>${globalIdx + 1}</span>`;
 
             roadmapHtml += `
             <div class="${stepClass}">
@@ -5191,7 +5208,7 @@
             </div>
         `;
 
-            if (idx < etapas.length - 1) {
+            if (localIdx < visibleEtapas.length - 1) {
                 let connectorClass = etapa.completada ? 'workflow-connector completed' : 'workflow-connector';
                 roadmapHtml += `<div class="${connectorClass}"></div>`;
             }
@@ -5202,6 +5219,13 @@
         const workflowProgress = document.getElementById('modalSolicitudWorkflowProgress');
         if (workflowProgress) {
             workflowProgress.innerHTML = roadmapHtml;
+
+            // Auto-scroll so the current etapa is visible/centered
+            const currentEl = workflowProgress.querySelector('.workflow-step.current');
+            if (currentEl && currentEl.scrollIntoView) {
+                // Use microtask to ensure layout is ready before scrolling
+                setTimeout(() => currentEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }), 0);
+            }
         }
     }
 
