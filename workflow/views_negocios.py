@@ -18,6 +18,7 @@ from .modelsWorkflow import (
 )
 from pacifico.models import Cliente, Cotizacion
 from django.contrib.auth.models import User, Group
+from django.views.decorators.http import require_http_methods
 
 def get_user_pipeline_access(user):
     """
@@ -1058,3 +1059,35 @@ def api_get_saved_pipeline(request):
         'has_saved_pipeline': False,
         'message': 'No hay pipeline guardado'
     })
+
+
+@login_required
+@require_http_methods(["DELETE"])
+def api_delete_solicitud(request, solicitud_id):
+    """
+    API endpoint to delete a solicitud (superusers only)
+    """
+    if not request.user.is_superuser:
+        return JsonResponse({
+            'error': 'No tienes permisos para eliminar solicitudes'
+        }, status=403)
+    
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Log the deletion for audit purposes
+        print(f"[SUPERUSER DELETE] User {request.user.username} deleting solicitud {solicitud_id} - {solicitud.codigo}")
+        
+        # Delete the solicitud
+        solicitud.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Solicitud eliminada correctamente'
+        })
+        
+    except Exception as e:
+        print(f"Error deleting solicitud {solicitud_id}: {str(e)}")
+        return JsonResponse({
+            'error': f'Error al eliminar la solicitud: {str(e)}'
+        }, status=500)

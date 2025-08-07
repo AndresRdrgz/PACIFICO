@@ -84,6 +84,7 @@ urlpatterns = [
     path('api/estadisticas/', views_negocios.api_estadisticas, name='api_estadisticas'),
     path('api/solicitudes-tabla/', views_negocios.api_solicitudes_tabla, name='api_solicitudes_tabla'),
     path('api/solicitudes/<int:solicitud_id>/detalle-modal/', views_negocios.api_detalle_solicitud_modal, name='api_detalle_solicitud_modal'),
+    path('api/solicitud/<int:solicitud_id>/delete/', views_negocios.api_delete_solicitud, name='api_delete_solicitud'),
     path('api/estadisticas-negocios/', views_negocios.api_estadisticas_negocios, name='api_estadisticas_negocios'),
     path('api/solicitudes/<int:solicitud_id>/prioridad/', views_workflow.api_actualizar_prioridad, name='api_actualizar_prioridad'),
     path('api/solicitudes/<int:solicitud_id>/etiquetas/', views_workflow.api_actualizar_etiquetas, name='api_actualizar_etiquetas'),
@@ -247,6 +248,10 @@ urlpatterns = [
     path('api/orden-expediente/agregar-comentario/', views_workflow.agregar_comentario_documento, name='agregar_comentario_documento'),
     path('api/orden-expediente/obtener-comentario/<int:documento_id>/', views_workflow.obtener_comentario_documento, name='obtener_comentario_documento'),
     path('api/orden-expediente/marcar-todos/', views_workflow.marcar_todos_documentos, name='marcar_todos_documentos'),
+    
+    # Pipeline session APIs
+    path('api/clear-saved-pipeline/', views_negocios.api_clear_saved_pipeline, name='api_clear_saved_pipeline'),
+    path('api/get-saved-pipeline/', views_negocios.api_get_saved_pipeline, name='api_get_saved_pipeline'),
     
     # Admin Back Office
     path('admin-backoffice/', api_admin_backoffice.admin_backoffice_view, name='admin_backoffice'),
