@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.utils import timezone
 from django.contrib.postgres.fields import JSONField
 from django.core.validators import FileExtensionValidator
@@ -119,10 +119,117 @@ TIPO_PRORRATEO_OPCIONES = [
         ('horas_extras', 'Horas Extras'),
         ('prima_produccion', 'Prima de Producción'),
     ]
+
 # Create your models here.
+class Sucursal(models.Model):
+    """
+    Modelo dinámico para gestionar sucursales desde el admin de Django
+    """
+    codigo = models.CharField(
+        max_length=10, 
+        unique=True,
+        help_text="Código único de la sucursal (ej: '2', '7', '13')"
+    )
+    nombre = models.CharField(
+        max_length=100,
+        help_text="Nombre de la sucursal (ej: 'COLON', 'DAVID', 'CALLE 50')"
+    )
+    direccion = models.TextField(
+        blank=True, 
+        null=True,
+        help_text="Dirección completa de la sucursal"
+    )
+    telefono = models.CharField(
+        max_length=20, 
+        blank=True, 
+        null=True,
+        help_text="Teléfono de contacto"
+    )
+    email = models.EmailField(
+        blank=True, 
+        null=True,
+        help_text="Email de contacto de la sucursal"
+    )
+    activa = models.BooleanField(
+        default=True,
+        help_text="Indica si la sucursal está activa"
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Sucursal"
+        verbose_name_plural = "Sucursales"
+        ordering = ['codigo']
+
+    def __str__(self):
+        return f"{self.codigo} - {self.nombre}"
+
+    @classmethod
+    def get_choices(cls):
+        """
+        Método para obtener las opciones dinámicamente para usar en choices
+        """
+        return [(sucursal.codigo, sucursal.nombre) for sucursal in cls.objects.filter(activa=True)]
+
+
+class GroupProfile(models.Model):
+    """
+    Extensión del modelo Group de Django para agregar metadatos
+    """
+    group = models.OneToOneField(Group, on_delete=models.CASCADE, related_name='profile')
+    es_sucursal = models.BooleanField(
+        default=False, 
+        help_text="Indica si este grupo representa una sucursal específica"
+    )
+    sucursal_codigo = models.CharField(
+        max_length=10, 
+        choices=SUCURSALES_OPCIONES, 
+        null=True, 
+        blank=True,
+        help_text="Código de la sucursal si es_sucursal=True"
+    )
+    descripcion = models.TextField(
+        blank=True, 
+        null=True,
+        help_text="Descripción adicional del grupo"
+    )
+    activo = models.BooleanField(
+        default=True,
+        help_text="Indica si el grupo está activo"
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Perfil de Grupo"
+        verbose_name_plural = "Perfiles de Grupos"
+
+    def __str__(self):
+        if self.es_sucursal and self.sucursal_codigo:
+            sucursal_nombre = dict(SUCURSALES_OPCIONES).get(self.sucursal_codigo, self.sucursal_codigo)
+            return f"{self.group.name} - Sucursal {sucursal_nombre}"
+        return f"{self.group.name}"
+
+    def save(self, *args, **kwargs):
+        # Si es sucursal pero no tiene código, limpiar el flag
+        if self.es_sucursal and not self.sucursal_codigo:
+            self.es_sucursal = False
+        # Si no es sucursal, limpiar el código
+        elif not self.es_sucursal:
+            self.sucursal_codigo = None
+        super().save(*args, **kwargs)
+
+
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    sucursal = models.CharField(max_length=255, choices=SUCURSALES_OPCIONES, null=True, blank=True)
+    sucursal = models.ForeignKey(
+        Sucursal,
+        on_delete=models.SET_NULL,
+        null=True, 
+        blank=True,
+        help_text="Sucursal a la que pertenece el usuario"
+    )
     oficial = models.CharField(max_length=255, choices=OFICIAL_OPCIONES, null=True, blank=True)
     auto_save_cotizaciones = models.BooleanField(default=False)
     pruebaFuncionalidades = models.BooleanField(default=False)
@@ -130,6 +237,7 @@ class UserProfile(models.Model):
         max_length=20,
         choices=[
             ('Oficial', 'Oficial'),
+            ('Asistente', 'Asistente'),
             ('Administrador', 'Administrador'),
             ('Supervisor', 'Supervisor'),
             ('Usuario', 'Usuario'),
