@@ -187,40 +187,11 @@ def enrich_solicitud_data(solicitud):
         'text-success': {'color': '#198754', 'css': 'bg-green-500', 'text': 'En tiempo', 'data': 'en tiempo', 'bg': ''}
     }
     
-    # Función helper para avatar
-    def get_user_avatar_data(user):
-        if not user:
-            return {'type': 'icon', 'content': 'fas fa-user-slash', 'class': 'w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium text-gray-500'}
-        
-        if hasattr(user, 'userprofile') and user.userprofile and hasattr(user.userprofile, 'profile_picture') and user.userprofile.profile_picture:
-            return {
-                'type': 'image',
-                'src': user.userprofile.profile_picture.url,
-                'alt': user.get_full_name() or user.username,
-                'class': 'w-4 h-4 rounded-full object-cover border'
-            }
-        
-        initial = ''
-        if user.first_name:
-            initial = user.first_name[0].upper()
-        elif user.username:
-            initial = user.username[0].upper()
-        
-        return {
-            'type': 'initial',
-            'content': initial,
-            'class': 'w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-600'
-        }
-    
     # Enriquecer datos de prioridad
     priority_data = priority_classes.get(solicitud.prioridad, {'bg': 'white', 'text': '#6c757d', 'css': 'bg-gray-100 text-gray-800'})
     
     # Enriquecer datos de SLA
     sla_data = sla_color_map.get(getattr(solicitud, 'sla_color', ''), {'color': '#6c757d', 'css': 'bg-gray-400', 'text': 'N/A', 'data': 'sin sla', 'bg': ''})
-    
-    # Enriquecer datos de usuarios
-    propietario_avatar = get_user_avatar_data(getattr(solicitud, 'propietario_user', None))
-    asignada_avatar = get_user_avatar_data(getattr(solicitud, 'asignada_a', None))
     
     # Datos enriquecidos
     enriched_data = {
@@ -236,9 +207,7 @@ def enrich_solicitud_data(solicitud):
         'sla_data_attr': sla_data['data'],
         'sla_bg_class': sla_data['bg'],
         
-        # Datos de usuarios
-        'propietario_avatar': propietario_avatar,
-        'asignada_avatar': asignada_avatar,
+        # Datos de usuarios (simplified)
         'is_unassigned': not getattr(solicitud, 'asignada_a', None),
         
         # Datos de etiquetas

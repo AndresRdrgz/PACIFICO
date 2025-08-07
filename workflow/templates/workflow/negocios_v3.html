@@ -1,0 +1,600 @@
+{% extends 'workflow/base.html' %}
+
+{% block title %}Negocios - Sistema de Workflow{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Header Section -->
+    <div class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="py-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">
+                            Gestión de Negocios
+                        </h1>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Administra y supervisa todas las solicitudes del sistema
+                        </p>
+                    </div>
+                    
+                    <!-- User info -->
+                    <div class="flex items-center space-x-4">
+                        <div class="hidden sm:flex items-center space-x-2">
+                            <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                                <span class="text-white text-sm font-medium">
+                                    {{ request.user.first_name.0|default:request.user.username.0|upper }}
+                                </span>
+                            </div>
+                            <div class="text-sm">
+                                <div class="text-gray-900 font-medium">{{ request.user.get_full_name|default:request.user.username }}</div>
+                                <div class="text-gray-500">
+                                    {% if request.user.is_superuser %}
+                                        Administrador
+                                    {% else %}
+                                        Usuario
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% if error_message %}
+            <!-- Error State -->
+            <div class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                    <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.966-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                </div>
+                <h3 class="text-lg font-medium text-red-800 mb-2">Sin acceso a pipelines</h3>
+                <p class="text-red-600">{{ error_message }}</p>
+                <p class="text-sm text-red-500 mt-2">Contacta al administrador para obtener los permisos necesarios.</p>
+            </div>
+        {% else %}
+            <!-- Filters Section -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-lg font-medium text-gray-900 mb-4">Filtros y Búsqueda</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <!-- Search -->
+                        <div>
+                            <label for="search" class="block text-sm font-medium text-gray-700 mb-1">
+                                Buscar
+                            </label>
+                            <input type="text" 
+                                   id="search" 
+                                   name="search"
+                                   placeholder="Código, cliente, cédula..."
+                                   class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                        </div>
+
+                        <!-- Pipeline Filter -->
+                        <div>
+                            <label for="pipeline" class="block text-sm font-medium text-gray-700 mb-1">
+                                Pipeline
+                            </label>
+                            <select id="pipeline" 
+                                    name="pipeline"
+                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                                <option value="">Todos los pipelines</option>
+                                {% for pipeline in pipelines %}
+                                    <option value="{{ pipeline.id }}">{{ pipeline.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Stage Filter -->
+                        <div>
+                            <label for="etapa" class="block text-sm font-medium text-gray-700 mb-1">
+                                Etapa
+                            </label>
+                            <select id="etapa" 
+                                    name="etapa"
+                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                                <option value="">Todas las etapas</option>
+                            </select>
+                        </div>
+
+                        <!-- Status Filter -->
+                        <div>
+                            <label for="estado" class="block text-sm font-medium text-gray-700 mb-1">
+                                Estado
+                            </label>
+                            <select id="estado" 
+                                    name="estado"
+                                    class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                                <option value="">Todos los estados</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <button type="button" 
+                                id="apply-filters"
+                                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <svg class="-ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            Buscar
+                        </button>
+                        
+                        <button type="button" 
+                                id="clear-filters"
+                                class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <svg class="-ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            Limpiar
+                        </button>
+                        
+                        <button type="button" 
+                                id="refresh-data"
+                                class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <svg class="-ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Actualizar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Section -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                <div class="bg-white overflow-hidden shadow-sm border border-gray-200 rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Total Solicitudes</dt>
+                                    <dd class="text-lg font-medium text-gray-900" id="stat-total">-</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white overflow-hidden shadow-sm border border-gray-200 rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">En Tiempo</dt>
+                                    <dd class="text-lg font-medium text-gray-900" id="stat-on-time">-</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white overflow-hidden shadow-sm border border-gray-200 rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-yellow-500 rounded-md flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.966-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Por Vencer</dt>
+                                    <dd class="text-lg font-medium text-gray-900" id="stat-warning">-</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white overflow-hidden shadow-sm border border-gray-200 rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-red-500 rounded-md flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Vencidas</dt>
+                                    <dd class="text-lg font-medium text-gray-900" id="stat-overdue">-</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Section -->
+            <div class="bg-white shadow-sm border border-gray-200 rounded-lg">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-medium text-gray-900">Solicitudes</h2>
+                        <div class="flex items-center space-x-2">
+                            <!-- Loading indicator -->
+                            <div id="loading-indicator" class="hidden">
+                                <svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </div>
+                            <span class="text-sm text-gray-500" id="result-count">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table Container -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Código
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Cliente
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Pipeline
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Etapa
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Estado
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Asignado a
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Prioridad
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    SLA
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Última Actualización
+                                </th>
+                                <th scope="col" class="relative px-6 py-3">
+                                    <span class="sr-only">Acciones</span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="solicitudes-table-body" class="bg-white divide-y divide-gray-200">
+                            <!-- Table content will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Empty State -->
+                <div id="empty-state" class="hidden text-center py-12">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">No hay solicitudes</h3>
+                    <p class="mt-1 text-sm text-gray-500">No se encontraron solicitudes con los filtros aplicados.</p>
+                </div>
+
+                <!-- Pagination -->
+                <div id="pagination-container" class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+                    <!-- Pagination will be populated by JavaScript -->
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Global variables
+let currentPage = 1;
+let isLoading = false;
+const maxPerPage = {{ max_per_page|default:15 }};
+
+// DOM elements
+const loadingIndicator = document.getElementById('loading-indicator');
+const tableBody = document.getElementById('solicitudes-table-body');
+const emptyState = document.getElementById('empty-state');
+const paginationContainer = document.getElementById('pagination-container');
+const resultCount = document.getElementById('result-count');
+
+// Filter elements
+const searchInput = document.getElementById('search');
+const pipelineSelect = document.getElementById('pipeline');
+const etapaSelect = document.getElementById('etapa');
+const estadoSelect = document.getElementById('estado');
+
+// Button elements
+const applyFiltersBtn = document.getElementById('apply-filters');
+const clearFiltersBtn = document.getElementById('clear-filters');
+const refreshDataBtn = document.getElementById('refresh-data');
+
+// Statistics elements
+const statTotal = document.getElementById('stat-total');
+const statOnTime = document.getElementById('stat-on-time');
+const statWarning = document.getElementById('stat-warning');
+const statOverdue = document.getElementById('stat-overdue');
+
+// Utility functions
+function showLoading() {
+    isLoading = true;
+    loadingIndicator.classList.remove('hidden');
+}
+
+function hideLoading() {
+    isLoading = false;
+    loadingIndicator.classList.add('hidden');
+}
+
+function showEmptyState() {
+    tableBody.classList.add('hidden');
+    emptyState.classList.remove('hidden');
+}
+
+function hideEmptyState() {
+    tableBody.classList.remove('hidden');
+    emptyState.classList.add('hidden');
+}
+
+function updateStatistics(solicitudes) {
+    const total = solicitudes.length;
+    let onTime = 0, warning = 0, overdue = 0;
+    
+    solicitudes.forEach(solicitud => {
+        switch(solicitud.sla_status) {
+            case 'en_tiempo':
+                onTime++;
+                break;
+            case 'por_vencer':
+                warning++;
+                break;
+            case 'vencido':
+                overdue++;
+                break;
+        }
+    });
+    
+    statTotal.textContent = total;
+    statOnTime.textContent = onTime;
+    statWarning.textContent = warning;
+    statOverdue.textContent = overdue;
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function getPriorityBadgeClass(prioridad) {
+    switch(prioridad) {
+        case 'Alta':
+            return 'bg-red-100 text-red-800';
+        case 'Media':
+            return 'bg-yellow-100 text-yellow-800';
+        case 'Baja':
+            return 'bg-green-100 text-green-800';
+        default:
+            return 'bg-gray-100 text-gray-800';
+    }
+}
+
+function getSLABadgeClass(slaStatus) {
+    switch(slaStatus) {
+        case 'en_tiempo':
+            return 'bg-green-100 text-green-800';
+        case 'por_vencer':
+            return 'bg-yellow-100 text-yellow-800';
+        case 'vencido':
+            return 'bg-red-100 text-red-800';
+        default:
+            return 'bg-gray-100 text-gray-800';
+    }
+}
+
+function renderSolicitudRow(solicitud) {
+    const digitalBadge = solicitud.origen === 'Canal Digital' 
+        ? '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 ml-1">Digital</span>'
+        : '';
+
+    return `
+        <tr class="hover:bg-gray-50 cursor-pointer" onclick="viewSolicitudDetails(${solicitud.id})">
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                ${solicitud.codigo}${digitalBadge}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm font-medium text-gray-900">${solicitud.cliente_nombre}</div>
+                <div class="text-sm text-gray-500">${solicitud.cliente_cedula}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                ${solicitud.pipeline.nombre}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                ${solicitud.etapa_actual.nombre}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    ${solicitud.subestado_actual.nombre}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                ${solicitud.asignada_a.full_name || 'Sin asignar'}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityBadgeClass(solicitud.prioridad)}">
+                    ${solicitud.prioridad}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSLABadgeClass(solicitud.sla_status)}">
+                    ${solicitud.sla_text}
+                </span>
+                <div class="text-xs text-gray-500 mt-1">${solicitud.sla_remaining}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                ${formatDate(solicitud.fecha_ultima_actualizacion)}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <button onclick="event.stopPropagation(); viewSolicitudDetails(${solicitud.id})" 
+                        class="text-blue-600 hover:text-blue-900">
+                    Ver detalles
+                </button>
+            </td>
+        </tr>
+    `;
+}
+
+// Main data loading function
+async function loadSolicitudes(page = 1) {
+    if (isLoading) return;
+    
+    showLoading();
+    currentPage = page;
+    
+    try {
+        const params = new URLSearchParams({
+            page: page,
+            search: searchInput.value.trim(),
+            pipeline: pipelineSelect.value,
+            etapa: etapaSelect.value,
+            estado: estadoSelect.value
+        });
+        
+        const response = await fetch(`/workflow/negocios/api/solicitudes-data/?${params}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Error al cargar datos');
+        }
+        
+        const solicitudes = data.data.solicitudes;
+        const pagination = data.data.pagination;
+        
+        // Update statistics
+        updateStatistics(solicitudes);
+        
+        // Update result count
+        resultCount.textContent = `${pagination.total_count} solicitudes encontradas`;
+        
+        // Render table
+        if (solicitudes.length === 0) {
+            showEmptyState();
+            paginationContainer.innerHTML = '';
+        } else {
+            hideEmptyState();
+            tableBody.innerHTML = solicitudes.map(renderSolicitudRow).join('');
+        }
+        
+        // Update filter options
+        updateFilterOptions(data.data.etapas_disponibles, data.data.subestados_disponibles);
+        
+    } catch (error) {
+        console.error('Error loading solicitudes:', error);
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="10" class="px-6 py-4 text-center text-red-600">
+                    Error al cargar datos: ${error.message}
+                </td>
+            </tr>
+        `;
+        showEmptyState();
+    } finally {
+        hideLoading();
+    }
+}
+
+function updateFilterOptions(etapas, subestados) {
+    // Update etapas dropdown
+    const currentEtapa = etapaSelect.value;
+    etapaSelect.innerHTML = '<option value="">Todas las etapas</option>';
+    etapas.forEach(etapa => {
+        const option = document.createElement('option');
+        option.value = etapa.id;
+        option.textContent = etapa.nombre;
+        option.selected = option.value === currentEtapa;
+        etapaSelect.appendChild(option);
+    });
+    
+    // Update subestados dropdown
+    const currentEstado = estadoSelect.value;
+    estadoSelect.innerHTML = '<option value="">Todos los estados</option>';
+    subestados.forEach(subestado => {
+        const option = document.createElement('option');
+        option.value = subestado.id;
+        option.textContent = subestado.nombre;
+        option.selected = option.value === currentEstado;
+        estadoSelect.appendChild(option);
+    });
+}
+
+function clearFilters() {
+    searchInput.value = '';
+    pipelineSelect.value = '';
+    etapaSelect.value = '';
+    estadoSelect.value = '';
+    loadSolicitudes(1);
+}
+
+function viewSolicitudDetails(solicitudId) {
+    // Placeholder for viewing solicitud details
+    console.log('Viewing solicitud details for ID:', solicitudId);
+    // You can implement a modal or navigate to a detail page here
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Initial load
+    loadSolicitudes();
+    
+    // Filter event listeners
+    applyFiltersBtn.addEventListener('click', () => loadSolicitudes(1));
+    clearFiltersBtn.addEventListener('click', clearFilters);
+    refreshDataBtn.addEventListener('click', () => loadSolicitudes(currentPage));
+    
+    // Enter key in search
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            loadSolicitudes(1);
+        }
+    });
+    
+    // Pipeline change event to update etapas
+    pipelineSelect.addEventListener('change', function() {
+        etapaSelect.value = '';
+        loadSolicitudes(1);
+    });
+});
+</script>
+{% endblock %}

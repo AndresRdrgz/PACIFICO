@@ -484,15 +484,13 @@
                             <div class="flex items-center justify-between text-sm">
                                 <span class="text-gray-500">Propietario:</span>
                                 <div class="flex items-center space-x-1">
-                                    {% with s.enriched_propietario_avatar as avatar %}
-                                    {% if avatar.type == 'image' %}
-                                    <img src="{{ avatar.src }}" alt="{{ avatar.alt }}" class="{{ avatar.class }}">
-                                    {% elif avatar.type == 'initial' %}
-                                    <div class="{{ avatar.class }}">{{ avatar.content }}</div>
-                                    {% else %}
-                                    <div class="{{ avatar.class }}"><i class="{{ avatar.content }}"></i></div>
-                                    {% endif %}
-                                    {% endwith %}
+                                    <div class="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-600">
+                                        {% if s.propietario %}
+                                            {{ s.propietario.first_name|first|default:s.propietario.username|first|upper }}
+                                        {% else %}
+                                            ?
+                                        {% endif %}
+                                    </div>
                                     <span class="text-gray-900 font-medium truncate text-xs">{{ s.propietario }}</span>
                                 </div>
                             </div>
@@ -507,17 +505,13 @@
                             </span>
                             {% else %}
                             <div class="flex items-center space-x-1">
-                                {% with s.enriched_asignada_avatar as avatar %}
-                                {% if avatar.type == 'image' %}
-                                <img src="{{ avatar.src }}" alt="{{ avatar.alt }}" class="{{ avatar.class }}">
-                                {% elif avatar.type == 'initial' %}
-                                <div
-                                    class="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center text-xs font-medium text-blue-600">
-                                    {{ avatar.content }}</div>
-                                {% else %}
-                                <div class="{{ avatar.class }}"><i class="{{ avatar.content }}"></i></div>
-                                {% endif %}
-                                {% endwith %}
+                                <div class="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center text-xs font-medium text-blue-600">
+                                    {% if s.asignada_a %}
+                                        {{ s.asignada_a.first_name|first|default:s.asignada_a.username|first|upper }}
+                                    {% else %}
+                                        ?
+                                    {% endif %}
+                                </div>
                                 <span class="text-sm font-medium text-gray-900 truncate">{{ s.asignada_a }}</span>
                             </div>
                             {% endif %}
@@ -801,17 +795,10 @@
                                 <td class="text-dark">
                                     <div class="d-flex align-items-center">
                                         {% if s.propietario %}
-                                        {% if s.propietario.userprofile and s.propietario.userprofile.profile_picture %}
-                                        <img src="{{ s.propietario.userprofile.profile_picture.url }}"
-                                            alt="{{ s.propietario.get_full_name|default:s.propietario.username }}"
-                                            class="me-2 rounded-circle object-cover border"
-                                            style="width: 24px; height: 24px; object-fit: cover;">
-                                        {% else %}
                                         <div class="me-2 rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
                                             style="width: 24px; height: 24px; background: linear-gradient(135deg, #6c757d, #495057); font-size: 0.7rem;">
                                             {{ s.propietario.first_name|first|default:s.propietario.username|first|upper }}
                                         </div>
-                                        {% endif %}
                                         <span class="small">
                                             {{ s.propietario.get_full_name|default:s.propietario.username }}
                                         </span>
@@ -1130,30 +1117,22 @@
 
                                                 {% if not s.enriched_is_unassigned %}
                                                 <div class="d-flex align-items-center">
-                                                    {% with s.enriched_asignado_avatar as avatar %}
-                                                    {% if avatar.type == 'image' %}
-                                                    <img src="{{ avatar.src }}" alt="{{ avatar.alt }}"
-                                                        class="w-4 h-4 rounded-full object-cover me-1">
-                                                    {% elif avatar.type == 'initial' %}
-                                                    <div
-                                                        class="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center text-xs font-medium text-blue-600 me-1">
-                                                        {{ avatar.content }}</div>
-                                                    {% else %}
-                                                    <div class="{{ avatar.class }} me-1"><i
-                                                            class="{{ avatar.content }}"></i></div>
-                                                    {% endif %}
+                                                    <div class="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-content-center text-xs font-medium text-blue-600 me-1">
+                                                        {% if s.asignado_a %}
+                                                            {{ s.asignado_a.first_name|first|default:s.asignado_a.username|first|upper }}
+                                                        {% else %}
+                                                            ?
+                                                        {% endif %}
+                                                    </div>
                                                     <span style="font-size: 0.7rem; color: #6c757d;">{{
                                                         s.asignado_a|truncatechars:10 }}</span>
-                                                    {% endwith %}
                                                 </div>
                                                 {% else %}
-                                                <div>
-                                                    {% with s.enriched_asignado_avatar as avatar %}
-                                                    <div class="{{ avatar.class }} me-1"><i
-                                                            class="{{ avatar.content }}"></i></div>
-                                                    <span style="font-size: 0.7rem; color: #6c757d;">{{
-                                                        s.asignado_a|truncatechars:10 }}</span>
-                                                    {% endwith %}
+                                                <div class="d-flex align-items-center">
+                                                    <div class="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-content-center text-xs font-medium text-gray-600 me-1">
+                                                        <i class="fas fa-user-slash"></i>
+                                                    </div>
+                                                    <span style="font-size: 0.7rem; color: #6c757d;">Sin asignar</span>
                                                 </div>
                                                 {% endif %}
                                             </div>
