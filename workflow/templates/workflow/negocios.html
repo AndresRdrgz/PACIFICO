@@ -206,17 +206,11 @@
                             </ul>
                         </div>
 
-                        <!-- Botones de cambio de vista -->
-                        <div class="btn-group" role="group" aria-label="Cambiar vista">
-                            <button type="button" class="btn btn-light btn-sm active" id="btnVistaTabla"
-                                onclick="cambiarVista('table')">
+                        <!-- View selector - only table now -->
+                        <div class="btn-group" role="group" aria-label="Vista de tabla">
+                            <button type="button" class="btn btn-light btn-sm active" id="btnVistaTabla">
                                 <i class="fas fa-table me-1"></i>
                                 Tabla
-                            </button>
-                            <button type="button" class="btn btn-outline-light btn-sm" id="btnVistaKanban"
-                                onclick="cambiarVista('kanban')">
-                                <i class="fas fa-columns me-1"></i>
-                                Kanban
                             </button>
                         </div>
 
@@ -357,10 +351,9 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         {% if pipeline %}
-        {% if view_type == 'table' %}
-
         <!-- Leyenda SLA Compacta -->
         <small class="text-muted mb-2 d-block" style="font-size: 0.7rem;">
             <i class="fas fa-info-circle me-1"></i>Leyenda SLA:
@@ -369,277 +362,8 @@
             <i class="fas fa-circle text-danger me-1 ms-2" style="font-size: 0.5rem;"></i>Vencido
         </small>
 
-        <!-- Vista Móvil Mejorada: Solo visible en pantallas pequeñas -->
-        <div class="vista-movil d-block d-sm-none">
-            <!-- Barra de búsqueda móvil con botón actualizar -->
-            <div class="bg-white rounded-lg shadow-sm p-4 mb-4 border">
-                <div class="d-flex gap-2 align-items-center">
-                    <div class="flex-grow-1 position-relative">
-                        <input type="text" id="busquedaMovil"
-                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="Buscar por código, cliente o cédula...">
-                        <div class="position-absolute" style="left: 12px; top: 50%; transform: translateY(-50%);">
-                            <i class="fas fa-search text-gray-400"></i>
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="actualizarSolicitudes()" 
-                        title="Actualizar lista" style="white-space: nowrap; border: 2px solid #6c757d; font-weight: 600;">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Tarjetas de solicitudes -->
-            <div class="space-y-4" id="solicitudesMovil">
-                {% for solicitud in solicitudes_tabla %}
-                <div class="solicitud-card bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200"
-                    data-prioridad="{{ solicitud.prioridad|lower }}" data-estado="{{ solicitud.sla_color }}"
-                    data-asignado="{% if solicitud.asignada_a %}asignado{% else %}sin_asignar{% endif %}"
-                    data-search="{{ solicitud.codigo|lower }} {{ solicitud.cliente|lower }} {{ solicitud.cedula|lower }}">
-
-                    <!-- Header de la tarjeta -->
-                    <div class="p-4 pb-3">
-                        <div class="flex items-start justify-between mb-3">
-                            <div class="flex items-center space-x-2">
-                                <!-- Indicador de SLA -->
-                                <div class="w-3 h-3 rounded-full {{ solicitud.enriched_sla_css_class }}"></div>
-                                <h3 class="text-lg font-bold text-gray-900">{{ solicitud.codigo }}</h3>
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <!-- Badge de prioridad -->
-                                {% if solicitud.prioridad %}
-                                <span
-                                    class="px-2 py-1 rounded-full text-xs font-semibold {{ solicitud.enriched_prioridad_css_class }}">
-                                    {{ solicitud.prioridad }}
-                                </span>
-                                {% endif %}
-                                <!-- Menú de opciones -->
-                                <div class="relative">
-                                    <button class="p-1 rounded-full hover:bg-gray-100 transition-colors"
-                                        onclick="toggleMenu(this)">
-                                        <i class="fas fa-ellipsis-v text-gray-400"></i>
-                                    </button>
-                                    <div
-                                        class="menu-dropdown absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10 hidden min-w-40">
-                                        <span class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">
-                                            <i class="fas fa-eye mr-2"></i>Ver Detalle
-                                        </span>
-                                        <a href="{% url 'workflow:transicion_solicitud' solicitud.id %}"
-                                            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                            <i class="fas fa-arrow-right mr-2"></i>Cambiar Etapa
-                                        </a>
-                                        {% if solicitud.acciones.eliminar %}
-                                        <button onclick="eliminarSolicitud('{{ solicitud.id }}')"
-                                            class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">
-                                            <i class="fas fa-trash mr-2"></i>Eliminar
-                                        </button>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Información principal -->
-                        <div class="grid grid-cols-2 gap-3 mb-3">
-                            <div>
-                                <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Cliente</p>
-                                <p class="text-sm font-semibold text-gray-900 truncate">
-                                    {% if solicitud.id %}
-                                    <a href="{% url 'workflow:detalle_solicitud' solicitud.id %}"
-                                        class="text-decoration-none text-success solicitud-link"
-                                        title="Ver detalles de {{ solicitud.cliente_nombre }}"
-                                        onclick="event.stopPropagation();">
-                                        {% if solicitud.origen == 'Canal Digital' %}
-                                        <i class="fas fa-mobile-alt text-info me-1" title="Canal Digital" style="font-size: 0.8rem;"></i>
-                                        {% endif %}
-                                        {{ solicitud.cliente_nombre }}
-                                    </a>
-                                    {% else %}
-                                    <span class="text-danger" title="Solicitud sin ID válido">
-                                        {% if solicitud.origen == 'Canal Digital' %}
-                                        <i class="fas fa-mobile-alt text-info me-1" title="Canal Digital" style="font-size: 0.8rem;"></i>
-                                        {% endif %}
-                                        {{ solicitud.cliente_nombre }}
-                                    </span>
-                                    {% endif %}
-                                </p>
-                            </div>
-                            <div>
-                                <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Monto</p>
-                                <p class="text-sm font-bold text-green-600">{{ solicitud.monto_formateado }}</p>
-                            </div>
-                        </div>
-
-                        <!-- Información secundaria -->
-                        <div class="space-y-2 mb-3">
-                            <div class="flex items-center justify-between text-sm">
-                                <span class="text-gray-500">Cédula:</span>
-                                <span class="text-gray-900 font-medium">{{ solicitud.cliente_cedula }}</span>
-                            </div>
-                            <div class="flex items-center justify-between text-sm">
-                                <span class="text-gray-500">Producto:</span>
-                                <span class="text-gray-900 font-medium truncate ml-2">{{ s.producto_descripcion
-                                    }}</span>
-                            </div>
-                            <div class="flex items-center justify-between text-sm">
-                                <span class="text-gray-500">Propietario:</span>
-                                <div class="flex items-center space-x-1">
-                                    <div class="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium text-gray-600">
-                                        {% if s.propietario %}
-                                            {{ s.propietario.first_name|first|default:s.propietario.username|first|upper }}
-                                        {% else %}
-                                            ?
-                                        {% endif %}
-                                    </div>
-                                    <span class="text-gray-900 font-medium truncate text-xs">{{ s.propietario }}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Asignación -->
-                        <div class="flex items-center justify-between mb-3">
-                            <span class="text-xs text-gray-500 uppercase tracking-wide font-medium">Asignado a</span>
-                            {% if s.enriched_is_unassigned %}
-                            <span class="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">
-                                <i class="fas fa-user-slash mr-1"></i>Sin asignar
-                            </span>
-                            {% else %}
-                            <div class="flex items-center space-x-1">
-                                <div class="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center text-xs font-medium text-blue-600">
-                                    {% if s.asignada_a %}
-                                        {{ s.asignada_a.first_name|first|default:s.asignada_a.username|first|upper }}
-                                    {% else %}
-                                        ?
-                                    {% endif %}
-                                </div>
-                                <span class="text-sm font-medium text-gray-900 truncate">{{ s.asignada_a }}</span>
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <!-- Etapa y Estado -->
-                        <div class="flex items-center justify-between mb-3">
-                            <div>
-                                <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Etapa</p>
-                                {% if s.etapa %}
-                                <span
-                                    class="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                                    {{ s.etapa }}
-                                </span>
-                                {% endif %}
-                            </div>
-                            <div>
-                                <p class="text-xs text-gray-500 uppercase tracking-wide font-medium">Estado</p>
-                                <span
-                                    class="inline-block px-2 py-1 bg-{{ s.estado_color }} text-white rounded-full text-xs font-medium">
-                                    {{ s.estado_actual }}
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- Etiquetas -->
-                        {% if s.etiquetas_oficial or s.origen == 'Canal Digital' %}
-                        <div class="mb-3">
-                            <p class="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Etiquetas</p>
-                            {% if s.etiquetas_oficial %}
-                            <span
-                                class="inline-block px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
-                                {{ s.etiquetas_oficial }}
-                            </span>
-                            {% endif %}
-                            {% if s.origen == 'Canal Digital' %}
-                            <span class="badge bg-info digital-badge-card {% if s.etiquetas_oficial %}ms-1{% endif %}"
-                                style="font-size: 0.65rem; font-weight: 600;" title="Solicitud del Canal Digital">
-                                <i class="fas fa-mobile-alt me-1"></i>Canal Digital
-                            </span>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <!-- Footer con SLA y fechas -->
-                    <div class="px-4 py-3 bg-gray-50 border-t border-gray-100">
-                        <div class="flex items-center justify-between text-xs">
-                            <div class="flex items-center space-x-4">
-                                <div>
-                                    <span class="text-gray-500">Creado:</span>
-                                    <span class="text-gray-900 font-medium">{{ s.fecha_inicio }}</span>
-                                </div>
-                                <div>
-                                    <span class="text-gray-500">SLA:</span>
-                                    <span class="font-medium {{ s.sla_color }}">{{ s.sla_restante }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Botones de acción -->
-                    <div class="p-4 pt-3 bg-gray-50">
-                        <div class="flex space-x-2">
-                            {% if s.id %}
-                            <a href="{% url 'workflow:detalle_solicitud' s.id %}"
-                                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-3 rounded-lg text-sm font-medium transition-colors">
-                                <i class="fas fa-eye mr-1"></i>Ver
-                            </a>
-                            <a href="{% url 'workflow:transicion_solicitud' s.id %}"
-                                class="flex-1 bg-gray-600 hover:bg-gray-700 text-white text-center py-2 px-3 rounded-lg text-sm font-medium transition-colors">
-                                <i class="fas fa-arrow-right mr-1"></i>Etapa
-                            </a>
-                            {% else %}
-                            <span class="flex-1 bg-gray-400 text-white text-center py-2 px-3 rounded-lg text-sm font-medium"
-                                title="Solicitud sin ID válido">
-                                <i class="fas fa-exclamation-triangle mr-1"></i>Sin ID
-                            </span>
-                            {% endif %}
-                            {% if s.acciones.eliminar and s.id %}
-                            <button onclick="eliminarSolicitud('{{ s.id }}')"
-                                class="bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="text-center py-12">
-                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-inbox text-gray-400 text-2xl"></i>
-                    </div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">No hay solicitudes</h3>
-                    <p class="text-gray-500">No se encontraron solicitudes que coincidan con los filtros aplicados.</p>
-                </div>
-                {% endfor %}
-            </div>
-
-            <!-- Paginación móvil -->
-            {% if page_obj.has_other_pages %}
-            <div class="mt-6 flex justify-center">
-                <nav class="flex items-center space-x-1">
-                    {% if page_obj.has_previous %}
-                    <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}"
-                        class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50">
-                        <i class="fas fa-chevron-left"></i>
-                    </a>
-                    {% endif %}
-
-                    <span
-                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border-t border-b border-gray-300">
-                        {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
-                    </span>
-
-                    {% if page_obj.has_next %}
-                    <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}"
-                        class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50">
-                        <i class="fas fa-chevron-right"></i>
-                    </a>
-                    {% endif %}
-                </nav>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Tabla Desktop Mejorada con Vanilla JavaScript -->
-        <div class="vista-desktop d-none d-sm-block">
+        <!-- Main Table View -->
+        <div class="vista-desktop">
             <!-- Table Container with Filters and Table in Same Container -->
             <div class="apc-table-container"
                 style="background: white; border: 1px solid #e9ecef; border-radius: 8px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
@@ -699,7 +423,7 @@
                                 title="Filtrar por origen">
                                 <option value="">Todos los orígenes</option>
                                 <option value="Canal Digital">
-                                    <i class="fas fa-mobile-alt"></i> Canal Digital
+                                    Canal Digital
                                 </option>
                                 <option value="Presencial">Presencial</option>
                                 <option value="Otro">Otros</option>
@@ -768,16 +492,10 @@
                                             <a href="#" class="text-decoration-none text-success solicitud-link"
                                                 title="Ver detalles de {{ s.cliente_nombre }}"
                                                 onclick="event.stopPropagation();">
-                                                {% if s.origen == 'Canal Digital' %}
-                                                <i class="fas fa-mobile-alt text-info me-1" title="Canal Digital" style="font-size: 0.8rem;"></i>
-                                                {% endif %}
                                                 {{ s.cliente_nombre }}
                                             </a>
                                             {% else %}
                                             <span class="text-danger" title="Solicitud sin ID válido">
-                                                {% if s.origen == 'Canal Digital' %}
-                                                <i class="fas fa-mobile-alt text-info me-1" title="Canal Digital" style="font-size: 0.8rem;"></i>
-                                                {% endif %}
                                                 {{ s.cliente_nombre }}
                                             </span>
                                             {% endif %}
@@ -860,7 +578,7 @@
                                         {% if s.origen == 'Canal Digital' %}
                                         <span class="badge bg-info digital-badge"
                                             title="Solicitud del Canal Digital">
-                                            <i class="fas fa-mobile-alt"></i> Digital
+                                            Digital
                                         </span>
                                         {% endif %}
                                     </div>
@@ -937,278 +655,18 @@
             </div>
         </div>
 
-        {% endif %}
-        {% elif view_type == 'kanban' %}
-        <!-- Vista Kanban Mejorada -->
-
-        <!-- Debug Information -->
-        {% if pipeline %}
-        <div class="alert alert-info">
-            <h6>🐛 Debug Information:</h6>
-            <p><strong>Pipeline:</strong> {{ pipeline.nombre }} (ID: {{ pipeline.id }})</p>
-            <p><strong>Etapas encontradas:</strong> {{ pipeline.etapas.count }}</p>
-            <p><strong>Total solicitudes:</strong> {{ solicitudes|length }}</p>
-            <p><strong>Solicitudes por etapa keys:</strong> {{ solicitudes_por_etapa.keys|join:", " }}</p>
-        </div>
         {% else %}
-        <div class="alert alert-warning">
-            <p><strong>⚠️ No pipeline selected</strong></p>
-        </div>
-        {% endif %}
-
-        <!-- Filtros Compactos para Kanban -->
-        <div class="card card-custom mb-2">
-            <div class="card-body py-2">
-                <div class="row g-1 align-items-center">
-                    <div class="col-4 col-md-2">
-                        <select id="kanbanFiltroEtapa" class="form-select form-select-sm">
-                            <option value="">Todas las etapas</option>
-                        </select>
-                    </div>
-                    <div class="col-4 col-md-2">
-                        <select id="kanbanFiltroSLA" class="form-select form-select-sm">
-                            <option value="">Todos los SLA</option>
-                        </select>
-                    </div>
-                    <div class="col-4 col-md-2">
-                        <select id="kanbanFiltroOrigen" class="form-select form-select-sm">
-                            <option value="">Todos los orígenes</option>
-                            <option value="Canal Digital">📱 Canal Digital</option>
-                            <option value="Presencial">🏢 Presencial</option>
-                        </select>
-                    </div>
-                    <div class="col-8 col-md-5">
-                        <input type="text" id="kanbanBusquedaGlobal" class="form-control form-control-sm"
-                            placeholder="Buscar...">
-                    </div>
-                    <div class="col-4 col-md-1">
-                        <button type="button" class="btn btn-sm btn-outline-info w-100" id="kanbanLimpiarFiltros">
-                            <i class="fas fa-filter-circle-xmark"></i>
-                        </button>
+        <!-- Selección de Pipeline - Diseño Simplificado con Tabla -->
+        <div class="card mb-4">
+            <div class="card-header py-3">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-project-diagram text-primary me-3" style="font-size: 1.5rem;"></i>
+                    <div>
+                        <h4 class="mb-1 fw-bold">Selecciona un Pipeline</h4>
+                        <p class="text-muted mb-0 small">Elige un pipeline para comenzar a gestionar solicitudes</p>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Disclaimer de desarrollo para Kanban -->
-        <div class="alert alert-warning border-warning mb-3"
-            style="border-left: 4px solid #ffc107 !important; background: linear-gradient(135deg, #fff8e1, #fff3cd); border-radius: 8px;">
-            <div class="d-flex align-items-center">
-                <i class="fas fa-exclamation-triangle text-warning me-3" style="font-size: 1.2rem;"></i>
-                <div>
-                    <h6 class="alert-heading mb-1" style="color: #856404; font-weight: 600;">
-                        <i class="fas fa-tools me-1"></i>
-                        Sección en Desarrollo
-                    </h6>
-                    <p class="mb-0" style="color: #856404; font-size: 0.9rem;">
-                        La vista Kanban está actualmente en desarrollo. Algunas funcionalidades pueden presentar
-                        limitaciones o estar sujetas a cambios.
-                        <br>
-                        <small class="text-muted">Para una experiencia completa, recomendamos usar la vista de
-                            tabla.</small>
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Contenedor Kanban con scroll horizontal -->
-        {% if pipeline %}
-        <div class="kanban-container"
-            style="height: calc(100vh - 280px); overflow-y: hidden; min-height: 700px;">
-            <div class="kanban-board d-flex" style="overflow-x: auto; gap: 0.75rem; padding-bottom: 1rem;">
-                {% for etapa in pipeline.etapas.all %}
-                <div class="kanban-column" style="min-width: 320px; width: 320px; flex-shrink: 0;">
-                    <div class="card shadow h-100"
-                        style="border: 2px solid #e9ecef; border-radius: 12px; background: #ffffff;">
-                        <!-- Header de etapa con búsqueda -->
-                        <div class="card-header text-white"
-                            style="background: #28a745; border-radius: 12px 12px 0 0; border: none;">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h6 class="mb-0 fw-bold text-white">
-                                    <i class="fas fa-list-ul me-2 text-white"></i>
-                                    {{ etapa.nombre }}
-                                </h6>
-                                <span class="badge bg-white text-success fw-bold"
-                                    id="count-etapa-{{ etapa.id }}">
-                                    {{ solicitudes_por_etapa|get_item:etapa.id|length }}
-                                </span>
-                            </div>
-                            <input type="text" class="form-control form-control-sm etapa-search"
-                                placeholder="Buscar en {{ etapa.nombre }}..." data-etapa-id="{{ etapa.id }}"
-                                style="background: rgba(255,255,255,0.9); border: none;">
-                        </div>
-
-                        <!-- Cuerpo de etapa con scroll -->
-                        <div class="card-body p-3 kanban-column-body"
-                            style="height: calc(100vh - 380px); overflow-y: auto; background: #f8f9fa;"
-                            data-etapa-id="{{ etapa.id }}">
-
-                            {% for s in solicitudes_por_etapa|get_item:etapa.id %}
-                            <div class="kanban-card mb-3" draggable="{% if s.id %}true{% else %}false{% endif %}" 
-                                {% if s.id %}data-solicitud-id="{{ s.id }}"{% endif %}
-                                data-etapa-id="{{ etapa.id }}"
-                                data-cliente="{{ s.cliente_nombre|default:'Sin cliente' }}"
-                                data-estado="{{ s.estado_actual|default:'Sin estado' }}"
-                                data-asignado="{{ s.asignado_a|default:'Sin asignar' }}"
-                                data-sla="{{ s.enriched_sla_data_attr }}"
-                                data-search="{{ s.codigo|lower }} {{ s.cliente_nombre|lower }}"
-                                data-codigo="{{ s.codigo }}" data-monto="{{ s.monto_formateado }}"
-                                data-fecha-inicio="{{ s.fecha_inicio_str|default:s.fecha_inicio }}"
-                                data-sla-texto="{{ s.sla_restante }}" style="cursor: grab;">
-
-                                <div class="card shadow-sm border-0"
-                                    style="border-left: 4px solid {{ s.enriched_sla_border_color }} !important; height: 110px; border-radius: 6px; transition: all 0.3s ease; background: white; cursor: pointer;"
-                                    onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.15)'"
-                                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 10px rgba(0,0,0,0.1)'"
-                                    {% if s.id %}onclick="window.location.href='{% url 'workflow:detalle_solicitud' s.id %}'"{% endif %}>
-                                    <div class="card-body p-2" style="height: 100%;">
-                                        <!-- Header compacto -->
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <div>
-                                                <h6 class="mb-0" style="font-size: 0.9rem;">
-                                                    <i class="fas fa-user text-muted me-1"
-                                                        style="font-size: 0.75rem; width: 12px;"></i>
-                                                    {% if s.origen == 'Canal Digital' %}
-                                                    <i class="fas fa-mobile-alt text-info me-1" title="Canal Digital" style="font-size: 0.7rem;"></i>
-                                                    {% endif %}
-                                                    {% if s.id %}
-                                                    <a href="{% url 'workflow:detalle_solicitud' s.id %}"
-                                                        class="text-decoration-none fw-bold text-success solicitud-link-kanban"
-                                                        title="Ver detalles de {{ s.cliente_nombre }}"
-                                                        onclick="event.stopPropagation();">
-                                                        {{ s.cliente_nombre|truncatechars:15 }}
-                                                    </a>
-                                                    {% else %}
-                                                    <span class="fw-bold text-danger" title="Solicitud sin ID válido">
-                                                        {{ s.cliente_nombre|truncatechars:15 }}
-                                                    </span>
-                                                    {% endif %}
-                                                </h6>
-                                                <small class="text-muted" style="font-size: 0.65rem;">{{
-                                                    s.codigo
-                                                    }}</small>
-                                            </div>
-
-                                            <!-- Timer y Status -->
-                                            <div class="text-end">
-                                                <div class="d-flex align-items-center justify-content-end mb-1">
-                                                    <i class="fas fa-clock text-muted me-1"
-                                                        style="font-size: 0.75rem; width: 12px;"></i>
-                                                    <span class="{{ s.sla_color }} fw-bold"
-                                                        style="font-size: 0.7rem;">{{
-                                                        s.sla_restante }}</span>
-                                                </div>
-                                                <span class="badge bg-{{ s.estado_color }}"
-                                                    style="font-size: 0.6rem; padding: 2px 5px;">{{
-                                                    s.estado_actual
-                                                    }}</span>
-                                            </div>
-                                        </div>
-
-                                        <!-- Contenido en 2 columnas -->
-                                        <div class="row g-1">
-                                            <!-- Columna izquierda -->
-                                            <div class="col-7">
-                                                <div class="d-flex align-items-center mb-1">
-                                                    <span class="text-success fw-bold"
-                                                        style="font-size: 0.75rem;">{{
-                                                        s.monto_formateado }}</span>
-                                                </div>
-
-                                                {% if not s.enriched_is_unassigned %}
-                                                <div class="d-flex align-items-center">
-                                                    <div class="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-content-center text-xs font-medium text-blue-600 me-1">
-                                                        {% if s.asignado_a %}
-                                                            {{ s.asignado_a.first_name|first|default:s.asignado_a.username|first|upper }}
-                                                        {% else %}
-                                                            ?
-                                                        {% endif %}
-                                                    </div>
-                                                    <span style="font-size: 0.7rem; color: #6c757d;">{{
-                                                        s.asignado_a|truncatechars:10 }}</span>
-                                                </div>
-                                                {% else %}
-                                                <div class="d-flex align-items-center">
-                                                    <div class="w-4 h-4 bg-gray-300 rounded-full flex items-center justify-content-center text-xs font-medium text-gray-600 me-1">
-                                                        <i class="fas fa-user-slash"></i>
-                                                    </div>
-                                                    <span style="font-size: 0.7rem; color: #6c757d;">Sin asignar</span>
-                                                </div>
-                                                {% endif %}
-                                            </div>
-
-                                            <!-- Columna derecha -->
-                                            <div class="col-5 text-end">
-                                                <div class="d-flex align-items-center justify-content-end">
-                                                    {% if s.origen == 'Canal Digital' %}
-                                                    <span class="badge bg-info me-1 digital-badge-mobile" style="font-size: 0.55rem;"
-                                                        title="Solicitud del Canal Digital">
-                                                        <i class="fas fa-mobile-alt me-1"></i>Digital
-                                                    </span>
-                                                    {% endif %}
-                                                    {% if s.prioridad %}
-                                                    <span class="badge me-1"
-                                                        style="font-size: 0.55rem; padding: 1px 4px; background-color: {{ s.enriched_prioridad_bg_color }}; color: {{ s.enriched_prioridad_text_color }};">
-                                                        {{ s.prioridad }}
-                                                    </span>
-                                                    {% endif %}
-                                                    <small class="text-muted" style="font-size: 0.65rem;">{{
-                                                        s.fecha_inicio
-                                                        }}</small>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            {% empty %}
-                            <div class="text-center py-4">
-                                <i class="fas fa-inbox text-muted mb-2"></i>
-                                <p class="text-muted small">Sin solicitudes</p>
-                            </div>
-                            {% endfor %}
-
-                            <!-- Mensaje cuando no hay solicitudes -->
-                            <div class="no-solicitudes text-center py-4" style="display: none;">
-                                <i class="fas fa-inbox text-muted mb-2"></i>
-                                <p class="text-muted small">Sin solicitudes</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="col-12">
-                    <div class="alert alert-info">
-                        <h5><i class="fas fa-info-circle me-2"></i>No hay etapas configuradas</h5>
-                        <p class="mb-0">El pipeline seleccionado no tiene etapas configuradas. Para usar la vista Kanban, es necesario configurar las etapas del pipeline.</p>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% else %}
-        <div class="alert alert-warning">
-            <h5><i class="fas fa-exclamation-triangle me-2"></i>Pipeline requerido</h5>
-            <p class="mb-0">Para utilizar la vista Kanban, primero selecciona un pipeline.</p>
-        </div>
-        {% endif %}
-
-        {% endif %}
-
-        {% else %}
-                <!-- Selección de Pipeline - Diseño Simplificado con Tabla -->
-                <div class="card mb-4">
-                    <div class="card-header py-3">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-project-diagram text-primary me-3" style="font-size: 1.5rem;"></i>
-                            <div>
-                                <h4 class="mb-1 fw-bold">Selecciona un Pipeline</h4>
-                                <p class="text-muted mb-0 small">Elige un pipeline para comenzar a gestionar solicitudes</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="card-body p-0">
+            </div>                    <div class="card-body p-0">
                         {% if pipelines %}
                         <div class="table-responsive">
                             <table class="table table-hover mb-0">
@@ -1234,18 +692,11 @@
                                             </span>
                                         </td>
                                         <td class="text-center py-3">
-                                            <div class="btn-group" role="group">
-                                                <a href="?pipeline={{ pipeline.id }}&view=table" 
-                                                   class="btn btn-primary btn-sm" 
-                                                   title="Vista de Tabla">
-                                                    <i class="fas fa-table me-1"></i>Tabla
-                                                </a>
-                                                <a href="?pipeline={{ pipeline.id }}&view=kanban" 
-                                                   class="btn btn-outline-primary btn-sm" 
-                                                   title="Vista Kanban">
-                                                    <i class="fas fa-columns me-1"></i>Kanban
-                                                </a>
-                                            </div>
+                                            <a href="?pipeline={{ pipeline.id }}" 
+                                               class="btn btn-primary btn-sm" 
+                                               title="Ver Solicitudes">
+                                                <i class="fas fa-eye me-1"></i>Ver Solicitudes
+                                            </a>
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -1278,10 +729,9 @@
 {% include 'workflow/partials/modalSolicitud.html' %}
 
 
+{% endblock content %}
 
 
-
-{% endblock %}
 
 {% block extra_js %}
 <script>
@@ -2504,26 +1954,6 @@
             }
         });
 
-        // Función para cambiar entre vistas
-        window.cambiarVista = function (vista) {
-            console.log('Cambiando a vista:', vista);
-
-            // Obtener parámetros actuales de la URL
-            var urlParams = new URLSearchParams(window.location.search);
-
-            // Actualizar el parámetro de vista
-            urlParams.set('view', vista);
-
-            // Mantener el pipeline si existe
-            {% if pipeline %}
-            urlParams.set('pipeline', '{{ pipeline.id }}');
-            {% endif %}
-
-            // Redirigir con los nuevos parámetros
-            var newUrl = window.location.pathname + '?' + urlParams.toString();
-            window.location.href = newUrl;
-        };
-
         // Función para actualizar solicitudes
         window.actualizarSolicitudes = function () {
             console.log('🔄 Actualizando lista de solicitudes...');
@@ -2552,29 +1982,10 @@
 
         // Actualizar estado de botones según vista actual
         document.addEventListener('DOMContentLoaded', function () {
-            var currentView = '{{ request.GET.view|default:"table" }}'; // Django template variable
-
+            // Always table view - no need for view switching
             const btnVistaTabla = document.getElementById('btnVistaTabla');
-            const btnVistaKanban = document.getElementById('btnVistaKanban');
-
-            if (currentView === 'kanban') {
-                if (btnVistaTabla) {
-                    btnVistaTabla.classList.remove('active', 'btn-light');
-                    btnVistaTabla.classList.add('btn-outline-light');
-                }
-                if (btnVistaKanban) {
-                    btnVistaKanban.classList.remove('btn-outline-light');
-                    btnVistaKanban.classList.add('active', 'btn-light');
-                }
-            } else {
-                if (btnVistaTabla) {
-                    btnVistaTabla.classList.remove('btn-outline-light');
-                    btnVistaTabla.classList.add('active', 'btn-light');
-                }
-                if (btnVistaKanban) {
-                    btnVistaKanban.classList.remove('active', 'btn-light');
-                    btnVistaKanban.classList.add('btn-outline-light');
-                }
+            if (btnVistaTabla) {
+                btnVistaTabla.classList.add('active', 'btn-light');
             }
         });
     });
@@ -2750,186 +2161,12 @@
         });
     });
 
-    // Kanban View Initialization
+    // Table view initialization only
     document.addEventListener('DOMContentLoaded', function () {
-        const currentView = '{{ request.GET.view|default:"table" }}';
-        
-        if (currentView === 'kanban') {
-            console.log('🎯 Inicializando vista Kanban');
-            
-            // Initialize Kanban filters
-            initializeKanbanFilters();
-            
-            // Initialize drag and drop if not already initialized
-            setTimeout(() => {
-                if (typeof inicializarDragAndDrop === 'function') {
-                    inicializarDragAndDrop();
-                    console.log('✅ Drag and drop inicializado para Kanban');
-                }
-            }, 500);
-            
-            // Initialize search functionality for Kanban
-            initializeKanbanSearch();
-        }
+        console.log('🎯 Inicializando vista de tabla');
     });
 
-    // Kanban Filter Functions
-    function initializeKanbanFilters() {
-        const filtroEtapa = document.getElementById('kanbanFiltroEtapa');
-        const filtroSLA = document.getElementById('kanbanFiltroSLA');
-        const filtroOrigen = document.getElementById('kanbanFiltroOrigen');
-        const busquedaGlobal = document.getElementById('kanbanBusquedaGlobal');
-        const limpiarFiltros = document.getElementById('kanbanLimpiarFiltros');
-
-        // Populate filter options
-        if (filtroEtapa) {
-            populateKanbanEtapaFilter();
-        }
-        
-        if (filtroSLA) {
-            populateKanbanSLAFilter();
-        }
-
-        // Add event listeners
-        [filtroEtapa, filtroSLA, filtroOrigen].forEach(filter => {
-            if (filter) {
-                filter.addEventListener('change', applyKanbanFilters);
-            }
-        });
-
-        if (busquedaGlobal) {
-            busquedaGlobal.addEventListener('input', debounce(applyKanbanFilters, 300));
-        }
-
-        if (limpiarFiltros) {
-            limpiarFiltros.addEventListener('click', clearKanbanFilters);
-        }
-    }
-
-    function populateKanbanEtapaFilter() {
-        const filter = document.getElementById('kanbanFiltroEtapa');
-        const etapas = new Set();
-        
-        document.querySelectorAll('.kanban-column .card-header h6').forEach(header => {
-            const etapaName = header.textContent.trim().replace(/\s+\d+$/, ''); // Remove count
-            etapas.add(etapaName);
-        });
-
-        etapas.forEach(etapa => {
-            const option = document.createElement('option');
-            option.value = etapa;
-            option.textContent = etapa;
-            filter.appendChild(option);
-        });
-    }
-
-    function populateKanbanSLAFilter() {
-        const filter = document.getElementById('kanbanFiltroSLA');
-        const slaOptions = [
-            { value: 'text-success', text: '✅ En tiempo' },
-            { value: 'text-warning', text: '⚠️ Por vencer' },
-            { value: 'text-danger', text: '🚨 Vencido' }
-        ];
-
-        slaOptions.forEach(option => {
-            const optionElement = document.createElement('option');
-            optionElement.value = option.value;
-            optionElement.textContent = option.text;
-            filter.appendChild(optionElement);
-        });
-    }
-
-    function applyKanbanFilters() {
-        const filtroEtapa = document.getElementById('kanbanFiltroEtapa')?.value || '';
-        const filtroSLA = document.getElementById('kanbanFiltroSLA')?.value || '';
-        const filtroOrigen = document.getElementById('kanbanFiltroOrigen')?.value || '';
-        const busqueda = document.getElementById('kanbanBusquedaGlobal')?.value.toLowerCase() || '';
-
-        document.querySelectorAll('.kanban-card').forEach(card => {
-            let visible = true;
-
-            // Filter by search
-            if (busqueda) {
-                const searchData = card.dataset.search || '';
-                if (!searchData.includes(busqueda)) {
-                    visible = false;
-                }
-            }
-
-            // Filter by SLA
-            if (filtroSLA) {
-                const slaSpan = card.querySelector('.sla_color, [class*="text-"]');
-                if (!slaSpan || !slaSpan.className.includes(filtroSLA)) {
-                    visible = false;
-                }
-            }
-
-            // Filter by origin
-            if (filtroOrigen) {
-                const hasDigitalIcon = card.querySelector('.fa-mobile-alt');
-                if (filtroOrigen === 'Canal Digital' && !hasDigitalIcon) {
-                    visible = false;
-                } else if (filtroOrigen === 'Presencial' && hasDigitalIcon) {
-                    visible = false;
-                }
-            }
-
-            card.style.display = visible ? 'block' : 'none';
-        });
-
-        // Update counts for each column
-        updateKanbanColumnCounts();
-    }
-
-    function clearKanbanFilters() {
-        document.getElementById('kanbanFiltroEtapa').value = '';
-        document.getElementById('kanbanFiltroSLA').value = '';
-        document.getElementById('kanbanFiltroOrigen').value = '';
-        document.getElementById('kanbanBusquedaGlobal').value = '';
-        
-        // Show all cards
-        document.querySelectorAll('.kanban-card').forEach(card => {
-            card.style.display = 'block';
-        });
-        
-        updateKanbanColumnCounts();
-    }
-
-    function updateKanbanColumnCounts() {
-        document.querySelectorAll('.kanban-column').forEach(column => {
-            const visibleCards = column.querySelectorAll('.kanban-card:not([style*="display: none"])');
-            const countBadge = column.querySelector('.badge');
-            if (countBadge) {
-                countBadge.textContent = visibleCards.length;
-            }
-        });
-    }
-
-    function initializeKanbanSearch() {
-        const searchInputs = document.querySelectorAll('.etapa-search');
-        searchInputs.forEach(input => {
-            input.addEventListener('input', function() {
-                const etapaId = this.dataset.etapaId;
-                const searchTerm = this.value.toLowerCase();
-                const column = document.querySelector(`.kanban-column-body[data-etapa-id="${etapaId}"]`);
-                
-                if (column) {
-                    const cards = column.querySelectorAll('.kanban-card');
-                    cards.forEach(card => {
-                        const searchData = card.dataset.search || '';
-                        const clienteName = card.dataset.cliente || '';
-                        const codigo = card.dataset.codigo || '';
-                        
-                        const isMatch = searchData.includes(searchTerm) || 
-                                       clienteName.toLowerCase().includes(searchTerm) ||
-                                       codigo.toLowerCase().includes(searchTerm);
-                        
-                        card.style.display = isMatch ? 'block' : 'none';
-                    });
-                }
-            });
-        });
-    }
+    // All Kanban functions removed - table view only
 
     // Utility function for debouncing
     function debounce(func, wait) {
@@ -4237,7 +3474,7 @@
             }, 300);
         }
 
-        // Función unificada para mostrar modal de requisitos faltantes (funciona para tabla y kanban)
+        // Función para mostrar modal de requisitos faltantes
         window.mostrarModalRequisitosFaltantes = function (solicitudId, nuevaEtapaId, nombreEtapa, callbackExito, callbackCancelacion) {
             console.log('🔍 Mostrando modal de requisitos faltantes');
             console.log('📋 Parámetros recibidos:', { solicitudId, nuevaEtapaId, nombreEtapa, callbackExito: typeof callbackExito, callbackCancelacion: typeof callbackCancelacion });
@@ -4659,7 +3896,7 @@
          * =========================================
          * 
          * Este sistema maneja la validación y carga de requisitos faltantes para transiciones
-         * de etapa tanto en vista de tabla como en vista Kanban.
+         * de etapa en la vista de tabla.
          * 
          * FUNCIONES PRINCIPALES:
          * - mostrarModalRequisitosFaltantes: Función principal que muestra el modal
@@ -4669,17 +3906,17 @@
          * - subirArchivosSecuencialmente: Sube archivos uno por uno con progreso
          * - resetearEstadoModal: Resetea el estado del modal
          * - cerrarModalRequisitos: Cierra el modal de forma segura
-         * - ejecutarCambioEtapa: Función unificada para cambiar etapa
+         * - ejecutarCambioEtapa: Función para cambiar etapa
          * - verificarFuncionesRequisitos: Verifica que todas las funciones estén disponibles
          * 
          * FLUJO DE TRABAJO:
-         * 1. Usuario intenta cambiar etapa (tabla o kanban)
+         * 1. Usuario intenta cambiar etapa en la tabla
          * 2. Se verifica si hay requisitos faltantes
          * 3. Si los hay, se muestra el modal con la lista
          * 4. Usuario sube archivos o confirma requisitos existentes
          * 5. Se validan todos los requisitos
          * 6. Se ejecuta la transición de etapa
-         * 7. Se actualiza la UI según la vista (tabla o kanban)
+         * 7. Se actualiza la UI de la tabla
          */
 
         // Función para resetear el estado del modal
@@ -5150,12 +4387,12 @@
             return true;
         }
 
-        // Función unificada para ejecutar el cambio de etapa (funciona para tabla y kanban)
-        window.ejecutarCambioEtapa = function (solicitudId, nuevaEtapaId, etapaActual, selectElement, subestadoSeleccionado = null, esKanban = false, etapaNombre = null) {
-            console.log('🔄 Ejecutando cambio de etapa:', { solicitudId, nuevaEtapaId, etapaActual, subestadoSeleccionado, esKanban, etapaNombre });
+        // Función para ejecutar el cambio de etapa (tabla únicamente)
+        window.ejecutarCambioEtapa = function (solicitudId, nuevaEtapaId, etapaActual, selectElement, subestadoSeleccionado = null) {
+            console.log('🔄 Ejecutando cambio de etapa:', { solicitudId, nuevaEtapaId, etapaActual, subestadoSeleccionado });
 
-            // Deshabilitar select mientras se procesa (solo para tabla)
-            if (selectElement && !esKanban) {
+            // Deshabilitar select mientras se procesa
+            if (selectElement) {
                 selectElement.disabled = true;
             }
 
@@ -5185,7 +4422,7 @@
                     console.log('Respuesta del servidor:', data);
                     if (data.success) {
                         // Actualizar data attribute (solo para tabla)
-                        if (selectElement && !esKanban) {
+                        if (selectElement) {
                             selectElement.setAttribute('data-etapa-actual', nuevaEtapaId);
                         }
 
@@ -5196,16 +4433,10 @@
                             alert(data.mensaje || 'Etapa cambiada exitosamente');
                         }
 
-                        if (esKanban) {
-                            // Para Kanban: actualizar UI dinámicamente
-                            console.log('🔄 Actualizando Kanban dinámicamente...');
-                            actualizarKanbanTrasMovimiento(solicitudId, nuevaEtapaId, etapaNombre);
-                        } else {
-                            // Para tabla: recargar página
-                            setTimeout(function () {
-                                location.reload();
-                            }, 1000);
-                        }
+                        // Recargar página para actualizar la vista
+                        setTimeout(function () {
+                            location.reload();
+                        }, 1000);
                     } else {
                         // Manejar errores específicos
                         if (data.tipo_error === 'transicion_invalida') {
@@ -5229,7 +4460,7 @@
                         }
 
                         // Revertir selección
-                        if (selectElement && !esKanban) {
+                        if (selectElement) {
                             selectElement.value = etapaActual;
                         }
                     }
@@ -5243,33 +4474,17 @@
                     }
 
                     // Revertir selección
-                    if (selectElement && !esKanban) {
+                    if (selectElement) {
                         selectElement.value = etapaActual;
                     }
                 })
                 .finally(() => {
-                    // Habilitar select (solo para tabla)
-                    if (selectElement && !esKanban) {
+                    // Habilitar select
+                    if (selectElement) {
                         selectElement.disabled = false;
                     }
                 });
         }
-
-        // Fallback: Asegurar que el drag and drop se inicialice si no se hizo antes
-        setTimeout(function () {
-            const kanbanBoard = document.querySelector('.kanban-board');
-            const kanbanCards = document.querySelectorAll('.kanban-card');
-            if (kanbanBoard && kanbanCards.length > 0) {
-                console.log('Fallback: Verificando drag and drop...');
-                if (!kanbanCards[0].dataset.dragInitialized) {
-                    console.log('Fallback: Inicializando drag and drop...');
-                    inicializarDragAndDrop();
-                    kanbanCards.forEach(function (card) {
-                        card.dataset.dragInitialized = 'true';
-                    });
-                }
-            }
-        }, 1000);
 
         // Función para abrir modal de agenda de firma
         window.abrirModalAgendaFirma = async function(requisitoId) {

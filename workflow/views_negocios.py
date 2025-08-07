@@ -480,39 +480,9 @@ def negocios_view(request):
         except (ValueError, TypeError):
             pass
     
-    # Prepare Kanban-specific data structure
-    solicitudes_por_etapa = {}
-    view_type = request.GET.get('view', 'table')
-    
-    if view_type == 'kanban' and current_pipeline:
-        print(f"🎯 DEBUG: Preparing Kanban data for pipeline {current_pipeline.nombre}")
-        print(f"🎯 DEBUG: Pipeline has {current_pipeline.etapas.count()} stages")
-        
-        # Initialize dictionary with all pipeline stages
-        for etapa in current_pipeline.etapas.all():
-            solicitudes_por_etapa[etapa.id] = []
-            print(f"    - Stage: {etapa.nombre} (ID: {etapa.id})")
-        
-        # Group solicitudes by their current stage
-        for solicitud in solicitudes_enriched:
-            if solicitud.etapa_actual and solicitud.etapa_actual.id in solicitudes_por_etapa:
-                solicitudes_por_etapa[solicitud.etapa_actual.id].append(solicitud)
-                print(f"    - Added solicitud {solicitud.codigo} to stage {solicitud.etapa_actual.nombre}")
-            else:
-                # Handle solicitudes without a current stage
-                if 'sin_etapa' not in solicitudes_por_etapa:
-                    solicitudes_por_etapa['sin_etapa'] = []
-                solicitudes_por_etapa['sin_etapa'].append(solicitud)
-                print(f"    - Added solicitud {solicitud.codigo} to 'sin_etapa'")
-        
-        print(f"🎯 DEBUG: Final solicitudes_por_etapa structure:")
-        for etapa_id, solicitudes_list in solicitudes_por_etapa.items():
-            print(f"    - Etapa {etapa_id}: {len(solicitudes_list)} solicitudes")
-    
     context = {
         'solicitudes': solicitudes_enriched,
         'solicitudes_tabla': solicitudes_enriched,  # Template expects this variable name
-        'solicitudes_por_etapa': solicitudes_por_etapa,  # For Kanban view
         'total_solicitudes': total_solicitudes,
         'solicitudes_pendientes': solicitudes_pendientes,
         'pipelines_disponibles': pipelines_enriched,
@@ -527,7 +497,6 @@ def negocios_view(request):
         'is_superuser': request.user.is_superuser,
         'user': request.user,
         'no_access': False,  # User has access since we checked above
-        'view_type': view_type,  # Pass view type to template
         'last_pipeline_saved': session_key in request.session,  # Info for frontend
         'last_pipeline_id': request.session.get(session_key, None),  # ID del último pipeline
         'user_access_info': access_info,  # Pass access information to template
