@@ -4,6 +4,88 @@
 
 {% block title %}Negocios - Sistema de Workflow{% endblock %}
 
+{% block extra_css %}
+<style>
+/* Profile Picture Optimization Styles */
+.profile-img {
+    transition: opacity 0.3s ease, transform 0.2s ease;
+    opacity: 0;
+    cursor: pointer;
+    will-change: opacity, transform;
+}
+
+.profile-img[src] {
+    opacity: 1;
+}
+
+.fallback-avatar {
+    transition: all 0.2s ease;
+    will-change: transform, opacity;
+}
+
+/* Hover effects for better UX */
+.profile-img:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+}
+
+.fallback-avatar:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Loading state for images */
+.profile-img:not([src]),
+.profile-img[src=""] {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Optimize for modern browsers */
+@supports (aspect-ratio: 1) {
+    .profile-img,
+    .fallback-avatar {
+        aspect-ratio: 1;
+        width: 32px;
+        height: auto;
+    }
+}
+
+/* Responsive profile pictures */
+@media (max-width: 768px) {
+    .profile-img, .fallback-avatar {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 0.7rem !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .profile-img,
+    .fallback-avatar {
+        border: 3px solid currentColor !important;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .profile-img,
+    .fallback-avatar {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 
 {% include 'workflow/partials/modalRequisitos.html' %}
@@ -513,16 +595,37 @@
                                 <td class="text-dark">
                                     <div class="d-flex align-items-center">
                                         {% if s.propietario %}
-                                        <div class="me-2 rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
-                                            style="width: 24px; height: 24px; background: linear-gradient(135deg, #6c757d, #495057); font-size: 0.7rem;">
-                                            {{ s.propietario.first_name|first|default:s.propietario.username|first|upper }}
+                                        <!-- Profile picture with lazy loading and fallback -->
+                                        <div class="me-2 position-relative">
+                                            {% if s.propietario.profile_picture or s.propietario.avatar or s.propietario.photo %}
+                                            <!-- Placeholder while loading -->
+                                            <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold fallback-avatar"
+                                                style="width: 32px; height: 32px; background: linear-gradient(135deg, #6c757d, #495057); font-size: 0.8rem;">
+                                                {{ s.propietario.first_name|first|default:s.propietario.username|first|upper }}
+                                            </div>
+                                            <!-- Actual profile image -->
+                                            <img 
+                                                class="rounded-circle profile-img"
+                                                data-src="{% if s.propietario.profile_picture %}{{ s.propietario.profile_picture.url }}{% elif s.propietario.avatar %}{{ s.propietario.avatar.url }}{% elif s.propietario.photo %}{{ s.propietario.photo.url }}{% endif %}"
+                                                alt="{{ s.propietario.get_full_name|default:s.propietario.username }}"
+                                                style="width: 32px; height: 32px; object-fit: cover; border: 2px solid #e9ecef; position: absolute; top: 0; left: 0; opacity: 0;"
+                                                loading="lazy"
+                                                title="Click para ver perfil de {{ s.propietario.get_full_name|default:s.propietario.username }}">
+                                            {% else %}
+                                            <!-- No profile picture - show initials avatar only -->
+                                            <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+                                                style="width: 32px; height: 32px; background: linear-gradient(135deg, #6c757d, #495057); font-size: 0.8rem;"
+                                                title="{{ s.propietario.get_full_name|default:s.propietario.username }}">
+                                                {{ s.propietario.first_name|first|default:s.propietario.username|first|upper }}
+                                            </div>
+                                            {% endif %}
                                         </div>
                                         <span class="small">
                                             {{ s.propietario.get_full_name|default:s.propietario.username }}
                                         </span>
                                         {% else %}
                                         <div class="me-2 rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
-                                            style="width: 24px; height: 24px; background: linear-gradient(135deg, #6c757d, #495057); font-size: 0.7rem;">
+                                            style="width: 32px; height: 32px; background: linear-gradient(135deg, #6c757d, #495057); font-size: 0.8rem;">
                                             ?
                                         </div>
                                         <span class="small">Sin propietario</span>
@@ -735,6 +838,155 @@
 
 {% block extra_js %}
 <script>
+    /*
+     * PROFILE PICTURE OPTIMIZATION SYSTEM
+     * ===================================
+     * 
+     * Features implemented:
+     * - Lazy loading using Intersection Observer API
+     * - Fallback to initials avatars on load failure
+     * - Performance optimization with image preloading
+     * - Responsive design with media queries
+     * - Accessibility support (high contrast, reduced motion)
+     * - Dynamic content support via refreshProfilePictures()
+     * - Support for multiple field names (profile_picture, avatar, photo)
+     * 
+     * Performance optimizations:
+     * - Uses IntersectionObserver for viewport-based loading
+     * - Preloads first 5 images using link prefetch
+     * - CSS will-change properties for smooth animations
+     * - Shimmer loading effect for better UX
+     * 
+     * Usage:
+     * - Profile pictures load automatically on page load
+     * - Call refreshProfilePictures() after dynamic content updates
+     * - Click on profile pictures to see user info toast
+     */
+
+    // Profile Picture Optimization and Lazy Loading
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeProfilePictures();
+    });
+
+    function initializeProfilePictures() {
+        const profileImages = document.querySelectorAll('.profile-img');
+        
+        // Use Intersection Observer for better performance
+        if ('IntersectionObserver' in window) {
+            const imageObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        loadProfileImage(img);
+                        observer.unobserve(img);
+                    }
+                });
+            }, {
+                rootMargin: '50px 0px', // Start loading 50px before image enters viewport
+                threshold: 0.01
+            });
+
+            profileImages.forEach(img => {
+                if (img.dataset.src) {
+                    imageObserver.observe(img);
+                }
+            });
+        } else {
+            // Fallback for older browsers - load all images immediately
+            profileImages.forEach(img => {
+                if (img.dataset.src) {
+                    loadProfileImage(img);
+                }
+            });
+        }
+
+        // Add click handler for profile pictures to show user info
+        profileImages.forEach(img => {
+            img.setAttribute('data-initialized', 'true');
+            
+            img.addEventListener('click', function() {
+                const userName = this.alt || 'Usuario';
+                const userInfo = this.closest('tr')?.querySelector('.small')?.textContent || userName;
+                
+                // Optional: Show user info tooltip or modal
+                if (typeof showToast !== 'undefined') {
+                    showToast(`👤 ${userInfo}`, 'info', 2000);
+                }
+            });
+        });
+    }
+
+    function loadProfileImage(img) {
+        const tempImg = new Image();
+        const originalSrc = img.dataset.src;
+        const fallback = img.previousElementSibling; // The fallback is now the previous sibling
+        
+        tempImg.onload = function() {
+            img.src = originalSrc;
+            img.style.opacity = '1';
+            // Keep fallback visible behind the image as a border/shadow effect
+            if (fallback && fallback.classList.contains('fallback-avatar')) {
+                fallback.style.opacity = '0.3';
+                fallback.style.transform = 'scale(1.1)';
+            }
+        };
+        
+        tempImg.onerror = function() {
+            // Keep fallback visible on error
+            img.style.display = 'none';
+            if (fallback && fallback.classList.contains('fallback-avatar')) {
+                fallback.style.opacity = '1';
+                fallback.style.transform = 'scale(1)';
+            }
+        };
+        
+        // Start loading
+        tempImg.src = originalSrc;
+    }
+
+    // Preload profile pictures for better performance
+    function preloadProfilePictures() {
+        const profileImages = document.querySelectorAll('.profile-img[data-src]');
+        const imagesToPreload = Array.from(profileImages)
+            .slice(0, 5) // Only preload first 5 images
+            .map(img => img.dataset.src)
+            .filter(src => src);
+
+        imagesToPreload.forEach(src => {
+            const link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = src;
+            document.head.appendChild(link);
+        });
+    }
+
+    // Call preload after page load
+    window.addEventListener('load', preloadProfilePictures);
+
+    // Utility function to reinitialize profile pictures for dynamically loaded content
+    window.refreshProfilePictures = function(container = document) {
+        const newProfileImages = container.querySelectorAll('.profile-img:not([data-initialized])');
+        
+        newProfileImages.forEach(img => {
+            img.setAttribute('data-initialized', 'true');
+            
+            // Add click handler
+            img.addEventListener('click', function() {
+                const userName = this.alt || 'Usuario';
+                const userInfo = this.closest('tr')?.querySelector('.small')?.textContent || userName;
+                
+                if (typeof showToast !== 'undefined') {
+                    showToast(`👤 ${userInfo}`, 'info', 2000);
+                }
+            });
+            
+            // Load image if it has data-src
+            if (img.dataset.src) {
+                loadProfileImage(img);
+            }
+        });
+    };
+
     // Global utility functions
     function showLoading(show) {
         const loadingIndicator = document.getElementById('loadingIndicator');
