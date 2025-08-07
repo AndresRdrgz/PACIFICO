@@ -47,10 +47,11 @@ def clientesList(request):
     except UserProfile.DoesNotExist:
         user_rol = 'Supervisor'  # Default role if no profile exists
     
-    # Filter clients based on user role
-    if user_rol == 'Oficial':
-        # Oficial users can only see clients where they are the propietario
-        clientes = Cliente.objects.filter(propietario=request.user).order_by('-id')
+    # Filter clients based on user role and group supervision
+    if user_rol in ['Oficial', 'Asistente']:
+        # Usar la función centralizada para obtener datos visibles
+        from .utils_grupos import obtener_todos_los_datos_visibles_para_usuario
+        clientes = obtener_todos_los_datos_visibles_para_usuario(request.user, Cliente).order_by('-id')
     else:
         # All other users can see all clients
         clientes = Cliente.objects.all().order_by('-id')
@@ -60,8 +61,12 @@ def clientesList(request):
     clientes = cliente_filter.qs
     
     # Check if user can see the filter
+    # Usar la función centralizada para verificar si es supervisor efectivo
+    from .utils_grupos import es_supervisor_efectivo
+    
     show_filter = (
         user_rol in ['Supervisor', 'Administrador'] or 
+        es_supervisor_efectivo(request.user) or
         request.user.is_superuser
     )
     

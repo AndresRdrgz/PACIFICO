@@ -39,7 +39,7 @@ class BaseClienteForm(forms.ModelForm):
     
     def configure_propietario_field(self, user):
         if 'propietario' in self.fields:
-            allowed_roles = ['Oficial', 'Administrador', 'Supervisor']
+            allowed_roles = ['Oficial', 'Asistente', 'Administrador', 'Supervisor']
             users_with_allowed_roles = User.objects.filter(
                 userprofile__rol__in=allowed_roles
             ).distinct().order_by('first_name', 'last_name', 'username')

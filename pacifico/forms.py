@@ -1,8 +1,9 @@
 import os
 from django import forms
+from django.contrib.admin.widgets import FilteredSelectMultiple
 from .models import Cotizacion, Aseguradora, Cliente, UserProfile, CotizacionDocumento
 from mantenimiento.models import Agencias
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from pathlib import Path
 import json
 from django.conf import settings
@@ -1446,3 +1447,168 @@ class CotizacionDocumentoForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['cotizacion'].required = False
         self.fields['documento'].required = False
+
+
+class SupervisorChoiceField(forms.ModelMultipleChoiceField):
+    """Campo personalizado para mostrar supervisores con información detallada"""
+    def label_from_instance(self, obj):
+        """
+        Personalizar cómo se muestran los supervisores en el widget
+        """
+        try:
+            profile = obj.userprofile
+            sucursal_info = f" - {profile.sucursal.nombre}" if profile.sucursal else ""
+            return f"{obj.get_full_name() or obj.username} ({profile.rol}){sucursal_info}"
+        except:
+            return f"{obj.get_full_name() or obj.username}"
+
+
+class GroupProfileInlineForm(forms.ModelForm):
+    """
+    Formulario para GroupProfile cuando se usa como inline (sin campo group)
+    """
+    supervisores = SupervisorChoiceField(
+        queryset=User.objects.all(),
+        widget=FilteredSelectMultiple('Supervisores', False),
+        required=False,
+        help_text='Selecciona los supervisores que pueden administrar este grupo. Puedes usar las flechas o hacer doble clic para mover usuarios entre las listas.'
+    )
+    
+    class Meta:
+        from .models import GroupProfile
+        model = GroupProfile
+        fields = ['es_sucursal', 'sucursal_codigo', 'descripcion', 'activo', 'supervisores']
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Actualizar queryset para supervisores (todos los usuarios activos)
+        self.fields['supervisores'].queryset = User.objects.filter(
+            is_active=True
+        ).select_related('userprofile')
+        
+        # Personalizar labels y help_text
+        self.fields['es_sucursal'].label = '¿Es un grupo de sucursal?'
+        self.fields['sucursal_codigo'].label = 'Código de sucursal'
+        self.fields['descripcion'].widget = forms.Textarea(attrs={'rows': 3})
+
+
+class GroupProfileForm(forms.ModelForm):
+    """
+    Formulario para GroupProfile cuando se usa en admin independiente (con campo group)
+    """
+    supervisores = SupervisorChoiceField(
+        queryset=User.objects.all(),
+        widget=FilteredSelectMultiple('Supervisores', False),
+        required=False,
+        help_text='Selecciona los supervisores que pueden administrar este grupo. Puedes usar las flechas o hacer doble clic para mover usuarios entre las listas.'
+    )
+    
+    class Meta:
+        from .models import GroupProfile
+        model = GroupProfile
+        fields = ['group', 'es_sucursal', 'sucursal_codigo', 'descripcion', 'activo', 'supervisores']
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Actualizar queryset para supervisores (todos los usuarios activos)
+        self.fields['supervisores'].queryset = User.objects.filter(
+            is_active=True
+        ).select_related('userprofile')
+        
+        # Personalizar labels y help_text
+        self.fields['es_sucursal'].label = '¿Es un grupo de sucursal?'
+        self.fields['sucursal_codigo'].label = 'Código de sucursal'
+        self.fields['descripcion'].widget = forms.Textarea(attrs={'rows': 3})
+        
+        # Si estamos editando, mostrar información adicional
+        if self.instance and self.instance.pk:
+            # Agregar información del grupo en el help_text
+            total_miembros = self.instance.group.user_set.count()
+            self.fields['group'].help_text = f'Este grupo tiene {total_miembros} miembros'
+
+
+class CustomGroupForm(forms.ModelForm):
+    """
+    Formulario personalizado para Group que incluye gestión de miembros
+    """
+    
+    class MiembroChoiceField(forms.ModelMultipleChoiceField):
+        def label_from_instance(self, obj):
+            """
+            Personalizar cómo se muestran los usuarios en el widget
+            """
+            try:
+                profile = obj.userprofile
+                sucursal_info = f" - {profile.sucursal.nombre}" if profile.sucursal else ""
+                return f"{obj.get_full_name() or obj.username} ({profile.rol}){sucursal_info}"
+            except:
+                return f"{obj.get_full_name() or obj.username}"
+    
+    miembros = MiembroChoiceField(
+        queryset=User.objects.all(),
+        widget=FilteredSelectMultiple('Miembros', False),
+        required=False,
+        help_text='Usa las flechas para mover usuarios entre "Disponibles" y "Seleccionados".'
+    )
+    
+    class Meta:
+        model = Group
+        fields = ['name', 'permissions', 'miembros']
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Actualizar queryset para miembros (todos los usuarios activos)
+        self.fields['miembros'].queryset = User.objects.filter(
+            is_active=True
+        ).select_related('userprofile')
+        
+        # Si estamos editando un grupo existente, preseleccionar los miembros actuales
+        if self.instance and self.instance.pk:
+            miembros_actuales = self.instance.user_set.all()
+            self.fields['miembros'].initial = miembros_actuales
+            total_miembros = miembros_actuales.count()
+            self.fields['name'].help_text = f'Este grupo tiene {total_miembros} miembros'
+            print(f"🔍 DEBUG INIT: Grupo '{self.instance.name}' tiene {total_miembros} miembros iniciales")
+            for miembro in miembros_actuales:
+                print(f"  - {miembro.username}")
+        else:
+            print(f"🔍 DEBUG INIT: Creando nuevo grupo")
+    
+    def clean(self):
+        print(f"🧪 DEBUG CLEAN: Iniciando validación del formulario")
+        print(f"🧪 DEBUG CLEAN: self.data = {dict(self.data) if hasattr(self, 'data') else 'No data'}")
+        
+        cleaned_data = super().clean()
+        miembros = cleaned_data.get('miembros', [])
+        print(f"🧪 DEBUG CLEAN: Datos del formulario - {len(miembros)} miembros seleccionados")
+        for miembro in miembros:
+            print(f"  - {miembro.username}")
+        return cleaned_data
+    
+    def save(self, commit=True):
+        print(f"💾 DEBUG SAVE: Iniciando guardado - commit={commit}")
+        
+        # Guardar el grupo primero
+        group = super().save(commit=commit)
+        
+        if commit:
+            # Debug: Verificar qué miembros se están seleccionando
+            miembros_seleccionados = self.cleaned_data.get('miembros', [])
+            print(f"🔄 DEBUG: Guardando grupo '{group.name}' con {len(miembros_seleccionados)} miembros")
+            
+            # Limpiar miembros actuales y agregar los nuevos
+            group.user_set.clear()
+            print(f"🧹 DEBUG: Miembros eliminados del grupo")
+            
+            for usuario in miembros_seleccionados:
+                group.user_set.add(usuario)
+                print(f"➕ DEBUG: Agregado usuario {usuario.username} al grupo")
+            
+            # Verificar el resultado final
+            total_final = group.user_set.count()
+            print(f"✅ DEBUG: Grupo '{group.name}' ahora tiene {total_final} miembros")
+        
+        return group

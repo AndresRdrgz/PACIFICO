@@ -198,6 +198,12 @@ class GroupProfile(models.Model):
         default=True,
         help_text="Indica si el grupo está activo"
     )
+    supervisores = models.ManyToManyField(
+        User,
+        blank=True,
+        related_name='grupos_supervisados',
+        help_text="Supervisores que pueden ver y administrar las solicitudes de este grupo"
+    )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField(auto_now=True)
 
@@ -219,6 +225,30 @@ class GroupProfile(models.Model):
         elif not self.es_sucursal:
             self.sucursal_codigo = None
         super().save(*args, **kwargs)
+
+    def get_supervisores_list(self):
+        """
+        Retorna una lista de nombres de supervisores para mostrar en el admin
+        """
+        return ", ".join([supervisor.get_full_name() or supervisor.username 
+                         for supervisor in self.supervisores.all()])
+    get_supervisores_list.short_description = 'Supervisores'
+
+    def puede_supervisar(self, usuario):
+        """
+        Verifica si un usuario puede supervisar este grupo
+        """
+        return self.supervisores.filter(id=usuario.id).exists()
+
+    def get_miembros_y_supervisores(self):
+        """
+        Retorna todos los usuarios que tienen acceso a las solicitudes del grupo
+        (miembros del grupo + supervisores)
+        """
+        miembros = self.group.user_set.all()
+        supervisores = self.supervisores.all()
+        # Usar union para evitar duplicados si un supervisor también es miembro
+        return miembros.union(supervisores)
 
 
 class UserProfile(models.Model):

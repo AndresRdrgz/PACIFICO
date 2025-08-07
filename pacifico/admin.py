@@ -3,7 +3,7 @@ from .models import Cotizacion, PeriodoPago, Aseguradora, FormPago, PruebaDario,
 from django.contrib.auth.models import User, Group
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin, GroupAdmin as BaseGroupAdmin
 from .models import Politicas
-from .forms import UserProfileForm  # Importamos el formulario personalizado
+from .forms import UserProfileForm, GroupProfileForm, GroupProfileInlineForm, CustomGroupForm  # Importamos los formularios personalizados
 
 # Register your models here.
 class UserProfileInline(admin.StackedInline):
@@ -144,25 +144,59 @@ class SucursalAdmin(admin.ModelAdmin):
 # Configuración para GroupProfile
 class GroupProfileInline(admin.StackedInline):
     model = GroupProfile
+    form = GroupProfileInlineForm  # Usar el formulario para inline (sin campo group)
     can_delete = False
-    fields = ('es_sucursal', 'sucursal_codigo', 'descripcion', 'activo')
+    fields = ('es_sucursal', 'sucursal_codigo', 'descripcion', 'activo', 'supervisores')
     extra = 0
 
-    def get_formset(self, request, obj=None, **kwargs):
-        formset = super().get_formset(request, obj, **kwargs)
-        
-        class CustomGroupProfileFormset(formset):
-            def get_form(self, form_index, **kwargs):
-                form = super().get_form(form_index, **kwargs)
-                # Agregar JavaScript para mostrar/ocultar sucursal_codigo
-                form.Media.js = form.Media.js + ('admin/js/group_profile.js',)
-                return form
-        
-        return CustomGroupProfileFormset
+    class Media:
+        # Incluir CSS y JS necesarios para FilteredSelectMultiple
+        css = {
+            'all': ('admin/css/widgets.css',),
+        }
+        js = ('admin/js/SelectBox.js', 'admin/js/SelectFilter2.js')
 
 
 class GroupAdmin(BaseGroupAdmin):
+    form = CustomGroupForm  # Usar nuestro formulario personalizado
     inlines = [GroupProfileInline]
+    
+    # Agregar el campo de miembros a los fieldsets
+    fieldsets = (
+        (None, {
+            'fields': ('name',)
+        }),
+        ('Miembros', {
+            'fields': ('miembros',),
+            'description': 'Gestiona los usuarios que pertenecen a este grupo'
+        }),
+        ('Permisos', {
+            'fields': ('permissions',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    class Media:
+        # CSS y JS necesarios para FilteredSelectMultiple
+        css = {
+            'all': ('admin/css/widgets.css',),
+        }
+        js = ('admin/js/SelectBox.js', 'admin/js/SelectFilter2.js')
+    
+    def save_model(self, request, obj, form, change):
+        """Override para agregar debug adicional y asegurar que se llame al save del formulario"""
+        print(f"🔧 DEBUG ADMIN: save_model llamado - change={change}")
+        print(f"🔧 DEBUG ADMIN: obj.name = {obj.name}")
+        print(f"🔧 DEBUG ADMIN: form type = {type(form)}")
+        print(f"🔧 DEBUG ADMIN: form.is_valid() = {form.is_valid()}")
+        
+        # Llamar al método save del formulario personalizado
+        if isinstance(form, CustomGroupForm):
+            print(f"🔧 DEBUG ADMIN: Es CustomGroupForm, llamando form.save()")
+            obj = form.save()
+        else:
+            print(f"🔧 DEBUG ADMIN: No es CustomGroupForm, llamando super().save_model()")
+            super().save_model(request, obj, form, change)
     
     def get_inline_instances(self, request, obj=None):
         if obj:  # Solo mostrar inline si el grupo ya existe
@@ -172,10 +206,18 @@ class GroupAdmin(BaseGroupAdmin):
 
 @admin.register(GroupProfile)
 class GroupProfileAdmin(admin.ModelAdmin):
-    list_display = ('group', 'es_sucursal', 'get_sucursal_display', 'activo', 'fecha_creacion')
-    list_filter = ('es_sucursal', 'activo', 'sucursal_codigo')
+    form = GroupProfileForm
+    list_display = ('group', 'es_sucursal', 'get_sucursal_display', 'get_supervisores_list', 'activo', 'fecha_creacion')
+    list_filter = ('es_sucursal', 'activo', 'sucursal_codigo', 'supervisores')
     search_fields = ('group__name', 'descripcion')
     readonly_fields = ('fecha_creacion', 'fecha_modificacion')
+    
+    class Media:
+        # Incluir CSS y JS necesarios para FilteredSelectMultiple
+        css = {
+            'all': ('admin/css/widgets.css',),
+        }
+        js = ('admin/js/SelectBox.js', 'admin/js/SelectFilter2.js')
     
     fieldsets = (
         ('Información Básica', {
@@ -184,6 +226,10 @@ class GroupProfileAdmin(admin.ModelAdmin):
         ('Configuración de Sucursal', {
             'fields': ('es_sucursal', 'sucursal_codigo'),
             'description': 'Marque "Es sucursal" si este grupo representa una sucursal específica'
+        }),
+        ('Supervisión', {
+            'fields': ('supervisores',),
+            'description': 'Supervisores que pueden ver y administrar las solicitudes de este grupo'
         }),
         ('Metadatos', {
             'fields': ('fecha_creacion', 'fecha_modificacion'),
