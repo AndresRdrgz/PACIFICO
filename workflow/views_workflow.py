@@ -40,6 +40,103 @@ from .models import ClienteEntrevista, CalificacionCampo
 from pacifico.models import UserProfile, Cliente, Cotizacion
 import json
 import ssl
+
+
+def usuario_puede_modificar_solicitud(usuario, solicitud):
+    """
+    Verifica si un usuario puede modificar una solicitud.
+    Incluye permisos básicos y supervisión de grupos (sin importar el rol del usuario).
+    """
+    print(f"🔍 DEBUG PERMISOS: Verificando permisos para usuario {usuario.username} en solicitud {solicitud.id}")
+    
+    # Permisos básicos
+    if (
+        solicitud.creada_por == usuario
+        or solicitud.asignada_a == usuario
+        or usuario.is_superuser
+        or getattr(usuario, "is_staff", False)
+    ):
+        print(f"✅ DEBUG: Usuario {usuario.username} tiene permisos básicos (creador/asignado/superuser/staff)")
+        return True
+
+    print(f"🔍 DEBUG: Verificando supervisión de grupos para {usuario.username}")
+    
+    # Verificación por supervisión de grupos
+    try:
+        from pacifico.utils_grupos import (
+            obtener_usuarios_supervisados_por_usuario,
+            obtener_grupos_supervisados_por_usuario,
+        )
+
+        # 1. Verificar si supervisa a los usuarios relacionados con la solicitud
+        print(f"🔍 DEBUG: Obteniendo usuarios supervisados por {usuario.username}")
+        usuarios_supervisados = obtener_usuarios_supervisados_por_usuario(usuario)
+        print(f"🔍 DEBUG: Usuarios supervisados encontrados: {usuarios_supervisados.count()}")
+        
+        if usuarios_supervisados.exists():
+            usuarios_relacionados = [u for u in [solicitud.creada_por, solicitud.asignada_a] if u]
+            print(f"🔍 DEBUG: Usuarios relacionados con solicitud: {[u.username for u in usuarios_relacionados]}")
+            
+            for usuario_relacionado in usuarios_relacionados:
+                if usuarios_supervisados.filter(pk=usuario_relacionado.pk).exists():
+                    print(f"✅ DEBUG: Usuario {usuario.username} supervisa a {usuario_relacionado.username}")
+                    return True
+
+        # 2. Verificar si supervisa grupos con permisos de bandeja/pipeline
+        print(f"🔍 DEBUG: Obteniendo grupos supervisados por {usuario.username}")
+        grupos_supervisados_profiles = obtener_grupos_supervisados_por_usuario(usuario)
+        print(f"🔍 DEBUG: Grupos supervisados encontrados: {grupos_supervisados_profiles.count()}")
+        
+        if grupos_supervisados_profiles.exists():
+            try:
+                from workflow.modelsWorkflow import PermisoBandeja, PermisoPipeline
+
+                grupos_supervisados = [gp.group for gp in grupos_supervisados_profiles]
+                print(f"✅ DEBUG: Usuario {usuario.username} supervisa grupos: {[g.name for g in grupos_supervisados]}")
+
+                # Verificar permisos de bandeja para la etapa actual
+                if solicitud.etapa_actual:
+                    print(f"🔍 DEBUG: Verificando permisos de bandeja para etapa {solicitud.etapa_actual.nombre}")
+                    permisos_bandeja = PermisoBandeja.objects.filter(
+                        etapa=solicitud.etapa_actual,
+                        grupo__in=grupos_supervisados,
+                        puede_transicionar=True,
+                    )
+                    print(f"🔍 DEBUG: Permisos de bandeja encontrados: {permisos_bandeja.count()}")
+                    
+                    if permisos_bandeja.exists():
+                        print(f"✅ DEBUG: Grupo supervisado tiene permiso de transición en etapa {solicitud.etapa_actual.nombre}")
+                        return True
+
+                # Verificar permisos de pipeline
+                print(f"🔍 DEBUG: Verificando permisos de pipeline para {solicitud.pipeline.nombre}")
+                permisos_pipeline = PermisoPipeline.objects.filter(
+                    pipeline=solicitud.pipeline,
+                    grupo__in=grupos_supervisados,
+                    puede_editar=True,
+                )
+                print(f"🔍 DEBUG: Permisos de pipeline encontrados: {permisos_pipeline.count()}")
+                
+                if permisos_pipeline.exists():
+                    print(f"✅ DEBUG: Grupo supervisado tiene permiso de edición en pipeline {solicitud.pipeline.nombre}")
+                    return True
+
+            except Exception as e:
+                print(f"❌ DEBUG: Error verificando permisos de grupo: {e}")
+                import traceback
+                print(f"❌ DEBUG: Traceback: {traceback.format_exc()}")
+                pass
+        else:
+            print(f"❌ DEBUG: Usuario {usuario.username} NO supervisa ningún grupo")
+
+    except ImportError as e:
+        print(f"❌ DEBUG: No se pudo importar utils_grupos: {e}")
+        import traceback
+        print(f"❌ DEBUG: Traceback: {traceback.format_exc()}")
+        pass
+
+    print(f"❌ DEBUG: Usuario {usuario.username} NO tiene permisos para modificar solicitud {solicitud.id}")
+    return False
 import uuid
 from datetime import datetime, timedelta
 from django.views.decorators.csrf import csrf_exempt
@@ -7482,11 +7579,14 @@ def api_cambiar_etapa(request, solicitud_id):
         # Obtener la solicitud
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         
-        # Verificar permisos (el usuario debe ser el creador, asignado, o tener permisos especiales)
-        if not (solicitud.creada_por == request.user or 
-                solicitud.asignada_a == request.user or 
-                request.user.is_superuser):
+        # Verificar permisos usando la función helper
+        if not usuario_puede_modificar_solicitud(request.user, solicitud):
+            print(f"❌ DEBUG: Usuario {request.user.username} no tiene permisos para cambiar solicitud {solicitud_id}")
+            print(f"❌ DEBUG: Creada por: {solicitud.creada_por.username if solicitud.creada_por else 'None'}")
+            print(f"❌ DEBUG: Asignada a: {solicitud.asignada_a.username if solicitud.asignada_a else 'None'}")
             return JsonResponse({'error': 'No tienes permisos para cambiar esta solicitud'}, status=403)
+        
+        print(f"🔑 DEBUG: Usuario {request.user.username} tiene permisos para cambiar solicitud {solicitud_id}")
         
         # Obtener datos del request
         data = json.loads(request.body)
@@ -9439,11 +9539,8 @@ def api_obtener_comentarios(request, solicitud_id):
     try:
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         
-        # Verificar permisos para ver la solicitud
-        if not (solicitud.creada_por == request.user or 
-                solicitud.asignada_a == request.user or 
-                request.user.is_superuser or
-                request.user.is_staff):
+        # Verificar permisos para ver la solicitud (incluye supervisores de grupo)
+        if not usuario_puede_modificar_solicitud(request.user, solicitud):
             return JsonResponse({'error': 'No tienes permisos para ver esta solicitud'}, status=403)
         
         # Obtener tipo de comentario del query parameter (opcional)
@@ -9493,11 +9590,8 @@ def api_crear_comentario(request, solicitud_id):
     try:
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         
-        # Verificar permisos para comentar en la solicitud
-        if not (solicitud.creada_por == request.user or 
-                solicitud.asignada_a == request.user or 
-                request.user.is_superuser or
-                request.user.is_staff):
+        # Verificar permisos para comentar en la solicitud (incluye supervisores de grupo)
+        if not usuario_puede_modificar_solicitud(request.user, solicitud):
             return JsonResponse({'error': 'No tienes permisos para comentar en esta solicitud'}, status=403)
         
         data = json.loads(request.body)
@@ -9757,10 +9851,8 @@ def api_obtener_requisitos_transicion(request, solicitud_id):
         if not nueva_etapa_id:
             return JsonResponse({'error': 'ID de nueva etapa requerido'}, status=400)
         
-        # Verificar permisos
-        if not (solicitud.creada_por == request.user or 
-                solicitud.asignada_a == request.user or 
-                request.user.is_superuser):
+        # Verificar permisos (incluye supervisores de grupo)
+        if not usuario_puede_modificar_solicitud(request.user, solicitud):
             return JsonResponse({'error': 'No tienes permisos para ver esta solicitud'}, status=403)
         
         nueva_etapa = get_object_or_404(Etapa, id=nueva_etapa_id, pipeline=solicitud.pipeline)
@@ -9930,11 +10022,8 @@ def api_obtener_transiciones_validas(request, solicitud_id):
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         print(f"✅ DEBUG: Solicitud encontrada: {solicitud.codigo}")
         
-        # Verificar permisos
-        if not (solicitud.creada_por == request.user or 
-                solicitud.asignada_a == request.user or 
-                request.user.is_superuser or
-                request.user.is_staff):
+        # Verificar permisos (incluye supervisores de grupo)
+        if not usuario_puede_modificar_solicitud(request.user, solicitud):
             return JsonResponse({
                 'success': False,
                 'error': 'No tienes permisos para ver esta solicitud'
@@ -13924,11 +14013,8 @@ def api_ejecutar_transicion(request):
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         transicion = get_object_or_404(TransicionEtapa, id=transicion_id)
         
-        # Verificar permisos
-        if not (solicitud.creada_por == request.user or 
-                solicitud.asignada_a == request.user or 
-                request.user.is_superuser or
-                request.user.is_staff):
+        # Verificar permisos (incluye supervisores de grupo)
+        if not usuario_puede_modificar_solicitud(request.user, solicitud):
             return JsonResponse({
                 'success': False,
                 'message': 'No tienes permisos para modificar esta solicitud.'

@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from .modelsWorkflow import Solicitud, Etapa, HistorialSolicitud
+from .views_workflow import usuario_puede_modificar_solicitud
 import json
 
 @login_required
@@ -18,10 +19,8 @@ def api_cambiar_etapa_backoffice(request, solicitud_id):
         # Obtener la solicitud
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         
-        # Verificar permisos
-        if not (solicitud.creada_por == request.user or 
-                solicitud.asignada_a == request.user or 
-                request.user.is_superuser):
+        # Verificar permisos (incluye supervisores de grupo)
+        if not usuario_puede_modificar_solicitud(request.user, solicitud):
             return JsonResponse({'error': 'No tienes permisos para cambiar esta solicitud'}, status=403)
         
         # Verificar que estamos en backoffice

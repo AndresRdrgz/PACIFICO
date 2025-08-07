@@ -673,13 +673,28 @@ def api_detalle_solicitud_modal(request, solicitud_id):
                 id=solicitud_id
             )
         else:
+            # Solicitudes propias (asignadas o creadas)
+            solicitudes_propias = Q(asignada_a=request.user) | Q(creada_por=request.user)
+            
+            # NUEVA FUNCIONALIDAD: Agregar solicitudes de usuarios supervisados
+            try:
+                from pacifico.utils_grupos import obtener_usuarios_supervisados_por_usuario
+                usuarios_supervisados = obtener_usuarios_supervisados_por_usuario(request.user)
+                if usuarios_supervisados.exists():
+                    # Agregar solicitudes de usuarios supervisados
+                    solicitudes_supervisadas = Q(asignada_a__in=usuarios_supervisados) | Q(creada_por__in=usuarios_supervisados)
+                    filtro_solicitudes = solicitudes_propias | solicitudes_supervisadas
+                else:
+                    filtro_solicitudes = solicitudes_propias
+            except ImportError:
+                # Si no existe el módulo, usar solo solicitudes propias
+                filtro_solicitudes = solicitudes_propias
+                
             solicitud = get_object_or_404(
                 Solicitud.objects.select_related(
                     'pipeline', 'etapa_actual', 'subestado_actual',
                     'creada_por', 'asignada_a', 'cliente', 'cotizacion'
-                ).filter(
-                    Q(asignada_a=request.user) | Q(creada_por=request.user)
-                ),
+                ).filter(filtro_solicitudes),
                 id=solicitud_id
             )
         
