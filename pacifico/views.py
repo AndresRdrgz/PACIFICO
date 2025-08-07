@@ -214,6 +214,42 @@ def update_consulta_fields(request, numero_cotizacion):
 
     return JsonResponse({'ok': True})
 
+@login_required
+def get_cotizacion_data(request, numero_cotizacion):
+    """
+    API endpoint to get cotización data as JSON for consultation fields validation
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    try:
+        cotizacion = get_object_or_404(Cotizacion, NumeroCotizacion=numero_cotizacion)
+        
+        # Return the consultation fields data
+        data = {
+            'id': cotizacion.NumeroCotizacion,
+            'sector': cotizacion.sector if hasattr(cotizacion, 'sector') else None,
+            'politica': cotizacion.politica.id if cotizacion.politica else None,
+            'observaciones': cotizacion.observaciones if hasattr(cotizacion, 'observaciones') else None,
+            'tiempoServicio': cotizacion.tiempoServicio if hasattr(cotizacion, 'tiempoServicio') else None,
+            'nombreEmpresa': cotizacion.nombreEmpresa if hasattr(cotizacion, 'nombreEmpresa') else None,
+            'ingresos': float(cotizacion.ingresos) if hasattr(cotizacion, 'ingresos') and cotizacion.ingresos else None,
+            'posicion': cotizacion.posicion if hasattr(cotizacion, 'posicion') else None,
+            'apcScore': cotizacion.apcScore if hasattr(cotizacion, 'apcScore') else None,
+            'apcPI': float(cotizacion.apcPI) if hasattr(cotizacion, 'apcPI') and cotizacion.apcPI else None,
+            # Additional fields for context
+            'nombreCliente': cotizacion.nombreCliente,
+            'cedulaCliente': cotizacion.cedulaCliente,
+            'montoPrestamo': float(cotizacion.montoPrestamo) if cotizacion.montoPrestamo else None,
+        }
+        
+        return JsonResponse(data)
+        
+    except Cotizacion.DoesNotExist:
+        return JsonResponse({'error': 'Cotización no encontrada'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
 def aseguradora_create(request):
     if request.method == 'POST':
         form = AseguradoraForm(request.POST)

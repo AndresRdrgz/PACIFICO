@@ -417,6 +417,70 @@
                                 Campo requerido para crear la solicitud
                             </small>
                         </div>
+
+                        <!-- Observaciones -->
+                        <div id="observacionesField" class="campo-dinamico" style="display: none;">
+                            <label for="observaciones" class="campo-label">
+                                Observaciones <span class="campo-required">*</span>
+                            </label>
+                            <textarea id="observaciones" name="observaciones" class="form-control" rows="3"
+                                placeholder="Describe el motivo de la consulta y observaciones relevantes..."></textarea>
+                            <small class="text-muted mt-1 d-block">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Campo requerido para crear la solicitud
+                            </small>
+                        </div>
+
+                        <!-- Nombre de la Empresa -->
+                        <div id="nombreEmpresaField" class="campo-dinamico" style="display: none;">
+                            <label for="nombreEmpresa" class="campo-label">
+                                Nombre de la Empresa <span class="campo-required">*</span>
+                            </label>
+                            <input type="text" id="nombreEmpresa" name="nombre_empresa" class="form-control" 
+                                placeholder="Nombre de la empresa donde trabaja">
+                            <small class="text-muted mt-1 d-block">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Campo requerido para crear la solicitud
+                            </small>
+                        </div>
+
+                        <!-- Ingresos -->
+                        <div id="ingresosField" class="campo-dinamico" style="display: none;">
+                            <label for="ingresos" class="campo-label">
+                                Ingresos <span class="campo-required">*</span>
+                            </label>
+                            <input type="number" id="ingresos" name="ingresos" class="form-control" 
+                                placeholder="0.00" step="0.01" min="0">
+                            <small class="text-muted mt-1 d-block">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Monto en USD - Campo requerido para crear la solicitud
+                            </small>
+                        </div>
+
+                        <!-- APC PI -->
+                        <div id="apcPIField" class="campo-dinamico" style="display: none;">
+                            <label for="apcPI" class="campo-label">
+                                APC PI <span class="campo-required">*</span>
+                            </label>
+                            <input type="number" id="apcPI" name="apc_pi" class="form-control" 
+                                placeholder="0.00" step="0.01" min="0">
+                            <small class="text-muted mt-1 d-block">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Índice APC PI - Campo requerido para crear la solicitud
+                            </small>
+                        </div>
+
+                        <!-- Save Button for Consultation Fields -->
+                        <div id="consultationSaveSection" class="mt-3" style="display: none;">
+                            <button type="button" class="btn btn-success btn-sm" onclick="handleSaveConsultationFields()">
+                                <i class="fas fa-save me-2"></i>
+                                Guardar Campos de Consulta
+                            </button>
+                            <small class="text-muted d-block mt-1">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Guarde los campos antes de crear la solicitud
+                            </small>
+                        </div>
                     </div>
                 </div>
 
@@ -1124,6 +1188,68 @@
         opacity: 0;
         transform: translateY(-10px);
     }
+
+    /* Save button styling */
+    #consultationSaveSection {
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        margin-top: 15px;
+    }
+
+    #consultationSaveSection .btn-success {
+        background: var(--verde-pacifico);
+        border-color: var(--verde-pacifico);
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+
+    #consultationSaveSection .btn-success:hover {
+        background: #1e5f2a;
+        border-color: #1e5f2a;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    #consultationSaveSection .btn-success:disabled {
+        background: #6c757d;
+        border-color: #6c757d;
+        transform: none;
+        box-shadow: none;
+    }
+
+    /* Field grouping improvements */
+    .campo-dinamico {
+        margin-bottom: 20px;
+        padding: 15px;
+        background: #ffffff;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .campo-dinamico:hover {
+        border-color: var(--verde-pacifico);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .campo-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .campo-required {
+        color: #dc3545;
+        font-weight: 700;
+    }
+
+    .form-control:focus {
+        border-color: var(--verde-pacifico);
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    }
 </style>
 
 <script>
@@ -1235,6 +1361,355 @@
         }
         
         return { canProceed: true, isDuplicate: false };
+    };
+
+    // Consultation Fields Validation Functions
+    window.validateConsultationFields = async function(cotizacionId) {
+        console.log('🔍 Validating consultation fields for cotización:', cotizacionId);
+        
+        if (!cotizacionId) {
+            return { isValid: true, missingFields: [] };
+        }
+
+        try {
+            // Fetch cotización data to check required fields
+            const response = await fetch(`/cotizacion/${cotizacionId}/data/`);
+            if (!response.ok) {
+                console.error('❌ Error fetching cotización data');
+                return { isValid: true, missingFields: [] }; // Don't block if can't validate
+            }
+
+            const cotizacionData = await response.json();
+            console.log('📋 Cotización data received:', cotizacionData);
+
+            const requiredFields = {
+                'sector': 'Sector',
+                'politica': 'Política',
+                'observaciones': 'Observaciones',
+                'tiempoServicio': 'Tiempo de Servicio',
+                'nombreEmpresa': 'Nombre de la Empresa',
+                'ingresos': 'Ingresos',
+                'posicion': 'Posición',
+                'apcScore': 'APC Score',
+                'apcPI': 'APC PI'
+            };
+
+            const missingFields = [];
+            const fieldValues = {};
+
+            for (const [field, displayName] of Object.entries(requiredFields)) {
+                const value = cotizacionData[field];
+                fieldValues[field] = value;
+                
+                // Check if field is missing or empty
+                if (value === null || value === undefined || value === '' || 
+                    (typeof value === 'string' && value.trim() === '')) {
+                    missingFields.push({
+                        field: field,
+                        displayName: displayName
+                    });
+                }
+            }
+
+            const isValid = missingFields.length === 0;
+            console.log(`📊 Validation result: ${isValid ? 'Valid' : 'Invalid'} - Missing fields:`, missingFields);
+
+            return {
+                isValid: isValid,
+                missingFields: missingFields,
+                fieldValues: fieldValues,
+                cotizacionData: cotizacionData
+            };
+
+        } catch (error) {
+            console.error('❌ Error validating consultation fields:', error);
+            return { isValid: true, missingFields: [] }; // Don't block if validation fails
+        }
+    };
+
+    window.showConsultationFieldsSection = function(validationResult) {
+        console.log('📋 Showing consultation fields section');
+        
+        const section = document.getElementById('cotizacionFieldsSection');
+        const infoAlert = document.getElementById('cotizacionFieldsInfo');
+        const warningAlert = document.getElementById('cotizacionFieldsWarning');
+        
+        if (!section) return;
+
+        const { isValid, missingFields, fieldValues } = validationResult;
+
+        // Clear previous field visibility
+        const dynamicFields = section.querySelectorAll('.campo-dinamico');
+        dynamicFields.forEach(field => {
+            field.style.display = 'none';
+        });
+
+        if (isValid) {
+            // All fields are complete
+            if (infoAlert) {
+                infoAlert.style.display = 'block';
+                infoAlert.innerHTML = `
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Perfecto:</strong> Todos los campos obligatorios están completos en la cotización seleccionada.
+                `;
+            }
+            if (warningAlert) {
+                warningAlert.style.display = 'none';
+            }
+            
+            // Hide save button section when all fields are complete
+            const saveSection = document.getElementById('consultationSaveSection');
+            if (saveSection) {
+                saveSection.style.display = 'none';
+            }
+        } else {
+            // Some fields are missing
+            if (warningAlert) {
+                const fieldNames = missingFields.map(f => f.displayName).join(', ');
+                warningAlert.style.display = 'block';
+                warningAlert.innerHTML = `
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Atención:</strong> Los siguientes campos están vacíos en la cotización: <strong>${fieldNames}</strong>
+                    <br><small class="mt-2 d-block">Por favor, complete estos campos para poder crear la solicitud.</small>
+                `;
+            }
+            if (infoAlert) {
+                infoAlert.style.display = 'none';
+            }
+
+            // Show fields for missing values and populate existing values
+            missingFields.forEach(missingField => {
+                const fieldElement = document.getElementById(`${missingField.field}Field`);
+                if (fieldElement) {
+                    fieldElement.style.display = 'block';
+                }
+            });
+
+            // Show save button section when there are missing fields
+            const saveSection = document.getElementById('consultationSaveSection');
+            if (saveSection) {
+                saveSection.style.display = 'block';
+            }
+
+            // Populate existing values for context
+            populateConsultationFields(fieldValues);
+        }
+
+        section.style.display = 'block';
+        section.classList.add('show');
+        
+        // Update create button state when section is shown
+        setTimeout(() => {
+            window.updateCreateButtonState();
+        }, 100);
+    };
+
+    window.hideConsultationFieldsSection = function() {
+        console.log('📋 Hiding consultation fields section');
+        
+        const section = document.getElementById('cotizacionFieldsSection');
+        if (section) {
+            section.style.display = 'none';
+            section.classList.remove('show');
+        }
+        
+        // Update create button state when section is hidden
+        setTimeout(() => {
+            window.updateCreateButtonState();
+        }, 100);
+    };
+
+    window.populateConsultationFields = function(fieldValues) {
+        console.log('📝 Populating consultation fields with existing values:', fieldValues);
+        
+        const fieldMappings = {
+            'sector': 'sector',
+            'politica': 'politica', 
+            'observaciones': 'observaciones',
+            'tiempoServicio': 'tiempoServicio',
+            'nombreEmpresa': 'nombreEmpresa',
+            'ingresos': 'ingresos',
+            'posicion': 'posicion',
+            'apcScore': 'apcScore',
+            'apcPI': 'apcPI'
+        };
+
+        for (const [fieldName, elementId] of Object.entries(fieldMappings)) {
+            const element = document.getElementById(elementId);
+            const value = fieldValues[fieldName];
+            
+            if (element && value !== null && value !== undefined && value !== '') {
+                element.value = value;
+                console.log(`📝 Populated ${fieldName} with value:`, value);
+            }
+        }
+
+        // Special handling for política - load options if needed
+        if (fieldValues.politica) {
+            loadPoliticasForDrawer(fieldValues.politica);
+        } else {
+            loadPoliticasForDrawer(null);
+        }
+    };
+
+    window.loadPoliticasForDrawer = async function(selectedPoliticaId) {
+        console.log('📋 Loading políticas for drawer select');
+        
+        const politicaSelect = document.getElementById('politica');
+        if (!politicaSelect) return;
+
+        try {
+            const response = await fetch('/workflow/api/politicas/');
+            const data = await response.json();
+            
+            politicaSelect.innerHTML = '<option value="">Seleccionar política...</option>';
+            
+            if (data.politicas) {
+                data.politicas.forEach(politica => {
+                    const option = document.createElement('option');
+                    option.value = politica.id;
+                    option.textContent = politica.titulo;
+                    
+                    if (selectedPoliticaId && String(selectedPoliticaId) === String(politica.id)) {
+                        option.selected = true;
+                    }
+                    
+                    politicaSelect.appendChild(option);
+                });
+            }
+            
+            console.log('📋 Políticas loaded successfully');
+        } catch (error) {
+            console.error('❌ Error loading políticas:', error);
+            politicaSelect.innerHTML = '<option value="">Error cargando políticas</option>';
+        }
+    };
+
+    window.saveConsultationFields = async function(cotizacionId) {
+        console.log('💾 Saving consultation fields for cotización:', cotizacionId);
+        
+        if (!cotizacionId) {
+            console.error('❌ No cotización ID provided');
+            return { success: false, error: 'No cotización ID provided' };
+        }
+
+        // Collect field values
+        const fieldData = {
+            sector: document.getElementById('sector')?.value || '',
+            politica: document.getElementById('politica')?.value || '',
+            observaciones: document.getElementById('observaciones')?.value?.trim() || '',
+            tiempoServicio: document.getElementById('tiempoServicio')?.value?.trim() || '',
+            nombreEmpresa: document.getElementById('nombreEmpresa')?.value?.trim() || '',
+            ingresos: document.getElementById('ingresos')?.value || '',
+            posicion: document.getElementById('posicion')?.value?.trim() || '',
+            apcScore: document.getElementById('apcScore')?.value || '',
+            apcPI: document.getElementById('apcPI')?.value || ''
+        };
+
+        console.log('📋 Field data to save:', fieldData);
+
+        // Basic client-side validation
+        const requiredFields = [];
+        if (!fieldData.sector) requiredFields.push('Sector');
+        if (!fieldData.politica) requiredFields.push('Política');
+        if (!fieldData.observaciones) requiredFields.push('Observaciones');
+        if (!fieldData.tiempoServicio) requiredFields.push('Tiempo de Servicio');
+        if (!fieldData.nombreEmpresa) requiredFields.push('Nombre de la Empresa');
+        if (!fieldData.ingresos) requiredFields.push('Ingresos');
+        if (!fieldData.posicion) requiredFields.push('Posición');
+        if (!fieldData.apcScore) requiredFields.push('APC Score');
+        if (!fieldData.apcPI) requiredFields.push('APC PI');
+
+        if (requiredFields.length > 0) {
+            const errorMessage = `Los siguientes campos son requeridos: ${requiredFields.join(', ')}`;
+            console.error('❌ Validation failed:', errorMessage);
+            alert(errorMessage);
+            return { success: false, error: errorMessage };
+        }
+
+        try {
+            // Get CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                             document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+
+            const response = await fetch(`/cotizacion/${cotizacionId}/update_consulta_fields/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(fieldData)
+            });
+
+            const result = await response.json();
+
+            if (result.ok) {
+                console.log('✅ Consultation fields saved successfully');
+                // Hide the consultation fields section since they're now complete
+                hideConsultationFieldsSection();
+                
+                // Show success message
+                const successAlert = document.createElement('div');
+                successAlert.className = 'alert alert-success alert-dismissible fade show';
+                successAlert.innerHTML = `
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Éxito:</strong> Los campos de consulta han sido guardados correctamente.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                
+                const section = document.getElementById('cotizacionFieldsSection');
+                if (section) {
+                    section.parentNode.insertBefore(successAlert, section);
+                }
+                
+                return { success: true };
+            } else {
+                console.error('❌ Error saving consultation fields:', result.error);
+                alert(`Error al guardar los campos: ${result.error}`);
+                return { success: false, error: result.error };
+            }
+
+        } catch (error) {
+            console.error('❌ Network error saving consultation fields:', error);
+            alert('Error de conexión al guardar los campos. Por favor, inténtelo de nuevo.');
+            return { success: false, error: error.message };
+        }
+    };
+
+    // Handler function for the save consultation fields button
+    window.handleSaveConsultationFields = async function() {
+        console.log('🔧 Save consultation fields button clicked');
+        
+        const cotizacionId = document.getElementById('cotizacionId')?.value;
+        if (!cotizacionId) {
+            alert('No hay cotización seleccionada');
+            return;
+        }
+
+        // Show loading state
+        const saveButton = document.querySelector('#consultationSaveSection button');
+        if (saveButton) {
+            saveButton.disabled = true;
+            saveButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Guardando...';
+        }
+
+        try {
+            const result = await saveConsultationFields(cotizacionId);
+            
+            if (result.success) {
+                // Re-validate consultation fields to update the display
+                setTimeout(async () => {
+                    const validationResult = await validateConsultationFields(cotizacionId);
+                    showConsultationFieldsSection(validationResult);
+                }, 1000);
+            }
+        } finally {
+            // Restore button state
+            if (saveButton) {
+                saveButton.disabled = false;
+                saveButton.innerHTML = '<i class="fas fa-save me-2"></i>Guardar Campos de Consulta';
+            }
+        }
     };
 
     // Submit form and showSuccessMessage functions defined in negocios.html to avoid conflicts
@@ -1892,10 +2367,13 @@
         const mandatoryInputs = [
             { id: 'posicion', name: 'Posición' },
             { id: 'tiempoServicio', name: 'Tiempo de Servicio' },
-            { id: 'salario', name: 'Salario Base Mensual' },
+            { id: 'ingresos', name: 'Ingresos' },
             { id: 'apcScore', name: 'APC Score' },
             { id: 'politica', name: 'Política' },
-            { id: 'sector', name: 'Sector' }
+            { id: 'sector', name: 'Sector' },
+            { id: 'observaciones', name: 'Observaciones' },
+            { id: 'nombreEmpresa', name: 'Nombre de la Empresa' },
+            { id: 'apcPI', name: 'APC PI' }
         ];
 
         let missingFields = [];
@@ -1932,6 +2410,154 @@
 
         return { isValid, missingFields };
     };
+
+    // Function to update create button state based on validation
+    window.updateCreateButtonState = function() {
+        console.log('🔍 Updating create button state');
+        
+        // Use a more stable selector that doesn't depend on the dynamic class
+        const createButton = document.querySelector('.drawer-footer button[onclick="submitSolicitud()"]') || 
+                           document.querySelector('.drawer-footer .btn-primary') ||
+                           document.querySelector('.drawer-footer .btn-secondary');
+        console.log('🔍 Create button found:', createButton);
+        if (!createButton) return;
+
+        // Check consultation fields validation
+        const consultationValidation = window.validateMandatoryFieldsBeforeSubmit();
+        
+        // Check if "como se entero" is selected (only if section is visible)
+        const comoSeEnteroSection = document.getElementById('comoSeEnteroSection');
+        const comoSeEntero = document.getElementById('comoSeEntero');
+        let comoSeEnteroValid = true; // Default to valid if section is not shown
+        
+        if (comoSeEnteroSection && comoSeEnteroSection.classList.contains('show')) {
+            // Section is visible, so validation is required
+            comoSeEnteroValid = comoSeEntero && comoSeEntero.value && comoSeEntero.value.trim() !== '';
+        }
+        
+        // Check if pipeline is selected
+        const pipelineSelect = document.getElementById('pipelineSelect');
+        const pipelineValid = pipelineSelect && pipelineSelect.value && pipelineSelect.value.trim() !== '';
+        
+        const allValid = consultationValidation.isValid && comoSeEnteroValid && pipelineValid;
+        
+        if (allValid) {
+            createButton.disabled = false;
+            createButton.innerHTML = '<i class="fas fa-plus me-2"></i>Crear';
+            createButton.classList.remove('btn-secondary');
+            createButton.classList.add('btn-primary');
+        } else {
+            createButton.disabled = true;
+            
+            // Show specific reason for disabled state
+            let reason = 'Crear';
+            if (!pipelineValid) {
+                reason = 'Selecciona Pipeline';
+            } else if (!comoSeEnteroValid) {
+                reason = 'Selecciona Canal';
+            } else if (!consultationValidation.isValid) {
+                reason = `Faltan ${consultationValidation.missingFields.length} campos`;
+            }
+            
+            createButton.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${reason}`;
+            createButton.classList.remove('btn-primary');
+            createButton.classList.add('btn-secondary');
+        }
+        
+        console.log('🔧 Create button state updated:', { 
+            allValid, 
+            consultationValid: consultationValidation.isValid, 
+            comoSeEnteroValid,
+            comoSeEnteroSectionVisible: comoSeEnteroSection && comoSeEnteroSection.classList.contains('show'),
+            comoSeEnteroValue: comoSeEntero ? comoSeEntero.value : 'element not found',
+            pipelineValid,
+            pipelineValue: pipelineSelect ? pipelineSelect.value : 'element not found',
+            buttonDisabled: createButton.disabled,
+            buttonText: createButton.innerHTML
+        });
+    };
+
+    // Debug function to manually test button state validation
+    window.debugButtonState = function() {
+        console.log('🔍 Manual button state debug');
+        const createButton = document.querySelector('.drawer-footer button[onclick="submitSolicitud()"]') || 
+                           document.querySelector('.drawer-footer .btn-primary') ||
+                           document.querySelector('.drawer-footer .btn-secondary');
+        const comoSeEnteroSection = document.getElementById('comoSeEnteroSection');
+        const comoSeEntero = document.getElementById('comoSeEntero');
+        const pipelineSelect = document.getElementById('pipelineSelect');
+        
+        console.log('Elements found:', {
+            createButton: !!createButton,
+            comoSeEnteroSection: !!comoSeEnteroSection,
+            comoSeEntero: !!comoSeEntero,
+            pipelineSelect: !!pipelineSelect
+        });
+        
+        if (comoSeEnteroSection) {
+            console.log('comoSeEnteroSection classes:', comoSeEnteroSection.className);
+            console.log('comoSeEnteroSection style:', comoSeEnteroSection.style.display);
+        }
+        
+        if (comoSeEntero) {
+            console.log('comoSeEntero value:', comoSeEntero.value);
+        }
+        
+        if (pipelineSelect) {
+            console.log('pipelineSelect value:', pipelineSelect.value);
+        }
+        
+        // Trigger the validation
+        window.updateCreateButtonState();
+    };
+
+    // Add event listeners for real-time validation
+    document.addEventListener('DOMContentLoaded', function() {
+        // Listen for changes in consultation fields
+        const consultationFieldIds = ['posicion', 'tiempoServicio', 'ingresos', 'apcScore', 'politica', 'sector', 'observaciones', 'nombreEmpresa', 'apcPI'];
+        
+        consultationFieldIds.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.addEventListener('input', function() {
+                    setTimeout(() => {
+                        window.updateCreateButtonState();
+                    }, 100);
+                });
+                
+                field.addEventListener('change', function() {
+                    setTimeout(() => {
+                        window.updateCreateButtonState();
+                    }, 100);
+                });
+            }
+        });
+        
+        // Listen for changes in "como se entero"
+        const comoSeEntero = document.getElementById('comoSeEntero');
+        if (comoSeEntero) {
+            console.log('✅ Como se enteró field found');
+            comoSeEntero.addEventListener('change', function() {
+                console.log('🔧 Como se enteró field changed');
+                setTimeout(() => {
+                    window.updateCreateButtonState();
+                    console.log('🔧 Como se enteró field changed');
+                }, 100);
+            });
+        }
+        
+        // Listen for changes in pipeline selection
+        const pipelineSelect = document.getElementById('pipelineSelect');
+        if (pipelineSelect) {
+            pipelineSelect.addEventListener('change', function() {
+                setTimeout(() => {
+                    window.updateCreateButtonState();
+                }, 100);
+            });
+        }
+        
+        console.log('✅ Real-time validation event listeners added');
+    });
 
     // Add event listeners for Makito checkboxes when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {

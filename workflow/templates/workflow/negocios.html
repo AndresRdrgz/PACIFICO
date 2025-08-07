@@ -3177,6 +3177,16 @@
                     }, 100);
                 }
 
+                // Update button state after drawer is loaded
+                setTimeout(() => {
+                    if (typeof window.updateCreateButtonState === 'function') {
+                        window.updateCreateButtonState();
+                        console.log('🔄 Initial button state updated');
+                    } else {
+                        console.warn('⚠️ updateCreateButtonState function not found');
+                    }
+                }, 200);
+
                 console.log('✅ Drawer opened successfully');
             });
         };
@@ -3928,6 +3938,13 @@
             // If this is a cotización selection, validate for duplicates
             if (type === 'cotizacion') {
                 validateCotizacionSelection(item);
+                
+                // Also validate consultation fields
+                if (typeof window.validateConsultationFields === 'function') {
+                    handleCotizacionConsultationValidation(item.id);
+                } else {
+                    console.warn('⚠️ validateConsultationFields function not available');
+                }
             }
         }
 
@@ -3960,7 +3977,68 @@
             }
         }
 
+        // Handle consultation fields validation for selected cotización
+        async function handleCotizacionConsultationValidation(cotizacionId) {
+            console.log('🔍 Handling consultation validation for cotización:', cotizacionId);
+            
+            try {
+                // Validate consultation fields
+                const validationResult = await window.validateConsultationFields(cotizacionId);
+                console.log('📋 Consultation validation result:', validationResult);
+                
+                if (validationResult && typeof window.showConsultationFieldsSection === 'function') {
+                    // Show the consultation fields section with results
+                    window.showConsultationFieldsSection(validationResult);
+                } else {
+                    console.error('❌ showConsultationFieldsSection function not available');
+                }
+            } catch (error) {
+                console.error('❌ Error validating consultation fields:', error);
+            }
+        }
 
+
+
+        async function validateCotizacionConsultationFields(cotizacionId) {
+            console.log('🔍 Validating consultation fields for cotización:', cotizacionId);
+            
+            if (!cotizacionId) {
+                // Hide consultation fields section if no cotización selected
+                if (typeof window.hideConsultationFieldsSection === 'function') {
+                    window.hideConsultationFieldsSection();
+                }
+                return;
+            }
+
+            try {
+                // Call the validation function from drawer.html
+                const validationResult = await window.validateConsultationFields(cotizacionId);
+                
+                if (validationResult) {
+                    console.log('📋 Consultation fields validation result:', validationResult);
+                    
+                    // Show the consultation fields section with the validation result
+                    if (typeof window.showConsultationFieldsSection === 'function') {
+                        window.showConsultationFieldsSection(validationResult);
+                    }
+                } else {
+                    console.log('⚠️ No validation result received');
+                    
+                    // Hide section if validation failed
+                    if (typeof window.hideConsultationFieldsSection === 'function') {
+                        window.hideConsultationFieldsSection();
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Error validating consultation fields:', error);
+                
+                // Don't block the user if validation fails, just log the error
+                // Hide section on error
+                if (typeof window.hideConsultationFieldsSection === 'function') {
+                    window.hideConsultationFieldsSection();
+                }
+            }
+        }
 
         // Duplicate functions removed - using the ones defined at the top of IIFE
 
@@ -4174,6 +4252,28 @@
             const submitBtn = document.querySelector('.drawer-footer .btn-primary');
             const originalText = submitBtn.innerHTML;
 
+            // Validate consultation fields if cotización is selected
+            const cotizacionId = document.getElementById('cotizacionId')?.value;
+            if (cotizacionId) {
+                console.log('🔍 Validating consultation fields before submission');
+                const consultationValidation = window.validateMandatoryFieldsBeforeSubmit();
+                if (!consultationValidation.isValid) {
+                    console.log('❌ Consultation fields validation failed:', consultationValidation.missingFields);
+                    
+                    const fieldNames = consultationValidation.missingFields.join(', ');
+                    alert(`Por favor, complete los siguientes campos obligatorios de la cotización:\n\n${fieldNames}`);
+                    
+                    // Scroll to the consultation fields section
+                    const consultationSection = document.getElementById('cotizacionFieldsSection');
+                    if (consultationSection) {
+                        consultationSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    
+                    return;
+                }
+                console.log('✅ Consultation fields validation passed');
+            }
+
             // Validate cotización for duplicates before submitting
             checkCotizacionBeforeSubmit().then(validationResult => {
                 if (!validationResult.canProceed) {
@@ -4283,6 +4383,12 @@
             // Clear stored cotización data for SURA
             window.selectedCotizacionData = null;
             console.log('🔧 Cleared stored cotización data');
+
+            // Hide consultation fields section when cotización is cleared
+            if (typeof window.hideConsultationFieldsSection === 'function') {
+                window.hideConsultationFieldsSection();
+                console.log('🔧 Cleared consultation fields section');
+            }
 
             // Also clear cliente when cotización is cleared
             console.log('🔧 Also clearing cliente due to cotización clear');
