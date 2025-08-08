@@ -1795,6 +1795,10 @@
                                             <option value="Rechazado">Rechazado</option>
                                             <option value="Alternativa">Alternativa</option>
                                         </select>
+                                        <small class="text-muted mt-1">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Este resultado se usará automáticamente como estado específico al cambiar a la etapa "Resultado Consulta"
+                                        </small>
                                     </div>
                                     
                                     <!-- Sección de bullet points auto-generados -->
@@ -3605,7 +3609,7 @@
 
 
     // Validate all fields are rated and analyst comment is filled before stage change
-    const validateAllFieldsRated = () => {
+    const validateAllFieldsRated = (targetStageName = '') => {
         const allComplianceButtons = document.querySelectorAll('.btn-compliance[data-action="bueno"], .btn-compliance[data-action="malo"]');
         const unratedFields = [];
         
@@ -3633,10 +3637,23 @@
         const analystTextarea = document.getElementById('comentario-analista-credito-text');
         const hasAnalystComment = analystTextarea && analystTextarea.value.trim().length > 0;
         
+        // Check if resultado_analisis is filled when target stage is "Resultado Consulta"
+        let hasResultadoAnalisis = true;
+        let resultadoAnalisisError = '';
+        if (targetStageName && (targetStageName.toLowerCase().includes('resultado consulta') || targetStageName.toLowerCase().includes('resultado-consulta'))) {
+            const resultadoAnalisisSelect = document.getElementById('resultado-analisis');
+            hasResultadoAnalisis = resultadoAnalisisSelect && resultadoAnalisisSelect.value.trim() !== '';
+            if (!hasResultadoAnalisis) {
+                resultadoAnalisisError = 'Debe seleccionar un resultado de análisis antes de cambiar a la etapa Resultado Consulta';
+            }
+        }
+        
         return {
-            isValid: unratedFields.length === 0 && hasAnalystComment,
+            isValid: unratedFields.length === 0 && hasAnalystComment && hasResultadoAnalisis,
             unratedFields: [...new Set(unratedFields)], // Remove duplicates
-            hasAnalystComment: hasAnalystComment
+            hasAnalystComment: hasAnalystComment,
+            hasResultadoAnalisis: hasResultadoAnalisis,
+            resultadoAnalisisError: resultadoAnalisisError
         };
     };
 
@@ -3701,7 +3718,7 @@
 
         // Show confirmation modal with analysis summary
     const showStageChangeConfirmation = (targetStageName) => {
-        const validation = validateAllFieldsRated();
+        const validation = validateAllFieldsRated(targetStageName);
         const summary = generateAnalysisSummary();
         
         if (!validation.isValid) {
@@ -3735,6 +3752,23 @@
                                             <li>Complete el campo "Análisis General" en la sección de Comentarios de Analista</li>
                                             <li>El análisis debe contener al menos un carácter</li>
                                             <li>Guarde el análisis antes de intentar cambiar de etapa</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                ` : ''}
+                                
+                                ${!validation.hasResultadoAnalisis ? `
+                                <div class="mb-3">
+                                    <h6><i class="fas fa-decision me-2"></i>Resultado de Análisis Requerido</h6>
+                                    <div class="alert alert-danger">
+                                        <i class="fas fa-exclamation-circle me-2"></i>
+                                        <strong>${validation.resultadoAnalisisError}</strong>
+                                        <br><br>
+                                        <strong>Instrucciones:</strong>
+                                        <ul class="mb-0 mt-2">
+                                            <li>Complete el campo "Resultado de Análisis" en la sección de Comentarios de Analista</li>
+                                            <li>Seleccione una de las opciones: Aprobado, Rechazado o Alternativa</li>
+                                            <li>Este resultado se usará automáticamente como estado específico para la etapa Resultado Consulta</li>
                                         </ul>
                                     </div>
                                 </div>
@@ -3882,7 +3916,10 @@
                                         </select>
                                         <small class="text-muted mt-2 d-block">
                                             <i class="fas fa-info-circle me-1"></i>
-                                            Debe seleccionar un estado específico para continuar
+                                            ${targetStageName.toLowerCase().includes('resultado consulta') ? 
+                                                'El estado se seleccionará automáticamente basado en el resultado de análisis' :
+                                                'Debe seleccionar un estado específico para continuar'
+                                            }
                                         </small>
                                     </div>
                                 </div>
@@ -3998,6 +4035,55 @@
                         option.textContent = subestado.nombre;
                         subestadoSelect.appendChild(option);
                     });
+                    
+                    // Auto-select subestado based on resultado_analisis if target stage is "Resultado Consulta"
+                    if (targetStageName.toLowerCase().includes('resultado consulta') || targetStageName.toLowerCase().includes('resultado-consulta')) {
+                        const resultadoAnalisisSelect = document.getElementById('resultado-analisis');
+                        if (resultadoAnalisisSelect && resultadoAnalisisSelect.value) {
+                            const resultadoValue = resultadoAnalisisSelect.value;
+                            console.log('Auto-selecting subestado based on resultado_analisis:', resultadoValue);
+                            
+                            // Find matching subestado by name
+                            const matchingSubestado = data.subestados.find(subestado => 
+                                subestado.nombre.toLowerCase() === resultadoValue.toLowerCase()
+                            );
+                            
+                            if (matchingSubestado) {
+                                subestadoSelect.value = matchingSubestado.id;
+                                console.log('Auto-selected subestado:', matchingSubestado.nombre, 'with ID:', matchingSubestado.id);
+                                
+                                // Show a success message
+                                const alertDiv = selectorSubestado.querySelector('.alert');
+                                if (alertDiv) {
+                                    const successMsg = document.createElement('div');
+                                    successMsg.className = 'alert alert-success mt-2';
+                                    successMsg.innerHTML = `
+                                        <i class="fas fa-check-circle me-2"></i>
+                                        <strong>✓ Estado seleccionado automáticamente:</strong> 
+                                        <span class="badge bg-success ms-2">${matchingSubestado.nombre}</span>
+                                        <br>
+                                        <small class="text-success">
+                                            <i class="fas fa-link me-1"></i>
+                                            Basado en el resultado de análisis seleccionado
+                                        </small>
+                                    `;
+                                    alertDiv.parentNode.insertBefore(successMsg, alertDiv.nextSibling);
+                                    
+                                    // Add a subtle highlight animation to the select
+                                    subestadoSelect.style.borderColor = '#28a745';
+                                    subestadoSelect.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
+                                    setTimeout(() => {
+                                        subestadoSelect.style.borderColor = '';
+                                        subestadoSelect.style.boxShadow = '';
+                                    }, 2000);
+                                }
+                            } else {
+                                console.log('No matching subestado found for resultado_analisis:', resultadoValue);
+                            }
+                        } else {
+                            console.log('No resultado_analisis value found to auto-select subestado');
+                        }
+                    }
                     
                     // Show the selector
                     selectorSubestado.style.display = 'block';
