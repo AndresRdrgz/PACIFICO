@@ -149,6 +149,7 @@ def update_consulta_fields(request, numero_cotizacion):
     tiempo_servicio = data.get('tiempoServicio')
     nombre_empresa = data.get('nombreEmpresa')
     ingresos = data.get('ingresos')
+    salarioBaseMensual = data.get('ingresos')
     posicion = data.get('posicion')
     apc_score = data.get('apcScore')
     apc_pi = data.get('apcPI')
@@ -205,10 +206,12 @@ def update_consulta_fields(request, numero_cotizacion):
         cotizacion.tiempoServicio = tiempo_servicio.strip()  # Keep as text, just strip whitespace
         cotizacion.nombreEmpresa = nombre_empresa
         cotizacion.ingresos = to_dec(ingresos, 'Ingresos')
+        cotizacion.salarioBaseMensual = to_dec(salarioBaseMensual, 'Salario Base Mensual')
         cotizacion.posicion = posicion
         cotizacion.apcScore = to_int(apc_score, 'APC Score')
         cotizacion.apcPI = to_dec(apc_pi, 'APC PI')
-        cotizacion.save(update_fields=['sector', 'politica', 'observaciones', 'tiempoServicio', 'nombreEmpresa', 'ingresos', 'posicion', 'apcScore', 'apcPI'])
+        print("salarioBaseMensual", salarioBaseMensual, "ingresos", ingresos)
+        cotizacion.save(update_fields=['sector', 'politica', 'observaciones', 'tiempoServicio', 'nombreEmpresa', 'ingresos', 'salarioBaseMensual', 'posicion', 'apcScore', 'apcPI'])
     except ValueError as ve:
         return JsonResponse({'ok': False, 'error': str(ve)}, status=400)
 
