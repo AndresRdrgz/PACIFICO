@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Emergency Production Database Fix Script for PostgreSQL
 Run this script directly on the production server to fix table issues
@@ -87,7 +88,7 @@ def create_clienteentrevista_table(cursor):
         apellido_casada VARCHAR(100),
         peso DECIMAL(5, 2),
         estatura DECIMAL(4, 2),
-        nacionalidad VARCHAR(100) NOT NULL DEFAULT 'Panamá',
+        nacionalidad VARCHAR(100) NOT NULL DEFAULT 'Panama',
         direccion_completa TEXT,
         barrio VARCHAR(100),
         calle VARCHAR(100),
