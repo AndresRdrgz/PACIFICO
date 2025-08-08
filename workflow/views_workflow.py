@@ -40,6 +40,213 @@ from .models import ClienteEntrevista, CalificacionCampo
 from pacifico.models import UserProfile, Cliente, Cotizacion
 import json
 import ssl
+
+
+def usuario_puede_modificar_solicitud(usuario, solicitud):
+    """
+    Verifica si un usuario puede modificar una solicitud.
+    Incluye permisos básicos y supervisión de grupos (sin importar el rol del usuario).
+    """
+    print(f"🔍 DEBUG PERMISOS: Verificando permisos para usuario {usuario.username} en solicitud {solicitud.id}")
+    
+    # Permisos básicos
+    if (
+        solicitud.creada_por == usuario
+        or solicitud.asignada_a == usuario
+        or usuario.is_superuser
+        or getattr(usuario, "is_staff", False)
+    ):
+        print(f"✅ DEBUG: Usuario {usuario.username} tiene permisos básicos (creador/asignado/superuser/staff)")
+        return True
+
+    print(f"🔍 DEBUG: Verificando supervisión de grupos para {usuario.username}")
+    
+    # Verificación por supervisión de grupos
+    try:
+        from pacifico.utils_grupos import (
+            obtener_usuarios_supervisados_por_usuario,
+            obtener_grupos_supervisados_por_usuario,
+        )
+
+        # 1. Verificar si supervisa a los usuarios relacionados con la solicitud
+        print(f"🔍 DEBUG: Obteniendo usuarios supervisados por {usuario.username}")
+        usuarios_supervisados = obtener_usuarios_supervisados_por_usuario(usuario)
+        print(f"🔍 DEBUG: Usuarios supervisados encontrados: {usuarios_supervisados.count()}")
+        
+        if usuarios_supervisados.exists():
+            usuarios_relacionados = [u for u in [solicitud.creada_por, solicitud.asignada_a] if u]
+            print(f"🔍 DEBUG: Usuarios relacionados con solicitud: {[u.username for u in usuarios_relacionados]}")
+            
+            for usuario_relacionado in usuarios_relacionados:
+                if usuarios_supervisados.filter(pk=usuario_relacionado.pk).exists():
+                    print(f"✅ DEBUG: Usuario {usuario.username} supervisa a {usuario_relacionado.username}")
+                    return True
+
+        # 2. Verificar si supervisa grupos con permisos de bandeja/pipeline
+        print(f"🔍 DEBUG: Obteniendo grupos supervisados por {usuario.username}")
+        grupos_supervisados_profiles = obtener_grupos_supervisados_por_usuario(usuario)
+        print(f"🔍 DEBUG: Grupos supervisados encontrados: {grupos_supervisados_profiles.count()}")
+        
+        if grupos_supervisados_profiles.exists():
+            try:
+                from workflow.modelsWorkflow import PermisoBandeja, PermisoPipeline
+
+                grupos_supervisados = [gp.group for gp in grupos_supervisados_profiles]
+                print(f"✅ DEBUG: Usuario {usuario.username} supervisa grupos: {[g.name for g in grupos_supervisados]}")
+
+                # Verificar permisos de bandeja para la etapa actual
+                if solicitud.etapa_actual:
+                    print(f"🔍 DEBUG: Verificando permisos de bandeja para etapa {solicitud.etapa_actual.nombre}")
+                    permisos_bandeja = PermisoBandeja.objects.filter(
+                        etapa=solicitud.etapa_actual,
+                        grupo__in=grupos_supervisados,
+                        puede_transicionar=True,
+                    )
+                    print(f"🔍 DEBUG: Permisos de bandeja encontrados: {permisos_bandeja.count()}")
+                    
+                    if permisos_bandeja.exists():
+                        print(f"✅ DEBUG: Grupo supervisado tiene permiso de transición en etapa {solicitud.etapa_actual.nombre}")
+                        return True
+
+                # Verificar permisos de pipeline
+                print(f"🔍 DEBUG: Verificando permisos de pipeline para {solicitud.pipeline.nombre}")
+                permisos_pipeline = PermisoPipeline.objects.filter(
+                    pipeline=solicitud.pipeline,
+                    grupo__in=grupos_supervisados,
+                    puede_editar=True,
+                )
+                print(f"🔍 DEBUG: Permisos de pipeline encontrados: {permisos_pipeline.count()}")
+                
+                if permisos_pipeline.exists():
+                    print(f"✅ DEBUG: Grupo supervisado tiene permiso de edición en pipeline {solicitud.pipeline.nombre}")
+                    return True
+
+            except Exception as e:
+                print(f"❌ DEBUG: Error verificando permisos de grupo: {e}")
+                import traceback
+                print(f"❌ DEBUG: Traceback: {traceback.format_exc()}")
+                pass
+        else:
+            print(f"❌ DEBUG: Usuario {usuario.username} NO supervisa ningún grupo")
+
+    except ImportError as e:
+        print(f"❌ DEBUG: No se pudo importar utils_grupos: {e}")
+        import traceback
+        print(f"❌ DEBUG: Traceback: {traceback.format_exc()}")
+        pass
+
+    print(f"❌ DEBUG: Usuario {usuario.username} NO tiene permisos para modificar solicitud {solicitud.id}")
+    return False
+
+
+# ==========================================
+# APIS PARA GESTIÓN DE PENDIENTES BACK OFFICE
+# ==========================================
+
+@login_required
+def api_obtener_documentos_pendientes_backoffice(request, solicitud_id):
+    """API para obtener documentos pendientes y 'malo' (no obligatorios) para Back Office"""
+    
+    # VERSIÓN SIMPLE PARA DEBUG
+    try:
+        print(f"🔍 DEBUG PENDIENTES: INICIANDO VERSIÓN SIMPLE para solicitud {solicitud_id}")
+        
+        # Test básico - solo retornar datos dummy
+        return JsonResponse({
+            'success': True,
+            'solicitud_id': int(solicitud_id),
+            'solicitud_codigo': f"TEST-{solicitud_id}",
+            'documentos_pendientes': [
+                {
+                    'requisito_id': 1,
+                    'nombre': 'Documento de prueba',
+                    'descripcion': 'Esto es una prueba',
+                    'estado_calificacion': 'pendiente',
+                    'fecha_calificacion': None,
+                    'calificado_por': 'Sistema',
+                    'observaciones': 'Prueba de API',
+                    'archivos_count': 0
+                }
+            ],
+            'total_pendientes': 1,
+            'solicitud_completa': False,
+            'mensaje_debug': 'API funcionando - versión de prueba'
+        })
+        
+    except Exception as e:
+        print(f"❌ DEBUG PENDIENTES: Error en versión simple: {str(e)}")
+        import traceback
+        print(f"❌ DEBUG PENDIENTES: Traceback: {traceback.format_exc()}")
+        return JsonResponse({
+            'success': False,
+            'error': f'Error en versión simple: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@csrf_exempt
+def api_marcar_solicitud_completa_backoffice(request, solicitud_id):
+    """API para marcar una solicitud como completa en Back Office"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        # Importar HistorialBackoffice
+        from .models import HistorialBackoffice
+        
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos
+        if not usuario_puede_modificar_solicitud(request.user, solicitud):
+            return JsonResponse({'error': 'No tienes permisos para modificar esta solicitud'}, status=403)
+        
+        # Verificar que la solicitud esté en Back Office
+        if not solicitud.etapa_actual or solicitud.etapa_actual.nombre != "Back Office":
+            return JsonResponse({'error': 'Esta funcionalidad solo está disponible para solicitudes en Back Office'}, status=400)
+        
+        # Verificar que no se haya marcado ya como completa en HistorialBackoffice
+        ya_completa = HistorialBackoffice.objects.filter(
+            solicitud=solicitud,
+            tipo_evento='solicitud_completa'
+        ).exists()
+        
+        if ya_completa:
+            return JsonResponse({'error': 'Esta solicitud ya fue marcada como completa'}, status=400)
+        
+        # Crear registro en HistorialBackoffice con el nuevo tipo de evento
+        HistorialBackoffice.objects.create(
+            tipo_evento='solicitud_completa',
+            solicitud=solicitud,
+            usuario=request.user,
+            observaciones=f"Solicitud marcada como completa en Back Office. Todos los documentos pendientes han sido revisados y calificados por {request.user.get_full_name() or request.user.username}."
+        )
+        
+        # También mantener el registro en HistorialSolicitud para compatibilidad
+        HistorialSolicitud.objects.create(
+            solicitud=solicitud,
+            etapa=solicitud.etapa_actual,
+            subestado=solicitud.subestado_actual,
+            usuario_responsable=request.user,
+            fecha_inicio=timezone.now(),
+            fecha_fin=timezone.now(),
+            comentarios=f"Solicitud Completa - Back Office. Todos los documentos pendientes han sido revisados por {request.user.get_full_name() or request.user.username}."
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Solicitud marcada como completa exitosamente',
+            'solicitud_id': solicitud.id,
+            'marcada_por': request.user.get_full_name() or request.user.username,
+            'fecha': timezone.now().isoformat()
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al marcar solicitud como completa: {str(e)}'
+        }, status=500)
+
+
 import uuid
 from datetime import datetime, timedelta
 from django.views.decorators.csrf import csrf_exempt
@@ -5026,12 +5233,12 @@ def enviar_correo_bandeja_grupal(solicitud, etapa, request=None):
         
         Una solicitud ha ingresado a una etapa de bandeja grupal y requiere atención:
         
-        • Código: {solicitud.codigo}
-        • Cliente: {cliente_nombre or 'Sin asignar'}
-        • Pipeline: {solicitud.pipeline.nombre}
-        • Etapa: {etapa.nombre}
-        • Creada por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
-        • Fecha: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
+        - Código: {solicitud.codigo}
+        - Cliente: {cliente_nombre or 'Sin asignar'}
+        - Pipeline: {solicitud.pipeline.nombre}
+        - Etapa: {etapa.nombre}
+        - Creada por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
+        - Fecha: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
         
         Para ver la solicitud, haz clic en el siguiente enlace:
         {bandeja_url}
@@ -5129,12 +5336,12 @@ def enviar_correo_solicitud_asignada(solicitud, usuario_asignado, request=None):
         
         Tu solicitud ha sido asignada a un usuario y está siendo procesada:
         
-        • Código: {solicitud.codigo}
-        • Cliente: {cliente_nombre or 'Sin asignar'}
-        • Pipeline: {solicitud.pipeline.nombre}
-        • Etapa: {solicitud.etapa_actual.nombre}
-        • Asignada a: {usuario_asignado.get_full_name() or usuario_asignado.username}
-        • Fecha de asignación: {timezone.now().strftime('%d/%m/%Y %H:%M')}
+        - Código: {solicitud.codigo}
+        - Cliente: {cliente_nombre or 'Sin asignar'}
+        - Pipeline: {solicitud.pipeline.nombre}
+        - Etapa: {solicitud.etapa_actual.nombre}
+        - Asignada a: {usuario_asignado.get_full_name() or usuario_asignado.username}
+        - Fecha de asignación: {timezone.now().strftime('%d/%m/%Y %H:%M')}
         
         Para ver el estado de tu solicitud, haz clic en el siguiente enlace:
         {solicitud_url}
@@ -5317,13 +5524,13 @@ def enviar_correo_cambio_etapa_propietario(solicitud, etapa_anterior, nueva_etap
         
         Tu solicitud ha cambiado de etapa y está siendo procesada:
         
-        • Código: {solicitud.codigo}
-        • Cliente: {cliente_nombre or 'Sin asignar'}
-        • Pipeline: {solicitud.pipeline.nombre}
-        • Etapa Anterior: {etapa_anterior.nombre if etapa_anterior else 'Sin etapa'}
-        • Nueva Etapa: {nueva_etapa.nombre}
-        • Cambiado por: {usuario_que_cambio.get_full_name() or usuario_que_cambio.username}
-        • Fecha de cambio: {timezone.now().strftime('%d/%m/%Y %H:%M')}
+        - Código: {solicitud.codigo}
+        - Cliente: {cliente_nombre or 'Sin asignar'}
+        - Pipeline: {solicitud.pipeline.nombre}
+        - Etapa Anterior: {etapa_anterior.nombre if etapa_anterior else 'Sin etapa'}
+        - Nueva Etapa: {nueva_etapa.nombre}
+        - Cambiado por: {usuario_que_cambio.get_full_name() or usuario_que_cambio.username}
+        - Fecha de cambio: {timezone.now().strftime('%d/%m/%Y %H:%M')}
         
         {analisis_texto}
         
@@ -5544,15 +5751,15 @@ def enviar_correo_comite_credito(solicitud, etapa, request=None):
         
         Una solicitud ha ingresado al Comité de Crédito y requiere su revisión y aprobación:
         
-        • Código: {solicitud.codigo}
-        • Cliente: {cliente_nombre}
-        • Cédula: {cliente_cedula}
-        • Monto: {monto_formateado}
-        • Producto: {solicitud.producto_descripcion}
-        • Pipeline: {solicitud.pipeline.nombre}
-        • Analista Revisor: {analista_revisor}
-        • Creada por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
-        • Fecha: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
+        - Código: {solicitud.codigo}
+        - Cliente: {cliente_nombre}
+        - Cédula: {cliente_cedula}
+        - Monto: {monto_formateado}
+        - Producto: {solicitud.producto_descripcion}
+        - Pipeline: {solicitud.pipeline.nombre}
+        - Analista Revisor: {analista_revisor}
+        - Creada por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
+        - Fecha: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
         
         Para revisar la solicitud, haz clic en el siguiente enlace:
         {bandeja_url}
@@ -6160,14 +6367,14 @@ def enviar_correo_apc_makito(solicitud, no_cedula, tipo_documento, request=None)
         
         Se ha solicitado la descarga del APC para la siguiente solicitud:
         
-        • Código de Solicitud: {solicitud.codigo}
-        • Cliente: {cliente_nombre}
-        • Tipo de Documento: {tipo_documento.title()}
-        • Número de Documento: {no_cedula}
-        • Pipeline: {solicitud.pipeline.nombre}
-        • Solicitado por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
-        • Correo Solicitante: {correo_solicitante}
-        • Fecha de Solicitud: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
+        - Código de Solicitud: {solicitud.codigo}
+        - Cliente: {cliente_nombre}
+        - Tipo de Documento: {tipo_documento.title()}
+        - Número de Documento: {no_cedula}
+        - Pipeline: {solicitud.pipeline.nombre}
+        - Solicitado por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
+        - Correo Solicitante: {correo_solicitante}
+        - Fecha de Solicitud: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
         
         ==========================================
         DATOS PARA EXTRACCIÓN AUTOMATIZADA (MAKITO RPA)
@@ -6225,10 +6432,10 @@ def enviar_correo_apc_makito(solicitud, no_cedula, tipo_documento, request=None)
         ==========================================
         NOTAS IMPORTANTES:
         ==========================================
-        • El archivo debe ser un PDF válido
-        • Tamaño máximo del archivo: 10MB
-        • El sistema automáticamente marcará la solicitud como completada
-        • Se enviará una notificación al solicitante cuando se complete
+        - El archivo debe ser un PDF válido
+        - Tamaño máximo del archivo: 10MB
+        - El sistema automáticamente marcará la solicitud como completada
+        - Se enviará una notificación al solicitante cuando se complete
         
         Saludos,
         Sistema de Workflow - Financiera Pacífico
@@ -6318,26 +6525,26 @@ def enviar_correo_sura_makito(solicitud, sura_primer_nombre, sura_primer_apellid
         
         Se ha solicitado la cotización SURA para la siguiente solicitud:
         
-        • Código de Solicitud: {solicitud.codigo}
-        • Cliente: {cliente_nombre}
-        • Primer Nombre: {sura_primer_nombre}
-        • Segundo Nombre: {solicitud.sura_segundo_nombre or 'N/A'}
-        • Primer Apellido: {sura_primer_apellido}
-        • Segundo Apellido: {solicitud.sura_segundo_apellido or 'N/A'}
-        • Número de Documento: {sura_no_documento}
-        • Tipo de Documento: {sura_tipo_documento or 'N/A'}
-        • Pipeline: {solicitud.pipeline.nombre}
-        • Solicitado por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
-        • Correo Solicitante: {correo_solicitante}
-        • Fecha de Solicitud: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
+        - Código de Solicitud: {solicitud.codigo}
+        - Cliente: {cliente_nombre}
+        - Primer Nombre: {sura_primer_nombre}
+        - Segundo Nombre: {solicitud.sura_segundo_nombre or 'N/A'}
+        - Primer Apellido: {sura_primer_apellido}
+        - Segundo Apellido: {solicitud.sura_segundo_apellido or 'N/A'}
+        - Número de Documento: {sura_no_documento}
+        - Tipo de Documento: {sura_tipo_documento or 'N/A'}
+        - Pipeline: {solicitud.pipeline.nombre}
+        - Solicitado por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
+        - Correo Solicitante: {correo_solicitante}
+        - Fecha de Solicitud: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
         
         ==========================================
         INFORMACIÓN DEL VEHÍCULO
         ==========================================
-        • Valor del Auto: ${sura_valor_auto or 'N/A'}
-        • Año del Auto: {sura_ano_auto or 'N/A'}
-        • Marca: {sura_marca or 'N/A'}
-        • Modelo: {sura_modelo or 'N/A'}
+        - Valor del Auto: ${sura_valor_auto or 'N/A'}
+        - Año del Auto: {sura_ano_auto or 'N/A'}
+        - Marca: {sura_marca or 'N/A'}
+        - Modelo: {sura_modelo or 'N/A'}
         
         ==========================================
         DATOS PARA EXTRACCIÓN AUTOMATIZADA (MAKITO RPA)
@@ -6413,10 +6620,10 @@ def enviar_correo_sura_makito(solicitud, sura_primer_nombre, sura_primer_apellid
         ==========================================
         NOTAS IMPORTANTES:
         ==========================================
-        • El archivo debe ser un PDF válido
-        • Tamaño máximo del archivo: 10MB
-        • El sistema automáticamente marcará la solicitud como completada
-        • Se enviará una notificación al solicitante cuando se complete
+        - El archivo debe ser un PDF válido
+        - Tamaño máximo del archivo: 10MB
+        - El sistema automáticamente marcará la solicitud como completada
+        - Se enviará una notificación al solicitante cuando se complete
         
         Saludos,
         Sistema de Workflow - Financiera Pacífico
@@ -7018,14 +7225,14 @@ def enviar_correo_debida_diligencia_makito(solicitud, tipo_documento, request=No
         
         Se ha solicitado generar documentos de debida diligencia para la siguiente solicitud:
         
-        • Código de Solicitud: {solicitud.codigo}
-        • Cliente: {cliente_nombre}
-        • Número de Documento: {no_documento}
-        • Tipo de Documento Solicitado: {tipo_legible}
-        • Pipeline: {solicitud.pipeline.nombre}
-        • Solicitado por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
-        • Correo Solicitante: {correo_solicitante}
-        • Fecha de Solicitud: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
+        - Código de Solicitud: {solicitud.codigo}
+        - Cliente: {cliente_nombre}
+        - Número de Documento: {no_documento}
+        - Tipo de Documento Solicitado: {tipo_legible}
+        - Pipeline: {solicitud.pipeline.nombre}
+        - Solicitado por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
+        - Correo Solicitante: {correo_solicitante}
+        - Fecha de Solicitud: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
         
         NOTA: Este correo incluye CC a arodriguez@fpacifico.com para seguimiento.
         
@@ -7089,11 +7296,11 @@ def enviar_correo_debida_diligencia_makito(solicitud, tipo_documento, request=No
         ==========================================
         NOTAS IMPORTANTES:
         ==========================================
-        • Los archivos deben ser PDF válidos
-        • Tamaño máximo por archivo: 10MB
-        • Se pueden subir uno o ambos archivos según disponibilidad
-        • El sistema marcará automáticamente como completado cuando ambos archivos estén presentes
-        • Se enviará una notificación al solicitante cuando se complete
+        - Los archivos deben ser PDF válidos
+        - Tamaño máximo por archivo: 10MB
+        - Se pueden subir uno o ambos archivos según disponibilidad
+        - El sistema marcará automáticamente como completado cuando ambos archivos estén presentes
+        - Se enviará una notificación al solicitante cuando se complete
         
         Saludos,
         Sistema de Workflow - Financiera Pacífico
@@ -7482,11 +7689,14 @@ def api_cambiar_etapa(request, solicitud_id):
         # Obtener la solicitud
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         
-        # Verificar permisos (el usuario debe ser el creador, asignado, o tener permisos especiales)
-        if not (solicitud.creada_por == request.user or 
-                solicitud.asignada_a == request.user or 
-                request.user.is_superuser):
+        # Verificar permisos usando la función helper
+        if not usuario_puede_modificar_solicitud(request.user, solicitud):
+            print(f"❌ DEBUG: Usuario {request.user.username} no tiene permisos para cambiar solicitud {solicitud_id}")
+            print(f"❌ DEBUG: Creada por: {solicitud.creada_por.username if solicitud.creada_por else 'None'}")
+            print(f"❌ DEBUG: Asignada a: {solicitud.asignada_a.username if solicitud.asignada_a else 'None'}")
             return JsonResponse({'error': 'No tienes permisos para cambiar esta solicitud'}, status=403)
+        
+        print(f"🔑 DEBUG: Usuario {request.user.username} tiene permisos para cambiar solicitud {solicitud_id}")
         
         # Obtener datos del request
         data = json.loads(request.body)
@@ -8364,6 +8574,72 @@ def api_kpis(request):
         })
         
     except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@login_required
+def api_kpis_subestado(request):
+    """API para obtener número de solicitudes por subestado"""
+    try:
+        from django.db.models import Count
+        
+        # Obtener todas las solicitudes activas agrupadas por subestado
+        solicitudes_por_subestado = Solicitud.objects.filter(
+            etapa_actual__isnull=False,
+            subestado_actual__isnull=False
+        ).values(
+            'subestado_actual__nombre'
+        ).annotate(
+            cantidad=Count('id')
+        ).order_by('subestado_actual__nombre')
+        
+        # Calcular total
+        total = sum(item['cantidad'] for item in solicitudes_por_subestado)
+        
+        # Inicializar contadores específicos
+        kpis = {
+            'total': total,
+            'checklist': 0,
+            'captura': 0,
+            'firma': 0,
+            'orden': 0,
+            'tramite': 0,
+            'subsanacion': 0
+        }
+        
+        # Mapear los subestados a los KPIs
+        for item in solicitudes_por_subestado:
+            nombre = item['subestado_actual__nombre'].lower()
+            cantidad = item['cantidad']
+            
+            if 'checklist' in nombre:
+                kpis['checklist'] = cantidad
+            elif 'captura' in nombre:
+                kpis['captura'] = cantidad
+            elif 'firma' in nombre:
+                kpis['firma'] = cantidad
+            elif 'orden' in nombre or 'expediente' in nombre:
+                kpis['orden'] = cantidad
+            elif 'tramite' in nombre or 'trámite' in nombre:
+                kpis['tramite'] = cantidad
+            elif 'subsanacion' in nombre or 'subsanación' in nombre:
+                kpis['subsanacion'] = cantidad
+        
+        # Debug: mostrar todos los subestados encontrados
+        print(f"📊 Subestados encontrados:")
+        for item in solicitudes_por_subestado:
+            print(f"   - {item['subestado_actual__nombre']}: {item['cantidad']}")
+        
+        return JsonResponse({
+            'success': True,
+            **kpis
+        })
+        
+    except Exception as e:
+        print(f"❌ Error en api_kpis_subestado: {str(e)}")
         return JsonResponse({
             'success': False,
             'error': str(e)
@@ -9439,11 +9715,8 @@ def api_obtener_comentarios(request, solicitud_id):
     try:
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         
-        # Verificar permisos para ver la solicitud
-        if not (solicitud.creada_por == request.user or 
-                solicitud.asignada_a == request.user or 
-                request.user.is_superuser or
-                request.user.is_staff):
+        # Verificar permisos para ver la solicitud (incluye supervisores de grupo)
+        if not usuario_puede_modificar_solicitud(request.user, solicitud):
             return JsonResponse({'error': 'No tienes permisos para ver esta solicitud'}, status=403)
         
         # Obtener tipo de comentario del query parameter (opcional)
@@ -9493,11 +9766,8 @@ def api_crear_comentario(request, solicitud_id):
     try:
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         
-        # Verificar permisos para comentar en la solicitud
-        if not (solicitud.creada_por == request.user or 
-                solicitud.asignada_a == request.user or 
-                request.user.is_superuser or
-                request.user.is_staff):
+        # Verificar permisos para comentar en la solicitud (incluye supervisores de grupo)
+        if not usuario_puede_modificar_solicitud(request.user, solicitud):
             return JsonResponse({'error': 'No tienes permisos para comentar en esta solicitud'}, status=403)
         
         data = json.loads(request.body)
@@ -9757,10 +10027,8 @@ def api_obtener_requisitos_transicion(request, solicitud_id):
         if not nueva_etapa_id:
             return JsonResponse({'error': 'ID de nueva etapa requerido'}, status=400)
         
-        # Verificar permisos
-        if not (solicitud.creada_por == request.user or 
-                solicitud.asignada_a == request.user or 
-                request.user.is_superuser):
+        # Verificar permisos (incluye supervisores de grupo)
+        if not usuario_puede_modificar_solicitud(request.user, solicitud):
             return JsonResponse({'error': 'No tienes permisos para ver esta solicitud'}, status=403)
         
         nueva_etapa = get_object_or_404(Etapa, id=nueva_etapa_id, pipeline=solicitud.pipeline)
@@ -9930,11 +10198,8 @@ def api_obtener_transiciones_validas(request, solicitud_id):
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         print(f"✅ DEBUG: Solicitud encontrada: {solicitud.codigo}")
         
-        # Verificar permisos
-        if not (solicitud.creada_por == request.user or 
-                solicitud.asignada_a == request.user or 
-                request.user.is_superuser or
-                request.user.is_staff):
+        # Verificar permisos (incluye supervisores de grupo)
+        if not usuario_puede_modificar_solicitud(request.user, solicitud):
             return JsonResponse({
                 'success': False,
                 'error': 'No tienes permisos para ver esta solicitud'
@@ -12149,7 +12414,7 @@ Estimado {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
 El proceso de APC para la solicitud {solicitud.codigo} ha sido completado exitosamente por Makito RPA.
 
 DETALLES DE LA SOLICITUD:
-• Código: {solicitud.codigo}
+- Código: {solicitud.codigo}
 • Cliente: {cliente_nombre}
 • Pipeline: {solicitud.pipeline.nombre}
 • Fecha de completado: {solicitud.apc_fecha_completado.strftime('%d/%m/%Y %H:%M')}
@@ -12268,7 +12533,7 @@ Estimado {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
 El proceso de APC para la solicitud {solicitud.codigo} ha sido iniciado por Makito RPA y se encuentra actualmente en proceso de extracción.
 
 DETALLES DE LA SOLICITUD:
-• Código: {solicitud.codigo}
+- Código: {solicitud.codigo}
 • Cliente: {cliente_nombre}
 • Pipeline: {solicitud.pipeline.nombre}
 • Fecha de inicio del proceso: {solicitud.apc_fecha_inicio.strftime('%d/%m/%Y %H:%M') if solicitud.apc_fecha_inicio else 'En proceso'}
@@ -12391,7 +12656,7 @@ Estimado {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
 La cotización SURA para la solicitud {solicitud.codigo} ha sido completada exitosamente por Makito RPA.
 
 DETALLES DE LA SOLICITUD:
-• Código: {solicitud.codigo}
+- Código: {solicitud.codigo}
 • Cliente: {cliente_nombre}
 • Pipeline: {solicitud.pipeline.nombre}
 • Fecha de completado: {solicitud.sura_fecha_completado.strftime('%d/%m/%Y %H:%M') if solicitud.sura_fecha_completado else 'Recién completado'}
@@ -12517,7 +12782,7 @@ Estimado {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
 La cotización SURA para la solicitud {solicitud.codigo} ha sido iniciada por Makito RPA y se encuentra actualmente en proceso.
 
 DETALLES DE LA SOLICITUD:
-• Código: {solicitud.codigo}
+- Código: {solicitud.codigo}
 • Cliente: {cliente_nombre}
 • Pipeline: {solicitud.pipeline.nombre}
 • Fecha de inicio del proceso: {solicitud.sura_fecha_inicio.strftime('%d/%m/%Y %H:%M') if solicitud.sura_fecha_inicio else 'En proceso'}
@@ -12644,7 +12909,7 @@ Estimado {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
 Se ha producido un error durante el procesamiento de la cotización SURA para la solicitud {solicitud.codigo}.
 
 DETALLES DE LA SOLICITUD:
-• Código: {solicitud.codigo}
+- Código: {solicitud.codigo}
 • Cliente: {cliente_nombre}
 • Pipeline: {solicitud.pipeline.nombre}
 • Fecha del error: {timezone.now().strftime('%d/%m/%Y %H:%M')}
@@ -13924,11 +14189,8 @@ def api_ejecutar_transicion(request):
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         transicion = get_object_or_404(TransicionEtapa, id=transicion_id)
         
-        # Verificar permisos
-        if not (solicitud.creada_por == request.user or 
-                solicitud.asignada_a == request.user or 
-                request.user.is_superuser or
-                request.user.is_staff):
+        # Verificar permisos (incluye supervisores de grupo)
+        if not usuario_puede_modificar_solicitud(request.user, solicitud):
             return JsonResponse({
                 'success': False,
                 'message': 'No tienes permisos para modificar esta solicitud.'
@@ -15654,6 +15916,7 @@ def api_validar_documentos_backoffice(request, solicitud_id):
         documentos_pendientes = []
         documentos_buenos = 0
         documentos_malos = 0
+        documentos_subsanados = 0
         
         # 🔍 DEBUG SIMPLIFICADO: Solo información esencial
         print(f"📋 Validando solicitud {solicitud_id}: {len(requisitos_definidos)} requisitos definidos")
@@ -15691,13 +15954,14 @@ def api_validar_documentos_backoffice(request, solicitud_id):
                         })
                     continue
                 
-                # Contar por estado (solo bueno/malo, pendiente se ignora)
+                # Contar por estado (bueno/malo/subsanado, pendiente se ignora)
                 if estado == 'bueno':
                     documentos_buenos += 1
                 elif estado == 'malo':
                     documentos_malos += 1
                     # ✅ LÓGICA CORRECTA: Solo documentos OBLIGATORIOS "malo" bloquean
-                    if es_obligatorio:
+                    # PERO: Si está subsanado, NO bloquea aunque sea malo
+                    if es_obligatorio and not (calificacion and calificacion.subsanado):
                         documentos_problematicos.append({
                             'nombre': req_sol.requisito.nombre,
                             'problema': 'calificado_como_malo',
@@ -15705,6 +15969,10 @@ def api_validar_documentos_backoffice(request, solicitud_id):
                             'es_obligatorio': True
                         })
                     # Los documentos opcionales "malo" NO bloquean el avance
+                
+                # Contar documentos subsanados (independientemente del estado base)
+                if calificacion and calificacion.subsanado:
+                    documentos_subsanados += 1
             else:
                 # Sin calificación = pendiente automático (permite avanzar)
                 documentos_pendientes.append({
@@ -15781,6 +16049,8 @@ def api_validar_documentos_backoffice(request, solicitud_id):
             mensaje_partes = []
             if documentos_buenos > 0:
                 mensaje_partes.append(f"{documentos_buenos} documento(s) bueno(s)")
+            if documentos_subsanados > 0:
+                mensaje_partes.append(f"{documentos_subsanados} documento(s) subsanado(s)")
             if documentos_malos > 0:
                 mensaje_partes.append(f"{documentos_malos} documento(s) malo(s) - NO bloquean")
             if len(documentos_pendientes) > 0:
@@ -15788,7 +16058,7 @@ def api_validar_documentos_backoffice(request, solicitud_id):
             
             if mensaje_partes:
                 detalle = ", ".join(mensaje_partes)
-                mensaje = f'✅ Puede avanzar. Estado: {detalle}. (Documentos "pendiente" y opcionales "malo" NO bloquean)'
+                mensaje = f'✅ Puede avanzar. Estado: {detalle}. (Documentos "pendiente", "subsanado" y opcionales "malo" NO bloquean)'
             else:
                 mensaje = '✅ Puede avanzar. No hay documentos obligatorios que bloqueen el avance.'
             
@@ -15800,6 +16070,7 @@ def api_validar_documentos_backoffice(request, solicitud_id):
                 'total_documentos': len(requisitos_definidos),  # ✅ Total según RequisitoTransicion
                 'documentos_buenos': documentos_buenos,
                 'documentos_malos': documentos_malos,
+                'documentos_subsanados': documentos_subsanados,
                 'documentos_pendientes_count': len(documentos_pendientes)
             })
         else:
@@ -15945,14 +16216,29 @@ def api_avanzar_subestado_backoffice(request, solicitud_id):
             })
         
         else:
-            # No hay siguiente subestado, avanzar a la siguiente etapa
+            # No hay siguiente subestado, verificar si hay siguiente etapa o si estamos al final del pipeline
             transiciones_salida = solicitud.etapa_actual.transiciones_salida.all()
             
             if not transiciones_salida.exists():
-                return JsonResponse({
-                    'success': False,
-                    'error': 'No hay transiciones disponibles desde esta etapa'
-                }, status=400)
+                # Verificar si hay una siguiente etapa en el pipeline
+                siguiente_etapa_pipeline = solicitud.pipeline.etapas.filter(
+                    orden__gt=solicitud.etapa_actual.orden
+                ).order_by('orden').first()
+                
+                if not siguiente_etapa_pipeline:
+                    # Estamos al final del pipeline - marcar como completada
+                    return JsonResponse({
+                        'success': True,
+                        'mensaje': 'La solicitud ha completado todo el flujo del pipeline. No hay más etapas disponibles.',
+                        'redirect_url': '/workflow/bandeja-mixta/',
+                        'completada': True
+                    })
+                else:
+                    # Hay siguiente etapa pero no hay transición configurada
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'No hay transiciones configuradas desde esta etapa. Se requiere configurar una transición hacia "{siguiente_etapa_pipeline.nombre}" o completar manualmente la solicitud.'
+                    }, status=400)
             
             # Tomar la primera transición disponible (puede mejorarse con lógica más específica)
             transicion = transiciones_salida.first()

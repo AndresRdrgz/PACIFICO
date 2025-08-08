@@ -540,6 +540,7 @@ class HistorialBackoffice(models.Model):
         ('subestado', 'Cambio de Subestado'),
         ('entrada_bandeja_grupal', 'Entrada a Bandeja Grupal'),
         ('asignacion_desde_bandeja_grupal', 'Asignación desde Bandeja Grupal'),
+        ('solicitud_completa', 'Solicitud Marcada como Completa'),
     ]
     
     # Campos principales
@@ -684,6 +685,8 @@ class HistorialBackoffice(models.Model):
         elif self.tipo_evento == 'asignacion_desde_bandeja_grupal':
             usuario_asignado = self.usuario_asignado.username if self.usuario_asignado else "Usuario desconocido"
             return f"Asignación #{self.solicitud.codigo} a {usuario_asignado}"
+        elif self.tipo_evento == 'solicitud_completa':
+            return f"Solicitud #{self.solicitud.codigo} marcada como completa por {self.usuario.username}"
         return f"Evento {self.tipo_evento} por {self.usuario.username}"
     
     def get_tiempo_formateado(self):

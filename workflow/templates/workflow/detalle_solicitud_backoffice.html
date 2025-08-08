@@ -871,6 +871,14 @@
                               <span>Malo</span>
                             </button>
                             
+                            <!-- Subsanado - Siempre disponible -->
+                            <button type="button" class="btn calificar-btn-backoffice {% if archivo_info.ultima_calificacion and archivo_info.ultima_calificacion.subsanado %}activo{% endif %}" data-estado="subsanado"
+                              data-requisito="{{ archivo_info.archivo_actual.id }}"
+                              title="Marcar como subsanado">
+                              <i class="fas fa-check-circle"></i>
+                              <span>Subsanado</span>
+                            </button>
+                            
                             <!-- PENDIENTE - Eliminado: Con archivo no se permite Pendiente -->
                             
                             <!-- Comentarios -->
@@ -895,6 +903,14 @@
                               disabled title="Debe subir archivo para calificar como malo">
                               <i class="fas fa-thumbs-down"></i>
                               <span>Malo</span>
+                            </button>
+                            
+                            <!-- Subsanado - Siempre disponible -->
+                            <button type="button" class="btn calificar-btn-backoffice {% if archivo_info.ultima_calificacion and archivo_info.ultima_calificacion.subsanado %}activo{% endif %}" data-estado="subsanado"
+                              data-requisito="{{ archivo_info.archivo_actual.id }}"
+                              title="Marcar como subsanado">
+                              <i class="fas fa-check-circle"></i>
+                              <span>Subsanado</span>
                             </button>
                             
                             <!-- Pendiente - Solo para documentos opcionales -->
@@ -1806,17 +1822,29 @@
         
         // Forzar estilo inline para asegurar que se vea - MÁS FUERTE
         if (estado === 'bueno') {
-          btn.style.backgroundColor = '#198754 !important';
-          btn.style.borderColor = '#198754 !important';
-          btn.style.color = 'white !important';
-          btn.style.fontWeight = 'bold';
-          btn.style.boxShadow = '0 0 10px rgba(25, 135, 84, 0.5)';
+          btn.style.setProperty('background-color', '#198754', 'important');
+          btn.style.setProperty('border-color', '#198754', 'important');
+          btn.style.setProperty('color', 'white', 'important');
+          btn.style.setProperty('font-weight', 'bold', 'important');
+          btn.style.setProperty('box-shadow', '0 0 10px rgba(25, 135, 84, 0.5)', 'important');
+        } else if (estado === 'subsanado') {
+          btn.style.setProperty('background-color', '#17a2b8', 'important');
+          btn.style.setProperty('border-color', '#17a2b8', 'important');
+          btn.style.setProperty('color', 'white', 'important');
+          btn.style.setProperty('font-weight', 'bold', 'important');
+          btn.style.setProperty('box-shadow', '0 0 10px rgba(23, 162, 184, 0.5)', 'important');
+        } else if (estado === 'pendiente') {
+          btn.style.setProperty('background-color', '#ffc107', 'important');
+          btn.style.setProperty('border-color', '#ffc107', 'important');
+          btn.style.setProperty('color', '#212529', 'important');
+          btn.style.setProperty('font-weight', 'bold', 'important');
+          btn.style.setProperty('box-shadow', '0 0 10px rgba(255, 193, 7, 0.5)', 'important');
         } else {
-          btn.style.backgroundColor = '#dc3545 !important';
-          btn.style.borderColor = '#dc3545 !important';
-          btn.style.color = 'white !important';
-          btn.style.fontWeight = 'bold';
-          btn.style.boxShadow = '0 0 10px rgba(220, 53, 69, 0.5)';
+          btn.style.setProperty('background-color', '#dc3545', 'important');
+          btn.style.setProperty('border-color', '#dc3545', 'important');
+          btn.style.setProperty('color', 'white', 'important');
+          btn.style.setProperty('font-weight', 'bold', 'important');
+          btn.style.setProperty('box-shadow', '0 0 10px rgba(220, 53, 69, 0.5)', 'important');
         }
         
         // FORZAR que se mantenga así para siempre
@@ -2114,6 +2142,12 @@
           btn.style.color = '#212529 !important';
           btn.style.fontWeight = 'bold';
           btn.style.boxShadow = '0 0 10px rgba(255, 193, 7, 0.5)';
+        } else if (estado === 'subsanado') {
+          btn.style.backgroundColor = '#17a2b8 !important';
+          btn.style.borderColor = '#17a2b8 !important';
+          btn.style.color = 'white !important';
+          btn.style.fontWeight = 'bold';
+          btn.style.boxShadow = '0 0 10px rgba(23, 162, 184, 0.5)';
         }
       });
     }, 1000);
@@ -2127,8 +2161,6 @@
 
         if (requisitoId && estado && !btn.disabled) {
           calificarDocumento(requisitoId, estado);
-        } else if (!requisitoId) {
-          mostrarMensaje('No se puede calificar: archivo no subido todavía', 'warning');
         }
       }
 

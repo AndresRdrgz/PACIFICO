@@ -14,6 +14,7 @@ from . import apicomite
 from . import dashboard_views
 from . import views_reconsideraciones
 from . import views_calificacion
+from . import api_pendientes_simple
 
 # Import reportes views with error handling
 try:
@@ -221,6 +222,11 @@ urlpatterns += [
     # APIs para modal de requisitos faltantes
     path('api/solicitudes/<int:solicitud_id>/requisitos-faltantes-detallado/', views_workflow.api_obtener_requisitos_faltantes_detallado, name='api_obtener_requisitos_faltantes_detallado'),
     path('api/solicitudes/<int:solicitud_id>/subir-requisito-modal/', views_workflow.api_subir_requisito_modal, name='api_subir_requisito_modal'),
+    
+    # APIs para gestión de pendientes Back Office
+    path('api/solicitudes/<int:solicitud_id>/documentos-pendientes-backoffice/', api_pendientes_simple.api_obtener_documentos_pendientes_backoffice_simple, name='api_obtener_documentos_pendientes_backoffice'),
+    path('api/solicitudes/<int:solicitud_id>/marcar-completa-backoffice/', views_workflow.api_marcar_solicitud_completa_backoffice, name='api_marcar_solicitud_completa_backoffice'),
+    path('api/requisito-solicitud/<int:requisito_solicitud_id>/calificar-modal/', api_pendientes_simple.api_calificar_documento_modal, name='api_calificar_documento_modal'),
     
     # URLs de testing para correos (eliminar en producción)
     path('test-correo-bandeja/', views_workflow.test_envio_correo_bandeja, name='test_correo_bandeja'),

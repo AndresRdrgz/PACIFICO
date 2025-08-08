@@ -251,6 +251,11 @@
                     <i class="fas fa-list me-2"></i>Catálogo Pendientes Antes Firma
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="opciones-tab" data-bs-toggle="tab" data-bs-target="#opciones" type="button" role="tab">
+                    <i class="fas fa-caret-down me-2"></i>Opciones Desplegables
+                </button>
+            </li>
         </ul>
     </div>
 
@@ -364,6 +369,60 @@
                         <i class="fas fa-list"></i>
                         <h5>No hay pendientes</h5>
                         <p>Crea tu primer pendiente del catálogo</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Opciones Desplegables -->
+        <div class="tab-pane fade" id="opciones" role="tabpanel">
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <div class="d-flex justify-content-between align-items-center w-100">
+                        <h5 class="mb-0">
+                            <i class="fas fa-caret-down me-2"></i>
+                            Gestión de Opciones Desplegables
+                        </h5>
+                        <button type="button" class="btn-admin btn-admin-success" id="btn-nueva-opcion">
+                            <i class="fas fa-plus"></i>Nueva Opción
+                        </button>
+                    </div>
+                </div>
+                <div class="p-3">
+                    <!-- Filtros y búsqueda -->
+                    <div class="search-container">
+                        <input type="text" class="search-input" id="search-opciones" placeholder="Buscar opciones...">
+                        <select class="form-control-admin" id="filter-activo-opciones" style="width: 150px;">
+                            <option value="">Todos</option>
+                            <option value="true">Activos</option>
+                            <option value="false">Inactivos</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Tabla -->
+                    <div class="table-responsive">
+                        <table class="admin-table table">
+                            <thead>
+                                <tr>
+                                    <th>Orden</th>
+                                    <th>Nombre</th>
+                                    <th>Descripción</th>
+                                    <th>Estado</th>
+                                    <th>Fecha Creación</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="opciones-tbody">
+                                <!-- Se llena via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Estado vacío -->
+                    <div class="empty-state" id="opciones-empty" style="display: none;">
+                        <i class="fas fa-caret-down"></i>
+                        <h5>No hay opciones desplegables</h5>
+                        <p>Crea tu primera opción desplegable</p>
                     </div>
                 </div>
             </div>
@@ -501,6 +560,54 @@
     </div>
 </div>
 
+<!-- Modal para Opciones Desplegables -->
+<div class="modal fade modal-admin" id="modalOpcion" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalOpcionTitle">Nueva Opción</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formOpcion">
+                    <input type="hidden" id="opcion-id">
+                    
+                    <div class="form-group-admin">
+                        <label for="opcion-nombre">Nombre *</label>
+                        <input type="text" class="form-control-admin" id="opcion-nombre" required>
+                    </div>
+                    
+                    <div class="form-group-admin">
+                        <label for="opcion-descripcion">Descripción</label>
+                        <textarea class="form-control-admin" id="opcion-descripcion" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group-admin">
+                                <label for="opcion-orden">Orden</label>
+                                <input type="number" class="form-control-admin" id="opcion-orden" min="0" value="0">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check mt-4">
+                                <input class="form-check-input" type="checkbox" id="opcion-activo" checked>
+                                <label class="form-check-label" for="opcion-activo">
+                                    Activo
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-admin btn-admin-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn-admin btn-admin-primary" id="btn-guardar-opcion">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% csrf_token %}
 {% endblock %}
 
@@ -510,18 +617,22 @@ document.addEventListener('DOMContentLoaded', function() {
     // Variables globales
     let plantillas = [];
     let catalogos = [];
+    let opciones = [];
     let pipelines = [];
     
     // Inicializar
     cargarPipelines();
     cargarPlantillas();
     cargarCatalogos();
+    cargarOpciones();
     
     // Event listeners
     document.getElementById('btn-nueva-plantilla').addEventListener('click', abrirModalPlantilla);
     document.getElementById('btn-nuevo-catalogo').addEventListener('click', abrirModalCatalogo);
+    document.getElementById('btn-nueva-opcion').addEventListener('click', abrirModalOpcion);
     document.getElementById('btn-guardar-plantilla').addEventListener('click', guardarPlantilla);
     document.getElementById('btn-guardar-catalogo').addEventListener('click', guardarCatalogo);
+    document.getElementById('btn-guardar-opcion').addEventListener('click', guardarOpcion);
     
     // Filtros
     document.getElementById('search-plantillas').addEventListener('input', filtrarPlantillas);
@@ -530,6 +641,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     document.getElementById('search-catalogo').addEventListener('input', filtrarCatalogos);
     document.getElementById('filter-activo-catalogo').addEventListener('change', filtrarCatalogos);
+    
+    document.getElementById('search-opciones').addEventListener('input', filtrarOpciones);
+    document.getElementById('filter-activo-opciones').addEventListener('change', filtrarOpciones);
     
     // Funciones para Plantillas
     async function cargarPipelines() {
@@ -959,6 +1073,228 @@ document.addEventListener('DOMContentLoaded', function() {
             this.remove();
         });
     }
+    
+    // ========================================
+    // FUNCIONES PARA OPCIONES DESPLEGABLES
+    // ========================================
+    
+    async function cargarOpciones() {
+        try {
+            const response = await fetch('/workflow/api/admin-backoffice/opciones/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                }
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    opciones = result.data;
+                    renderizarOpciones();
+                } else {
+                    console.error('Error al cargar opciones:', result.error);
+                    mostrarMensaje('Error al cargar opciones desplegables', 'error');
+                }
+            } else {
+                console.error('Error HTTP al cargar opciones:', response.status);
+                mostrarMensaje('Error de conexión al cargar opciones', 'error');
+            }
+        } catch (error) {
+            console.error('Error en cargarOpciones:', error);
+            mostrarMensaje('Error al cargar opciones desplegables', 'error');
+        }
+    }
+    
+    function renderizarOpciones() {
+        const tbody = document.getElementById('opciones-tbody');
+        const emptyState = document.getElementById('opciones-empty');
+        
+        if (opciones.length === 0) {
+            tbody.innerHTML = '';
+            emptyState.style.display = 'block';
+            return;
+        }
+        
+        emptyState.style.display = 'none';
+        
+        tbody.innerHTML = opciones.map(opcion => `
+            <tr>
+                <td>${opcion.orden}</td>
+                <td><strong>${opcion.nombre}</strong></td>
+                <td>${opcion.descripcion || '-'}</td>
+                <td>
+                    <span class="badge ${opcion.activo ? 'bg-success' : 'bg-secondary'}">
+                        ${opcion.activo ? 'Activo' : 'Inactivo'}
+                    </span>
+                </td>
+                <td><small class="text-muted">${opcion.fecha_creacion}</small></td>
+                <td>
+                    <button class="btn-admin btn-admin-warning btn-sm me-1" onclick="editarOpcion(${opcion.id})" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn-admin btn-admin-danger btn-sm" onclick="eliminarOpcion(${opcion.id})" title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    
+    function filtrarOpciones() {
+        const busqueda = document.getElementById('search-opciones').value.toLowerCase();
+        const activo = document.getElementById('filter-activo-opciones').value;
+        
+        const opcionesFiltradas = opciones.filter(opcion => {
+            const cumpleBusqueda = opcion.nombre.toLowerCase().includes(busqueda) || 
+                                  (opcion.descripcion && opcion.descripcion.toLowerCase().includes(busqueda));
+            const cumpleActivo = !activo || opcion.activo.toString() === activo;
+            
+            return cumpleBusqueda && cumpleActivo;
+        });
+        
+        // Renderizar filtrados
+        const tbody = document.getElementById('opciones-tbody');
+        tbody.innerHTML = opcionesFiltradas.map(opcion => `
+            <tr>
+                <td>${opcion.orden}</td>
+                <td><strong>${opcion.nombre}</strong></td>
+                <td>${opcion.descripcion || '-'}</td>
+                <td>
+                    <span class="badge ${opcion.activo ? 'bg-success' : 'bg-secondary'}">
+                        ${opcion.activo ? 'Activo' : 'Inactivo'}
+                    </span>
+                </td>
+                <td><small class="text-muted">${opcion.fecha_creacion}</small></td>
+                <td>
+                    <button class="btn-admin btn-admin-warning btn-sm me-1" onclick="editarOpcion(${opcion.id})" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn-admin btn-admin-danger btn-sm" onclick="eliminarOpcion(${opcion.id})" title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    
+    function abrirModalOpcion(id = null) {
+        const modal = new bootstrap.Modal(document.getElementById('modalOpcion'));
+        const title = document.getElementById('modalOpcionTitle');
+        
+        if (id) {
+            title.textContent = 'Editar Opción';
+            cargarDatosOpcion(id);
+        } else {
+            title.textContent = 'Nueva Opción';
+            limpiarFormularioOpcion();
+        }
+        
+        modal.show();
+    }
+    
+    function limpiarFormularioOpcion() {
+        document.getElementById('opcion-id').value = '';
+        document.getElementById('opcion-nombre').value = '';
+        document.getElementById('opcion-descripcion').value = '';
+        document.getElementById('opcion-orden').value = '0';
+        document.getElementById('opcion-activo').checked = true;
+    }
+    
+    function cargarDatosOpcion(id) {
+        const opcion = opciones.find(o => o.id == id);
+        if (opcion) {
+            document.getElementById('opcion-id').value = opcion.id;
+            document.getElementById('opcion-nombre').value = opcion.nombre;
+            document.getElementById('opcion-descripcion').value = opcion.descripcion || '';
+            document.getElementById('opcion-orden').value = opcion.orden;
+            document.getElementById('opcion-activo').checked = opcion.activo;
+        }
+    }
+    
+    async function guardarOpcion() {
+        try {
+            const id = document.getElementById('opcion-id').value;
+            const nombre = document.getElementById('opcion-nombre').value.trim();
+            const descripcion = document.getElementById('opcion-descripcion').value.trim();
+            const orden = parseInt(document.getElementById('opcion-orden').value) || 0;
+            const activo = document.getElementById('opcion-activo').checked;
+            
+            // Validar campos requeridos
+            if (!nombre) {
+                mostrarMensaje('El nombre es requerido', 'error');
+                return;
+            }
+            
+            const data = {
+                nombre: nombre,
+                descripcion: descripcion,
+                orden: orden,
+                activo: activo
+            };
+            
+            const url = id ? 
+                `/workflow/api/admin-backoffice/opciones/${id}/` : 
+                '/workflow/api/admin-backoffice/opciones/';
+            const method = id ? 'PUT' : 'POST';
+            
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok && result.success) {
+                bootstrap.Modal.getInstance(document.getElementById('modalOpcion')).hide();
+                mostrarMensaje(result.message || 'Opción guardada exitosamente', 'success');
+                cargarOpciones();
+            } else {
+                mostrarMensaje(result.error || 'Error al guardar opción', 'error');
+            }
+            
+        } catch (error) {
+            console.error('Error en guardarOpcion:', error);
+            mostrarMensaje('Error al guardar opción', 'error');
+        }
+    }
+    
+    // Funciones globales para opciones
+    window.editarOpcion = function(id) {
+        abrirModalOpcion(id);
+    };
+    
+    window.eliminarOpcion = async function(id) {
+        if (confirm('¿Estás seguro de que deseas eliminar esta opción?')) {
+            try {
+                const response = await fetch(`/workflow/api/admin-backoffice/opciones/${id}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    mostrarMensaje(result.message || 'Opción eliminada exitosamente', 'success');
+                    cargarOpciones();
+                } else {
+                    mostrarMensaje(result.error || 'Error al eliminar opción', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Error en eliminarOpcion:', error);
+                mostrarMensaje('Error al eliminar opción', 'error');
+            }
+        }
+    };
 });
 </script>
 {% endblock %}

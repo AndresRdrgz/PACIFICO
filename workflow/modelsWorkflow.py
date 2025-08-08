@@ -97,7 +97,7 @@ class TransicionEtapa(models.Model):
         unique_together = ('pipeline', 'etapa_origen', 'etapa_destino')
 
     def __str__(self):
-        return f"{self.etapa_origen.nombre} → {self.etapa_destino.nombre} ({self.nombre})"
+        return f"{self.etapa_origen.nombre} -> {self.etapa_destino.nombre} ({self.nombre})"
 
 
 class PermisoEtapa(models.Model):

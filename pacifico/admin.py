@@ -1,9 +1,9 @@
 from django.contrib import admin
-from .models import Cotizacion, PeriodoPago, Aseguradora, FormPago, PruebaDario, Cliente, UserProfile, CotizacionDocumento, DebidaDiligencia
-from django.contrib.auth.models import User
-from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from .models import Cotizacion, PeriodoPago, Aseguradora, FormPago, PruebaDario, Cliente, UserProfile, CotizacionDocumento, DebidaDiligencia, GroupProfile, Sucursal
+from django.contrib.auth.models import User, Group
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin, GroupAdmin as BaseGroupAdmin
 from .models import Politicas
-from .forms import UserProfileForm  # Importamos el formulario personalizado
+from .forms import UserProfileForm, GroupProfileForm, GroupProfileInlineForm, CustomGroupForm  # Importamos los formularios personalizados
 
 # Register your models here.
 class UserProfileInline(admin.StackedInline):
@@ -112,3 +112,138 @@ class PoliticasAdmin(admin.ModelAdmin):
     list_display = ('titulo',)
     search_fields = ('titulo',)
     list_filter = ('titulo',)
+
+
+@admin.register(Sucursal)
+class SucursalAdmin(admin.ModelAdmin):
+    list_display = ('codigo', 'nombre', 'telefono', 'activa', 'fecha_creacion')
+    list_filter = ('activa', 'fecha_creacion')
+    search_fields = ('codigo', 'nombre', 'direccion')
+    readonly_fields = ('fecha_creacion', 'fecha_modificacion')
+    
+    fieldsets = (
+        ('Información Básica', {
+            'fields': ('codigo', 'nombre', 'activa')
+        }),
+        ('Información de Contacto', {
+            'fields': ('direccion', 'telefono', 'email'),
+            'classes': ('collapse',)
+        }),
+        ('Metadatos', {
+            'fields': ('fecha_creacion', 'fecha_modificacion'),
+            'classes': ('collapse',)
+        })
+    )
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:  # Si estamos editando
+            return self.readonly_fields + ('codigo',)  # No permitir cambiar el código
+        return self.readonly_fields
+
+
+# Configuración para GroupProfile
+class GroupProfileInline(admin.StackedInline):
+    model = GroupProfile
+    form = GroupProfileInlineForm  # Usar el formulario para inline (sin campo group)
+    can_delete = False
+    fields = ('es_sucursal', 'sucursal_codigo', 'descripcion', 'activo', 'supervisores')
+    extra = 0
+
+    class Media:
+        # Incluir CSS y JS necesarios para FilteredSelectMultiple
+        css = {
+            'all': ('admin/css/widgets.css',),
+        }
+        js = ('admin/js/SelectBox.js', 'admin/js/SelectFilter2.js')
+
+
+class GroupAdmin(BaseGroupAdmin):
+    form = CustomGroupForm  # Usar nuestro formulario personalizado
+    inlines = [GroupProfileInline]
+    
+    # Agregar el campo de miembros a los fieldsets
+    fieldsets = (
+        (None, {
+            'fields': ('name',)
+        }),
+        ('Miembros', {
+            'fields': ('miembros',),
+            'description': 'Gestiona los usuarios que pertenecen a este grupo'
+        }),
+        ('Permisos', {
+            'fields': ('permissions',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    class Media:
+        # CSS y JS necesarios para FilteredSelectMultiple
+        css = {
+            'all': ('admin/css/widgets.css',),
+        }
+        js = ('admin/js/SelectBox.js', 'admin/js/SelectFilter2.js')
+    
+    def save_model(self, request, obj, form, change):
+        """Override para agregar debug adicional y asegurar que se llame al save del formulario"""
+        print(f"🔧 DEBUG ADMIN: save_model llamado - change={change}")
+        print(f"🔧 DEBUG ADMIN: obj.name = {obj.name}")
+        print(f"🔧 DEBUG ADMIN: form type = {type(form)}")
+        print(f"🔧 DEBUG ADMIN: form.is_valid() = {form.is_valid()}")
+        
+        # Llamar al método save del formulario personalizado
+        if isinstance(form, CustomGroupForm):
+            print(f"🔧 DEBUG ADMIN: Es CustomGroupForm, llamando form.save()")
+            obj = form.save()
+        else:
+            print(f"🔧 DEBUG ADMIN: No es CustomGroupForm, llamando super().save_model()")
+            super().save_model(request, obj, form, change)
+    
+    def get_inline_instances(self, request, obj=None):
+        if obj:  # Solo mostrar inline si el grupo ya existe
+            return super().get_inline_instances(request, obj)
+        return []
+
+
+@admin.register(GroupProfile)
+class GroupProfileAdmin(admin.ModelAdmin):
+    form = GroupProfileForm
+    list_display = ('group', 'es_sucursal', 'get_sucursal_display', 'get_supervisores_list', 'activo', 'fecha_creacion')
+    list_filter = ('es_sucursal', 'activo', 'sucursal_codigo', 'supervisores')
+    search_fields = ('group__name', 'descripcion')
+    readonly_fields = ('fecha_creacion', 'fecha_modificacion')
+    
+    class Media:
+        # Incluir CSS y JS necesarios para FilteredSelectMultiple
+        css = {
+            'all': ('admin/css/widgets.css',),
+        }
+        js = ('admin/js/SelectBox.js', 'admin/js/SelectFilter2.js')
+    
+    fieldsets = (
+        ('Información Básica', {
+            'fields': ('group', 'descripcion', 'activo')
+        }),
+        ('Configuración de Sucursal', {
+            'fields': ('es_sucursal', 'sucursal_codigo'),
+            'description': 'Marque "Es sucursal" si este grupo representa una sucursal específica'
+        }),
+        ('Supervisión', {
+            'fields': ('supervisores',),
+            'description': 'Supervisores que pueden ver y administrar las solicitudes de este grupo'
+        }),
+        ('Metadatos', {
+            'fields': ('fecha_creacion', 'fecha_modificacion'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def get_sucursal_display(self, obj):
+        if obj.es_sucursal and obj.sucursal_codigo:
+            return dict(obj._meta.get_field('sucursal_codigo').choices).get(obj.sucursal_codigo, obj.sucursal_codigo)
+        return "-"
+    get_sucursal_display.short_description = 'Sucursal'
+
+
+# Re-registrar Group con el nuevo admin
+admin.site.unregister(Group)
+admin.site.register(Group, GroupAdmin)

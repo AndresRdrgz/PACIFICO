@@ -67,6 +67,21 @@ def get_user_pipeline_access(user):
         etapas__permisos__puede_ver=True
     ).distinct()
     
+    # NUEVA FUNCIONALIDAD: Get pipelines user has access to through supervised groups
+    supervised_group_permissions = PermisoPipeline.objects.none()
+    try:
+        from pacifico.utils_grupos import obtener_grupos_supervisados_por_usuario
+        grupos_supervisados = obtener_grupos_supervisados_por_usuario(user)
+        if grupos_supervisados.exists():
+            # Obtener los grupos Django asociados a los GroupProfile supervisados
+            grupos_django_supervisados = [gp.group for gp in grupos_supervisados]
+            supervised_group_permissions = PermisoPipeline.objects.filter(
+                grupo__in=grupos_django_supervisados,
+                puede_ver=True
+            ).select_related('pipeline')
+    except ImportError:
+        pass  # Si no existe el módulo, continuar sin supervisión
+    
     # Combine all accessible pipelines
     accessible_pipelines = set()
     pipeline_permissions = {}
@@ -116,6 +131,28 @@ def get_user_pipeline_access(user):
                 'access_level': 'stage'
             }
     
+    # NUEVA FUNCIONALIDAD: Process supervised group permissions
+    for perm in supervised_group_permissions:
+        accessible_pipelines.add(perm.pipeline)
+        if perm.pipeline.id not in pipeline_permissions:
+            pipeline_permissions[perm.pipeline.id] = {
+                'can_create': perm.puede_crear,
+                'can_edit': perm.puede_editar,
+                'can_delete': perm.puede_eliminar,
+                'can_admin': perm.puede_admin,
+                'access_level': 'supervised_group'
+            }
+        else:
+            # Merge permissions (take the highest level)
+            existing = pipeline_permissions[perm.pipeline.id]
+            pipeline_permissions[perm.pipeline.id] = {
+                'can_create': existing['can_create'] or perm.puede_crear,
+                'can_edit': existing['can_edit'] or perm.puede_editar,
+                'can_delete': existing['can_delete'] or perm.puede_eliminar,
+                'can_admin': existing['can_admin'] or perm.puede_admin,
+                'access_level': 'mixed'
+            }
+    
     # Convert set to list for easier handling
     pipelines_list = list(accessible_pipelines)
     
@@ -148,14 +185,29 @@ def get_user_solicitudes_queryset(user, pipeline_id=None):
         access_info = get_user_pipeline_access(user)
         accessible_pipeline_ids = [p.id for p in access_info['pipelines']]
         
+        # Solicitudes propias (asignadas o creadas)
+        solicitudes_propias = Q(asignada_a=user) | Q(creada_por=user)
+        
+        # NUEVA FUNCIONALIDAD: Agregar solicitudes de usuarios supervisados
+        try:
+            from pacifico.utils_grupos import obtener_usuarios_supervisados_por_usuario
+            usuarios_supervisados = obtener_usuarios_supervisados_por_usuario(user)
+            if usuarios_supervisados.exists():
+                # Agregar solicitudes de usuarios supervisados
+                solicitudes_supervisadas = Q(asignada_a__in=usuarios_supervisados) | Q(creada_por__in=usuarios_supervisados)
+                filtro_solicitudes = solicitudes_propias | solicitudes_supervisadas
+            else:
+                filtro_solicitudes = solicitudes_propias
+        except ImportError:
+            # Si no existe el módulo, usar solo solicitudes propias
+            filtro_solicitudes = solicitudes_propias
+        
         queryset = Solicitud.objects.select_related(
             'pipeline', 'etapa_actual', 'subestado_actual', 
             'creada_por', 'asignada_a'
         ).prefetch_related(
             'cliente', 'cotizacion', 'notas_recordatorios'
-        ).filter(
-            Q(asignada_a=user) | Q(creada_por=user)
-        )
+        ).filter(filtro_solicitudes)
         
         # Filter by accessible pipelines
         if accessible_pipeline_ids:
@@ -622,13 +674,28 @@ def api_detalle_solicitud_modal(request, solicitud_id):
                 id=solicitud_id
             )
         else:
+            # Solicitudes propias (asignadas o creadas)
+            solicitudes_propias = Q(asignada_a=request.user) | Q(creada_por=request.user)
+            
+            # NUEVA FUNCIONALIDAD: Agregar solicitudes de usuarios supervisados
+            try:
+                from pacifico.utils_grupos import obtener_usuarios_supervisados_por_usuario
+                usuarios_supervisados = obtener_usuarios_supervisados_por_usuario(request.user)
+                if usuarios_supervisados.exists():
+                    # Agregar solicitudes de usuarios supervisados
+                    solicitudes_supervisadas = Q(asignada_a__in=usuarios_supervisados) | Q(creada_por__in=usuarios_supervisados)
+                    filtro_solicitudes = solicitudes_propias | solicitudes_supervisadas
+                else:
+                    filtro_solicitudes = solicitudes_propias
+            except ImportError:
+                # Si no existe el módulo, usar solo solicitudes propias
+                filtro_solicitudes = solicitudes_propias
+                
             solicitud = get_object_or_404(
                 Solicitud.objects.select_related(
                     'pipeline', 'etapa_actual', 'subestado_actual',
                     'creada_por', 'asignada_a', 'cliente', 'cotizacion'
-                ).filter(
-                    Q(asignada_a=request.user) | Q(creada_por=request.user)
-                ),
+                ).filter(filtro_solicitudes),
                 id=solicitud_id
             )
         
@@ -767,9 +834,22 @@ def api_estadisticas_negocios(request):
         if request.user.is_superuser:
             solicitudes = Solicitud.objects.all()
         else:
-            solicitudes = Solicitud.objects.filter(
-                Q(asignada_a=request.user) | Q(creada_por=request.user)
-            )
+            # Solicitudes propias (asignadas o creadas)
+            solicitudes_propias = Q(asignada_a=request.user) | Q(creada_por=request.user)
+            
+            # NUEVA FUNCIONALIDAD: Agregar solicitudes de usuarios supervisados
+            try:
+                from pacifico.utils_grupos import obtener_usuarios_supervisados_por_usuario
+                usuarios_supervisados = obtener_usuarios_supervisados_por_usuario(request.user)
+                if usuarios_supervisados.exists():
+                    # Agregar solicitudes de usuarios supervisados
+                    solicitudes_supervisadas = Q(asignada_a__in=usuarios_supervisados) | Q(creada_por__in=usuarios_supervisados)
+                    solicitudes = Solicitud.objects.filter(solicitudes_propias | solicitudes_supervisadas)
+                else:
+                    solicitudes = Solicitud.objects.filter(solicitudes_propias)
+            except ImportError:
+                # Si no existe el módulo, usar solo solicitudes propias
+                solicitudes = Solicitud.objects.filter(solicitudes_propias)
         
         # Calcular estadísticas
         total_solicitudes = solicitudes.count()
@@ -827,9 +907,24 @@ def api_solicitudes(request):
                 'cliente', 'cotizacion'
             )
         else:
-            solicitudes = Solicitud.objects.filter(
-                Q(asignada_a=request.user) | Q(creada_por=request.user)
-            ).select_related(
+            # Solicitudes propias (asignadas o creadas)
+            solicitudes_propias = Q(asignada_a=request.user) | Q(creada_por=request.user)
+            
+            # NUEVA FUNCIONALIDAD: Agregar solicitudes de usuarios supervisados
+            try:
+                from pacifico.utils_grupos import obtener_usuarios_supervisados_por_usuario
+                usuarios_supervisados = obtener_usuarios_supervisados_por_usuario(request.user)
+                if usuarios_supervisados.exists():
+                    # Agregar solicitudes de usuarios supervisados
+                    solicitudes_supervisadas = Q(asignada_a__in=usuarios_supervisados) | Q(creada_por__in=usuarios_supervisados)
+                    solicitudes = Solicitud.objects.filter(solicitudes_propias | solicitudes_supervisadas)
+                else:
+                    solicitudes = Solicitud.objects.filter(solicitudes_propias)
+            except ImportError:
+                # Si no existe el módulo, usar solo solicitudes propias
+                solicitudes = Solicitud.objects.filter(solicitudes_propias)
+            
+            solicitudes = solicitudes.select_related(
                 'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por', 'asignada_a',
                 'cliente', 'cotizacion'
             )
