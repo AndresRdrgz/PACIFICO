@@ -1038,6 +1038,14 @@
                                                         <i class="fas fa-hand-paper me-1"></i><span
                                                             class="btn-action-text">Tomar</span>
                                                     </button>
+                                                    {% if solicitud.etapa_actual.nombre == 'Back Office' %}
+                                                    <button class="modern-btn modern-btn-info ver-pendientes-backoffice"
+                                                        data-solicitud-id="{{ solicitud.id }}"
+                                                        data-codigo="{{ solicitud.codigo }}"
+                                                        title="Ver documentos pendientes">
+                                                        <i class="fas fa-clipboard-list me-1"></i><span class="btn-action-text">Pendientes</span>
+                                                    </button>
+                                                    {% endif %}
                                                     {% if user.is_superuser or user.is_staff %}
                                                     <button class="modern-btn modern-btn-primary asignar-solicitud"
                                                         data-solicitud-id="{{ solicitud.id }}"
@@ -1136,6 +1144,14 @@
                                                         class="modern-btn modern-btn-primary">
                                                         <i class="fas fa-search me-1"></i><span class="btn-action-text">Analizar</span>
                                                     </a>
+                                                    {% if solicitud.etapa_actual.nombre == 'Back Office' %}
+                                                    <button class="modern-btn modern-btn-info ver-pendientes-backoffice"
+                                                        data-solicitud-id="{{ solicitud.id }}"
+                                                        data-codigo="{{ solicitud.codigo }}"
+                                                        title="Ver documentos pendientes">
+                                                        <i class="fas fa-clipboard-list me-1"></i><span class="btn-action-text">Pendientes</span>
+                                                    </button>
+                                                    {% endif %}
                                                     <button class="modern-btn modern-btn-warning devolver-solicitud"
                                                         data-solicitud-id="{{ solicitud.id }}"
                                                         data-codigo="{{ solicitud.codigo }}">
@@ -1695,6 +1711,98 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Documentos Pendientes Back Office -->
+<div class="modal fade" id="pendientesBackofficeModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-clipboard-list me-2"></i>
+                    Documentos Pendientes - Back Office
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="pendientes-loading" class="text-center py-4">
+                    <div class="spinner-border text-info" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Cargando documentos pendientes...</p>
+                </div>
+                
+                <div id="pendientes-contenido" style="display: none;">
+                    <!-- Header con información de la solicitud -->
+                    <div class="alert alert-info border-0 mb-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h6 class="mb-1">
+                                    <strong>Solicitud:</strong> 
+                                    <span id="pendientes-solicitud-codigo"></span>
+                                </h6>
+                                <small class="text-muted">
+                                    Documentos NO OBLIGATORIOS que requieren atención
+                                </small>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <span class="badge bg-info fs-6" id="pendientes-contador">
+                                    0 pendientes
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lista de documentos pendientes -->
+                    <div id="pendientes-lista">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+
+                    <!-- Estado: Solicitud ya completa -->
+                    <div id="pendientes-ya-completa" class="alert alert-success border-0" style="display: none;">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-check-circle text-success me-3 fs-4"></i>
+                            <div>
+                                <h6 class="mb-1">Solicitud Completa</h6>
+                                <small class="text-muted">
+                                    Esta solicitud ya fue marcada como completa. 
+                                    Todos los documentos pendientes han sido revisados.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sin documentos pendientes -->
+                    <div id="pendientes-sin-documentos" class="text-center py-5" style="display: none;">
+                        <i class="fas fa-check-circle text-success mb-3" style="font-size: 3rem;"></i>
+                        <h5 class="text-success">¡Excelente!</h5>
+                        <p class="text-muted">No hay documentos pendientes para esta solicitud.</p>
+                    </div>
+                </div>
+
+                <!-- Error state -->
+                <div id="pendientes-error" style="display: none;">
+                    <div class="alert alert-danger border-0">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle text-danger me-3"></i>
+                            <div>
+                                <h6 class="mb-1">Error al cargar documentos</h6>
+                                <small id="pendientes-error-mensaje"></small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cerrar
+                </button>
+                <button type="button" class="btn btn-success" id="btn-marcar-completa" style="display: none;">
+                    <i class="fas fa-check me-1"></i>Marcar Solicitud Completa
+                </button>
             </div>
         </div>
     </div>
@@ -3405,5 +3513,530 @@
         }
     }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ==========================================
+// GESTIÓN DE DOCUMENTOS PENDIENTES BACK OFFICE
+// ==========================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Event listener para botones de "Ver Pendientes"
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.ver-pendientes-backoffice')) {
+            e.preventDefault();
+            const button = e.target.closest('.ver-pendientes-backoffice');
+            const solicitudId = button.getAttribute('data-solicitud-id');
+            const codigoSolicitud = button.getAttribute('data-codigo');
+            
+            console.log('🔍 Abriendo modal de pendientes para solicitud:', solicitudId);
+            abrirModalPendientes(solicitudId, codigoSolicitud);
+        }
+    });
+
+    // Event listener para marcar solicitud como completa
+    document.getElementById('btn-marcar-completa').addEventListener('click', function() {
+        const solicitudId = this.getAttribute('data-solicitud-id');
+        marcarSolicitudCompleta(solicitudId);
+    });
+});
+
+/**
+ * Abre el modal de documentos pendientes y carga los datos
+ */
+function abrirModalPendientes(solicitudId, codigoSolicitud) {
+    const modal = new bootstrap.Modal(document.getElementById('pendientesBackofficeModal'));
+    
+    // Mostrar loading y ocultar contenido
+    document.getElementById('pendientes-loading').style.display = 'block';
+    document.getElementById('pendientes-contenido').style.display = 'none';
+    document.getElementById('pendientes-error').style.display = 'none';
+    
+    // Abrir modal
+    modal.show();
+    
+    // Cargar datos
+    cargarDocumentosPendientes(solicitudId, codigoSolicitud);
+}
+
+/**
+ * Carga los documentos pendientes desde la API
+ */
+function cargarDocumentosPendientes(solicitudId, codigoSolicitud) {
+    console.log('📡 Cargando documentos pendientes para solicitud:', solicitudId);
+    
+    fetch(`/workflow/api/solicitudes/${solicitudId}/documentos-pendientes-backoffice/`, {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/json'
+        }
+    })
+        .then(response => {
+            console.log('📡 Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('✅ Datos de pendientes recibidos:', data);
+            
+            if (data.success) {
+                mostrarDocumentosPendientes(data, codigoSolicitud);
+            } else {
+                throw new Error(data.error || 'Error desconocido');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error cargando documentos pendientes:', error);
+            mostrarErrorPendientes(error.message);
+        });
+}
+
+/**
+ * Muestra los documentos del checklist en el modal con funcionalidad de calificación
+ */
+function mostrarDocumentosPendientes(data, codigoSolicitud) {
+    // Ocultar loading
+    document.getElementById('pendientes-loading').style.display = 'none';
+    document.getElementById('pendientes-contenido').style.display = 'block';
+    
+    // Actualizar información de la solicitud
+    document.getElementById('pendientes-solicitud-codigo').textContent = codigoSolicitud;
+    document.getElementById('pendientes-contador').textContent = 
+        `${data.total_documentos} documento${data.total_documentos !== 1 ? 's' : ''}`;
+    
+    // Guardar solicitud ID para el botón de marcar completa
+    document.getElementById('btn-marcar-completa').setAttribute('data-solicitud-id', data.solicitud_id);
+    
+    const listaContainer = document.getElementById('pendientes-lista');
+    const sinDocumentosDiv = document.getElementById('pendientes-sin-documentos');
+    const yaCompletaDiv = document.getElementById('pendientes-ya-completa');
+    const btnMarcarCompleta = document.getElementById('btn-marcar-completa');
+    
+    // Verificar si ya está marcada como completa
+    if (data.solicitud_completa) {
+        yaCompletaDiv.style.display = 'block';
+        btnMarcarCompleta.style.display = 'none';
+        listaContainer.innerHTML = '';
+        sinDocumentosDiv.style.display = 'none';
+        return;
+    }
+    
+    // Verificar si hay documentos para mostrar
+    if (data.total_documentos === 0) {
+        sinDocumentosDiv.style.display = 'block';
+        btnMarcarCompleta.style.display = 'inline-block';
+        listaContainer.innerHTML = '';
+        yaCompletaDiv.style.display = 'none';
+        return;
+    }
+    
+    // Mostrar documentos
+    yaCompletaDiv.style.display = 'none';
+    sinDocumentosDiv.style.display = 'none';
+    btnMarcarCompleta.style.display = 'inline-block';
+    
+    let html = '';
+    
+    data.documentos.forEach((doc, index) => {
+        // Determinar color del borde según estado
+        let borderClass = 'border-warning';
+        let estadoBadge = '';
+        
+        switch(doc.estado_calificacion) {
+            case 'bueno':
+                borderClass = 'border-success';
+                estadoBadge = '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Bueno</span>';
+                break;
+            case 'malo':
+                borderClass = 'border-danger';
+                estadoBadge = '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Malo</span>';
+                break;
+            case 'pendiente':
+                borderClass = 'border-warning';
+                estadoBadge = '<span class="badge bg-warning"><i class="fas fa-clock me-1"></i>Pendiente</span>';
+                break;
+            default:
+                borderClass = 'border-secondary';
+                estadoBadge = '<span class="badge bg-secondary"><i class="fas fa-question me-1"></i>Sin calificar</span>';
+        }
+        
+        html += `
+            <div class="card mb-3 border-start ${borderClass} border-4" id="documento-${doc.requisito_solicitud_id}">
+                <div class="card-body">
+                    <div class="row">
+                        <!-- IZQUIERDA: Información del documento -->
+                        <div class="col-md-6">
+                            <h6 class="card-title mb-2">
+                                <i class="fas fa-file-alt me-2"></i>
+                                ${doc.nombre}
+                                ${doc.obligatorio ? '<span class="badge bg-danger ms-2">Obligatorio</span>' : '<span class="badge bg-info ms-2">Opcional</span>'}
+                            </h6>
+                            ${doc.descripcion ? `<p class="card-text text-muted small mb-2">${doc.descripcion}</p>` : ''}
+                            
+                            <div class="d-flex gap-2 mb-2">
+                                ${estadoBadge}
+                                <small class="text-muted align-self-center">
+                                    <i class="fas fa-paperclip me-1"></i>
+                                    ${doc.archivos_count} archivo${doc.archivos_count !== 1 ? 's' : ''}
+                                </small>
+                            </div>
+                            
+                            ${doc.tiene_archivo ? `
+                                <div class="mb-2">
+                                    <a href="${doc.archivo_url}" target="_blank" class="btn btn-outline-primary btn-sm me-2">
+                                        <i class="fas fa-eye me-1"></i>Ver
+                                    </a>
+                                    <a href="${doc.archivo_url}" download class="btn btn-outline-success btn-sm">
+                                        <i class="fas fa-download me-1"></i>Descargar
+                                    </a>
+                                </div>
+                            ` : `
+                                <div class="alert alert-warning py-2 mb-2">
+                                    <small><i class="fas fa-info-circle me-1"></i>Sin archivo subido</small>
+                                </div>
+                            `}
+                            
+                            ${doc.observaciones ? `
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <strong>Observaciones:</strong> ${doc.observaciones}
+                                    </small>
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        <!-- DERECHA: Botones de calificación -->
+                        <div class="col-md-6">
+                            <div class="d-flex flex-column gap-2">
+                                <h6 class="mb-2">Calificar documento:</h6>
+                                
+                                <!-- Botón Bueno -->
+                                <button type="button" 
+                                        class="btn ${doc.estado_calificacion === 'bueno' ? 'btn-success' : 'btn-outline-success'} btn-sm calificar-modal-btn" 
+                                        data-requisito-solicitud-id="${doc.requisito_solicitud_id}"
+                                        data-estado="bueno"
+                                        ${!doc.puede_calificar_bueno ? 'disabled title="Debe subir archivo para calificar como bueno"' : ''}>
+                                    <i class="fas fa-thumbs-up me-1"></i>Bueno
+                                </button>
+                                
+                                <!-- Botón Malo -->
+                                <button type="button" 
+                                        class="btn ${doc.estado_calificacion === 'malo' ? 'btn-danger' : 'btn-outline-danger'} btn-sm calificar-modal-btn" 
+                                        data-requisito-solicitud-id="${doc.requisito_solicitud_id}"
+                                        data-estado="malo"
+                                        ${!doc.puede_calificar_malo ? 'disabled title="Debe subir archivo para calificar como malo"' : ''}>
+                                    <i class="fas fa-thumbs-down me-1"></i>Malo
+                                </button>
+                                
+                                <!-- Botón Pendiente (solo para opcionales) -->
+                                ${doc.puede_calificar_pendiente ? `
+                                    <button type="button" 
+                                            class="btn ${doc.estado_calificacion === 'pendiente' ? 'btn-warning' : 'btn-outline-warning'} btn-sm calificar-modal-btn" 
+                                            data-requisito-solicitud-id="${doc.requisito_solicitud_id}"
+                                            data-estado="pendiente">
+                                        <i class="fas fa-clock me-1"></i>Pendiente
+                                    </button>
+                                ` : ''}
+                                
+                                ${doc.fecha_calificacion ? `
+                                    <small class="text-muted mt-2">
+                                        <i class="fas fa-clock me-1"></i>
+                                        Calificado: ${new Date(doc.fecha_calificacion).toLocaleDateString()}
+                                        <br>Por: ${doc.calificado_por}
+                                    </small>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    listaContainer.innerHTML = html;
+    
+    // Agregar event listeners para los botones de calificación
+    document.querySelectorAll('.calificar-modal-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const requisitoSolicitudId = this.getAttribute('data-requisito-solicitud-id');
+            const estado = this.getAttribute('data-estado');
+            calificarDocumentoModal(requisitoSolicitudId, estado, this);
+        });
+    });
+}
+
+/**
+ * Muestra error en el modal
+ */
+function mostrarErrorPendientes(mensaje) {
+    document.getElementById('pendientes-loading').style.display = 'none';
+    document.getElementById('pendientes-contenido').style.display = 'none';
+    document.getElementById('pendientes-error').style.display = 'block';
+    document.getElementById('pendientes-error-mensaje').textContent = mensaje;
+}
+
+/**
+ * Marca una solicitud como completa en Back Office
+ */
+function marcarSolicitudCompleta(solicitudId) {
+    const button = document.getElementById('btn-marcar-completa');
+    const originalText = button.innerHTML;
+    
+    // Mostrar loading en el botón
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Marcando...';
+    
+    console.log('📝 Marcando solicitud como completa:', solicitudId);
+    
+    fetch(`/workflow/api/solicitudes/${solicitudId}/marcar-completa-backoffice/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('✅ Solicitud marcada como completa:', data);
+        
+        if (data.success) {
+            // Mostrar mensaje de éxito
+            mostrarNotificacion('Solicitud marcada como completa exitosamente', 'success');
+            
+            // Actualizar el modal para mostrar estado completo
+            document.getElementById('pendientes-ya-completa').style.display = 'block';
+            document.getElementById('pendientes-lista').innerHTML = '';
+            document.getElementById('pendientes-sin-documentos').style.display = 'none';
+            button.style.display = 'none';
+            
+            // Opcional: Recargar la página después de un momento
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            throw new Error(data.error || 'Error desconocido');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error marcando solicitud como completa:', error);
+        mostrarNotificacion(`Error: ${error.message}`, 'error');
+    })
+    .finally(() => {
+        // Restaurar botón
+        button.disabled = false;
+        button.innerHTML = originalText;
+    });
+}
+
+/**
+ * Obtiene el token CSRF
+ */
+function getCsrfToken() {
+    const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrfInput) {
+        return csrfInput.value;
+    }
+    
+    const csrfCookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='));
+    
+    return csrfCookie ? csrfCookie.split('=')[1] : '';
+}
+
+/**
+ * Muestra notificaciones toast
+ */
+function mostrarNotificacion(mensaje, tipo = 'info') {
+    // Crear elemento de notificación
+    const alertClass = tipo === 'success' ? 'alert-success' : 
+                     tipo === 'error' ? 'alert-danger' : 'alert-info';
+    
+    const notification = document.createElement('div');
+    notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${mensaje}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove después de 5 segundos
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+/**
+ * Califica un documento desde el modal
+ */
+function calificarDocumentoModal(requisitoSolicitudId, estado, botonElement) {
+    console.log(`📝 Calificando documento ${requisitoSolicitudId} como ${estado}`);
+    
+    // Guardar estado original del botón
+    const originalText = botonElement.innerHTML;
+    const originalDisabled = botonElement.disabled;
+    
+    // Mostrar loading en el botón
+    botonElement.disabled = true;
+    botonElement.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Calificando...';
+    
+    fetch(`/workflow/api/requisito-solicitud/${requisitoSolicitudId}/calificar-modal/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            estado: estado,
+            observaciones: '' // Podríamos agregar un campo para esto después
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('✅ Documento calificado:', data);
+        
+        if (data.success) {
+            // Mostrar notificación de éxito
+            mostrarNotificacion(`Documento calificado como ${estado}`, 'success');
+            
+            // Si fue calificado como "bueno", desaparece del modal
+            if (data.desaparece_del_modal) {
+                const documentoCard = document.getElementById(`documento-${requisitoSolicitudId}`);
+                if (documentoCard) {
+                    // Animación de desaparición
+                    documentoCard.style.transition = 'opacity 0.5s ease-out';
+                    documentoCard.style.opacity = '0';
+                    
+                    setTimeout(() => {
+                        documentoCard.remove();
+                        
+                        // Verificar si ya no hay documentos
+                        const listaContainer = document.getElementById('pendientes-lista');
+                        if (listaContainer.children.length === 0) {
+                            document.getElementById('pendientes-sin-documentos').style.display = 'block';
+                            // Actualizar contador
+                            document.getElementById('pendientes-contador').textContent = '0 documentos';
+                        } else {
+                            // Actualizar contador
+                            const count = listaContainer.children.length;
+                            document.getElementById('pendientes-contador').textContent = 
+                                `${count} documento${count !== 1 ? 's' : ''}`;
+                        }
+                    }, 500);
+                }
+            } else {
+                // Actualizar el estado visual del documento
+                actualizarEstadoDocumentoModal(requisitoSolicitudId, estado, data);
+                
+                // Restaurar botón
+                botonElement.disabled = originalDisabled;
+                botonElement.innerHTML = originalText;
+                
+                // Actualizar estado de los botones
+                const documentoCard = document.getElementById(`documento-${requisitoSolicitudId}`);
+                if (documentoCard) {
+                    // Actualizar clases de botones
+                    documentoCard.querySelectorAll('.calificar-modal-btn').forEach(btn => {
+                        const btnEstado = btn.getAttribute('data-estado');
+                        if (btnEstado === estado) {
+                            // Activar botón seleccionado
+                            btn.className = btn.className.replace('btn-outline-', 'btn-');
+                        } else {
+                            // Desactivar otros botones
+                            btn.className = btn.className.replace('btn-success', 'btn-outline-success');
+                            btn.className = btn.className.replace('btn-danger', 'btn-outline-danger');
+                            btn.className = btn.className.replace('btn-warning', 'btn-outline-warning');
+                        }
+                    });
+                }
+            }
+            
+        } else {
+            throw new Error(data.error || 'Error desconocido al calificar');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error calificando documento:', error);
+        mostrarNotificacion(`Error: ${error.message}`, 'error');
+        
+        // Restaurar botón
+        botonElement.disabled = originalDisabled;
+        botonElement.innerHTML = originalText;
+    });
+}
+
+/**
+ * Actualiza el estado visual de un documento en el modal
+ */
+function actualizarEstadoDocumentoModal(requisitoSolicitudId, estado, data) {
+    const documentoCard = document.getElementById(`documento-${requisitoSolicitudId}`);
+    if (!documentoCard) return;
+    
+    // Actualizar clase del borde
+    documentoCard.className = documentoCard.className.replace(/border-(success|danger|warning|secondary)/, '');
+    
+    let borderClass = 'border-warning';
+    switch(estado) {
+        case 'bueno':
+            borderClass = 'border-success';
+            break;
+        case 'malo':
+            borderClass = 'border-danger';
+            break;
+        case 'pendiente':
+            borderClass = 'border-warning';
+            break;
+    }
+    
+    documentoCard.classList.add(borderClass);
+    
+    // Actualizar badge de estado
+    const badgeContainer = documentoCard.querySelector('.d-flex.gap-2.mb-2');
+    if (badgeContainer) {
+        const estadoBadge = badgeContainer.querySelector('.badge');
+        if (estadoBadge) {
+            estadoBadge.className = 'badge';
+            let badgeContent = '';
+            
+            switch(estado) {
+                case 'bueno':
+                    estadoBadge.classList.add('bg-success');
+                    badgeContent = '<i class="fas fa-check me-1"></i>Bueno';
+                    break;
+                case 'malo':
+                    estadoBadge.classList.add('bg-danger');
+                    badgeContent = '<i class="fas fa-times me-1"></i>Malo';
+                    break;
+                case 'pendiente':
+                    estadoBadge.classList.add('bg-warning');
+                    badgeContent = '<i class="fas fa-clock me-1"></i>Pendiente';
+                    break;
+            }
+            
+            estadoBadge.innerHTML = badgeContent;
+        }
+    }
+}
+
+</script>
 {% endblock %}
     

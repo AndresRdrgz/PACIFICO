@@ -137,6 +137,105 @@ def usuario_puede_modificar_solicitud(usuario, solicitud):
 
     print(f"❌ DEBUG: Usuario {usuario.username} NO tiene permisos para modificar solicitud {solicitud.id}")
     return False
+
+
+# ==========================================
+# APIS PARA GESTIÓN DE PENDIENTES BACK OFFICE
+# ==========================================
+
+@login_required
+def api_obtener_documentos_pendientes_backoffice(request, solicitud_id):
+    """API para obtener documentos pendientes y 'malo' (no obligatorios) para Back Office"""
+    
+    # VERSIÓN SIMPLE PARA DEBUG
+    try:
+        print(f"🔍 DEBUG PENDIENTES: INICIANDO VERSIÓN SIMPLE para solicitud {solicitud_id}")
+        
+        # Test básico - solo retornar datos dummy
+        return JsonResponse({
+            'success': True,
+            'solicitud_id': int(solicitud_id),
+            'solicitud_codigo': f"TEST-{solicitud_id}",
+            'documentos_pendientes': [
+                {
+                    'requisito_id': 1,
+                    'nombre': 'Documento de prueba',
+                    'descripcion': 'Esto es una prueba',
+                    'estado_calificacion': 'pendiente',
+                    'fecha_calificacion': None,
+                    'calificado_por': 'Sistema',
+                    'observaciones': 'Prueba de API',
+                    'archivos_count': 0
+                }
+            ],
+            'total_pendientes': 1,
+            'solicitud_completa': False,
+            'mensaje_debug': 'API funcionando - versión de prueba'
+        })
+        
+    except Exception as e:
+        print(f"❌ DEBUG PENDIENTES: Error en versión simple: {str(e)}")
+        import traceback
+        print(f"❌ DEBUG PENDIENTES: Traceback: {traceback.format_exc()}")
+        return JsonResponse({
+            'success': False,
+            'error': f'Error en versión simple: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@csrf_exempt
+def api_marcar_solicitud_completa_backoffice(request, solicitud_id):
+    """API para marcar una solicitud como completa en Back Office"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar permisos
+        if not usuario_puede_modificar_solicitud(request.user, solicitud):
+            return JsonResponse({'error': 'No tienes permisos para modificar esta solicitud'}, status=403)
+        
+        # Verificar que la solicitud esté en Back Office
+        if not solicitud.etapa_actual or solicitud.etapa_actual.nombre != "Back Office":
+            return JsonResponse({'error': 'Esta funcionalidad solo está disponible para solicitudes en Back Office'}, status=400)
+        
+        # Verificar que no se haya marcado ya como completa
+        ya_completa = HistorialSolicitud.objects.filter(
+            solicitud=solicitud,
+            comentarios__icontains="Solicitud Completa - Back Office"
+        ).exists()
+        
+        if ya_completa:
+            return JsonResponse({'error': 'Esta solicitud ya fue marcada como completa'}, status=400)
+        
+        # Crear registro en HistorialSolicitud
+        HistorialSolicitud.objects.create(
+            solicitud=solicitud,
+            etapa=solicitud.etapa_actual,
+            subestado=solicitud.subestado_actual,
+            usuario_responsable=request.user,
+            fecha_inicio=timezone.now(),
+            fecha_fin=timezone.now(),
+            comentarios=f"Solicitud Completa - Back Office. Todos los documentos pendientes han sido revisados por {request.user.get_full_name() or request.user.username}."
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Solicitud marcada como completa exitosamente',
+            'solicitud_id': solicitud.id,
+            'marcada_por': request.user.get_full_name() or request.user.username,
+            'fecha': timezone.now().isoformat()
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Error al marcar solicitud como completa: {str(e)}'
+        }, status=500)
+
+
 import uuid
 from datetime import datetime, timedelta
 from django.views.decorators.csrf import csrf_exempt
@@ -5123,12 +5222,12 @@ def enviar_correo_bandeja_grupal(solicitud, etapa, request=None):
         
         Una solicitud ha ingresado a una etapa de bandeja grupal y requiere atención:
         
-        • Código: {solicitud.codigo}
-        • Cliente: {cliente_nombre or 'Sin asignar'}
-        • Pipeline: {solicitud.pipeline.nombre}
-        • Etapa: {etapa.nombre}
-        • Creada por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
-        • Fecha: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
+        - Código: {solicitud.codigo}
+        - Cliente: {cliente_nombre or 'Sin asignar'}
+        - Pipeline: {solicitud.pipeline.nombre}
+        - Etapa: {etapa.nombre}
+        - Creada por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
+        - Fecha: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
         
         Para ver la solicitud, haz clic en el siguiente enlace:
         {bandeja_url}
@@ -5226,12 +5325,12 @@ def enviar_correo_solicitud_asignada(solicitud, usuario_asignado, request=None):
         
         Tu solicitud ha sido asignada a un usuario y está siendo procesada:
         
-        • Código: {solicitud.codigo}
-        • Cliente: {cliente_nombre or 'Sin asignar'}
-        • Pipeline: {solicitud.pipeline.nombre}
-        • Etapa: {solicitud.etapa_actual.nombre}
-        • Asignada a: {usuario_asignado.get_full_name() or usuario_asignado.username}
-        • Fecha de asignación: {timezone.now().strftime('%d/%m/%Y %H:%M')}
+        - Código: {solicitud.codigo}
+        - Cliente: {cliente_nombre or 'Sin asignar'}
+        - Pipeline: {solicitud.pipeline.nombre}
+        - Etapa: {solicitud.etapa_actual.nombre}
+        - Asignada a: {usuario_asignado.get_full_name() or usuario_asignado.username}
+        - Fecha de asignación: {timezone.now().strftime('%d/%m/%Y %H:%M')}
         
         Para ver el estado de tu solicitud, haz clic en el siguiente enlace:
         {solicitud_url}
@@ -5414,13 +5513,13 @@ def enviar_correo_cambio_etapa_propietario(solicitud, etapa_anterior, nueva_etap
         
         Tu solicitud ha cambiado de etapa y está siendo procesada:
         
-        • Código: {solicitud.codigo}
-        • Cliente: {cliente_nombre or 'Sin asignar'}
-        • Pipeline: {solicitud.pipeline.nombre}
-        • Etapa Anterior: {etapa_anterior.nombre if etapa_anterior else 'Sin etapa'}
-        • Nueva Etapa: {nueva_etapa.nombre}
-        • Cambiado por: {usuario_que_cambio.get_full_name() or usuario_que_cambio.username}
-        • Fecha de cambio: {timezone.now().strftime('%d/%m/%Y %H:%M')}
+        - Código: {solicitud.codigo}
+        - Cliente: {cliente_nombre or 'Sin asignar'}
+        - Pipeline: {solicitud.pipeline.nombre}
+        - Etapa Anterior: {etapa_anterior.nombre if etapa_anterior else 'Sin etapa'}
+        - Nueva Etapa: {nueva_etapa.nombre}
+        - Cambiado por: {usuario_que_cambio.get_full_name() or usuario_que_cambio.username}
+        - Fecha de cambio: {timezone.now().strftime('%d/%m/%Y %H:%M')}
         
         {analisis_texto}
         
@@ -5641,15 +5740,15 @@ def enviar_correo_comite_credito(solicitud, etapa, request=None):
         
         Una solicitud ha ingresado al Comité de Crédito y requiere su revisión y aprobación:
         
-        • Código: {solicitud.codigo}
-        • Cliente: {cliente_nombre}
-        • Cédula: {cliente_cedula}
-        • Monto: {monto_formateado}
-        • Producto: {solicitud.producto_descripcion}
-        • Pipeline: {solicitud.pipeline.nombre}
-        • Analista Revisor: {analista_revisor}
-        • Creada por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
-        • Fecha: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
+        - Código: {solicitud.codigo}
+        - Cliente: {cliente_nombre}
+        - Cédula: {cliente_cedula}
+        - Monto: {monto_formateado}
+        - Producto: {solicitud.producto_descripcion}
+        - Pipeline: {solicitud.pipeline.nombre}
+        - Analista Revisor: {analista_revisor}
+        - Creada por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
+        - Fecha: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
         
         Para revisar la solicitud, haz clic en el siguiente enlace:
         {bandeja_url}
@@ -6257,14 +6356,14 @@ def enviar_correo_apc_makito(solicitud, no_cedula, tipo_documento, request=None)
         
         Se ha solicitado la descarga del APC para la siguiente solicitud:
         
-        • Código de Solicitud: {solicitud.codigo}
-        • Cliente: {cliente_nombre}
-        • Tipo de Documento: {tipo_documento.title()}
-        • Número de Documento: {no_cedula}
-        • Pipeline: {solicitud.pipeline.nombre}
-        • Solicitado por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
-        • Correo Solicitante: {correo_solicitante}
-        • Fecha de Solicitud: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
+        - Código de Solicitud: {solicitud.codigo}
+        - Cliente: {cliente_nombre}
+        - Tipo de Documento: {tipo_documento.title()}
+        - Número de Documento: {no_cedula}
+        - Pipeline: {solicitud.pipeline.nombre}
+        - Solicitado por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
+        - Correo Solicitante: {correo_solicitante}
+        - Fecha de Solicitud: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
         
         ==========================================
         DATOS PARA EXTRACCIÓN AUTOMATIZADA (MAKITO RPA)
@@ -6322,10 +6421,10 @@ def enviar_correo_apc_makito(solicitud, no_cedula, tipo_documento, request=None)
         ==========================================
         NOTAS IMPORTANTES:
         ==========================================
-        • El archivo debe ser un PDF válido
-        • Tamaño máximo del archivo: 10MB
-        • El sistema automáticamente marcará la solicitud como completada
-        • Se enviará una notificación al solicitante cuando se complete
+        - El archivo debe ser un PDF válido
+        - Tamaño máximo del archivo: 10MB
+        - El sistema automáticamente marcará la solicitud como completada
+        - Se enviará una notificación al solicitante cuando se complete
         
         Saludos,
         Sistema de Workflow - Financiera Pacífico
@@ -6415,26 +6514,26 @@ def enviar_correo_sura_makito(solicitud, sura_primer_nombre, sura_primer_apellid
         
         Se ha solicitado la cotización SURA para la siguiente solicitud:
         
-        • Código de Solicitud: {solicitud.codigo}
-        • Cliente: {cliente_nombre}
-        • Primer Nombre: {sura_primer_nombre}
-        • Segundo Nombre: {solicitud.sura_segundo_nombre or 'N/A'}
-        • Primer Apellido: {sura_primer_apellido}
-        • Segundo Apellido: {solicitud.sura_segundo_apellido or 'N/A'}
-        • Número de Documento: {sura_no_documento}
-        • Tipo de Documento: {sura_tipo_documento or 'N/A'}
-        • Pipeline: {solicitud.pipeline.nombre}
-        • Solicitado por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
-        • Correo Solicitante: {correo_solicitante}
-        • Fecha de Solicitud: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
+        - Código de Solicitud: {solicitud.codigo}
+        - Cliente: {cliente_nombre}
+        - Primer Nombre: {sura_primer_nombre}
+        - Segundo Nombre: {solicitud.sura_segundo_nombre or 'N/A'}
+        - Primer Apellido: {sura_primer_apellido}
+        - Segundo Apellido: {solicitud.sura_segundo_apellido or 'N/A'}
+        - Número de Documento: {sura_no_documento}
+        - Tipo de Documento: {sura_tipo_documento or 'N/A'}
+        - Pipeline: {solicitud.pipeline.nombre}
+        - Solicitado por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
+        - Correo Solicitante: {correo_solicitante}
+        - Fecha de Solicitud: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
         
         ==========================================
         INFORMACIÓN DEL VEHÍCULO
         ==========================================
-        • Valor del Auto: ${sura_valor_auto or 'N/A'}
-        • Año del Auto: {sura_ano_auto or 'N/A'}
-        • Marca: {sura_marca or 'N/A'}
-        • Modelo: {sura_modelo or 'N/A'}
+        - Valor del Auto: ${sura_valor_auto or 'N/A'}
+        - Año del Auto: {sura_ano_auto or 'N/A'}
+        - Marca: {sura_marca or 'N/A'}
+        - Modelo: {sura_modelo or 'N/A'}
         
         ==========================================
         DATOS PARA EXTRACCIÓN AUTOMATIZADA (MAKITO RPA)
@@ -6510,10 +6609,10 @@ def enviar_correo_sura_makito(solicitud, sura_primer_nombre, sura_primer_apellid
         ==========================================
         NOTAS IMPORTANTES:
         ==========================================
-        • El archivo debe ser un PDF válido
-        • Tamaño máximo del archivo: 10MB
-        • El sistema automáticamente marcará la solicitud como completada
-        • Se enviará una notificación al solicitante cuando se complete
+        - El archivo debe ser un PDF válido
+        - Tamaño máximo del archivo: 10MB
+        - El sistema automáticamente marcará la solicitud como completada
+        - Se enviará una notificación al solicitante cuando se complete
         
         Saludos,
         Sistema de Workflow - Financiera Pacífico
@@ -7115,14 +7214,14 @@ def enviar_correo_debida_diligencia_makito(solicitud, tipo_documento, request=No
         
         Se ha solicitado generar documentos de debida diligencia para la siguiente solicitud:
         
-        • Código de Solicitud: {solicitud.codigo}
-        • Cliente: {cliente_nombre}
-        • Número de Documento: {no_documento}
-        • Tipo de Documento Solicitado: {tipo_legible}
-        • Pipeline: {solicitud.pipeline.nombre}
-        • Solicitado por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
-        • Correo Solicitante: {correo_solicitante}
-        • Fecha de Solicitud: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
+        - Código de Solicitud: {solicitud.codigo}
+        - Cliente: {cliente_nombre}
+        - Número de Documento: {no_documento}
+        - Tipo de Documento Solicitado: {tipo_legible}
+        - Pipeline: {solicitud.pipeline.nombre}
+        - Solicitado por: {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
+        - Correo Solicitante: {correo_solicitante}
+        - Fecha de Solicitud: {solicitud.fecha_creacion.strftime('%d/%m/%Y %H:%M')}
         
         NOTA: Este correo incluye CC a arodriguez@fpacifico.com para seguimiento.
         
@@ -7186,11 +7285,11 @@ def enviar_correo_debida_diligencia_makito(solicitud, tipo_documento, request=No
         ==========================================
         NOTAS IMPORTANTES:
         ==========================================
-        • Los archivos deben ser PDF válidos
-        • Tamaño máximo por archivo: 10MB
-        • Se pueden subir uno o ambos archivos según disponibilidad
-        • El sistema marcará automáticamente como completado cuando ambos archivos estén presentes
-        • Se enviará una notificación al solicitante cuando se complete
+        - Los archivos deben ser PDF válidos
+        - Tamaño máximo por archivo: 10MB
+        - Se pueden subir uno o ambos archivos según disponibilidad
+        - El sistema marcará automáticamente como completado cuando ambos archivos estén presentes
+        - Se enviará una notificación al solicitante cuando se complete
         
         Saludos,
         Sistema de Workflow - Financiera Pacífico
@@ -12238,7 +12337,7 @@ Estimado {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
 El proceso de APC para la solicitud {solicitud.codigo} ha sido completado exitosamente por Makito RPA.
 
 DETALLES DE LA SOLICITUD:
-• Código: {solicitud.codigo}
+- Código: {solicitud.codigo}
 • Cliente: {cliente_nombre}
 • Pipeline: {solicitud.pipeline.nombre}
 • Fecha de completado: {solicitud.apc_fecha_completado.strftime('%d/%m/%Y %H:%M')}
@@ -12357,7 +12456,7 @@ Estimado {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
 El proceso de APC para la solicitud {solicitud.codigo} ha sido iniciado por Makito RPA y se encuentra actualmente en proceso de extracción.
 
 DETALLES DE LA SOLICITUD:
-• Código: {solicitud.codigo}
+- Código: {solicitud.codigo}
 • Cliente: {cliente_nombre}
 • Pipeline: {solicitud.pipeline.nombre}
 • Fecha de inicio del proceso: {solicitud.apc_fecha_inicio.strftime('%d/%m/%Y %H:%M') if solicitud.apc_fecha_inicio else 'En proceso'}
@@ -12480,7 +12579,7 @@ Estimado {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
 La cotización SURA para la solicitud {solicitud.codigo} ha sido completada exitosamente por Makito RPA.
 
 DETALLES DE LA SOLICITUD:
-• Código: {solicitud.codigo}
+- Código: {solicitud.codigo}
 • Cliente: {cliente_nombre}
 • Pipeline: {solicitud.pipeline.nombre}
 • Fecha de completado: {solicitud.sura_fecha_completado.strftime('%d/%m/%Y %H:%M') if solicitud.sura_fecha_completado else 'Recién completado'}
@@ -12606,7 +12705,7 @@ Estimado {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
 La cotización SURA para la solicitud {solicitud.codigo} ha sido iniciada por Makito RPA y se encuentra actualmente en proceso.
 
 DETALLES DE LA SOLICITUD:
-• Código: {solicitud.codigo}
+- Código: {solicitud.codigo}
 • Cliente: {cliente_nombre}
 • Pipeline: {solicitud.pipeline.nombre}
 • Fecha de inicio del proceso: {solicitud.sura_fecha_inicio.strftime('%d/%m/%Y %H:%M') if solicitud.sura_fecha_inicio else 'En proceso'}
@@ -12733,7 +12832,7 @@ Estimado {solicitud.creada_por.get_full_name() or solicitud.creada_por.username}
 Se ha producido un error durante el procesamiento de la cotización SURA para la solicitud {solicitud.codigo}.
 
 DETALLES DE LA SOLICITUD:
-• Código: {solicitud.codigo}
+- Código: {solicitud.codigo}
 • Cliente: {cliente_nombre}
 • Pipeline: {solicitud.pipeline.nombre}
 • Fecha del error: {timezone.now().strftime('%d/%m/%Y %H:%M')}
