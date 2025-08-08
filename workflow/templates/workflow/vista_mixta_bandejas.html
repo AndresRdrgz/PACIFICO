@@ -1816,7 +1816,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
                 <div id="pendientes-loading" class="text-center py-4">
                     <div class="spinner-border text-info" role="status">
                         <span class="visually-hidden">Cargando...</span>
@@ -1888,9 +1888,6 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times me-1"></i>Cerrar
-                </button>
-                <button type="button" class="btn btn-success" id="btn-marcar-completa" style="display: none;">
-                    <i class="fas fa-check me-1"></i>Marcar Solicitud Completa
                 </button>
             </div>
         </div>
@@ -3656,11 +3653,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Event listener para marcar solicitud como completa
-    document.getElementById('btn-marcar-completa').addEventListener('click', function() {
-        const solicitudId = this.getAttribute('data-solicitud-id');
-        marcarSolicitudCompleta(solicitudId);
-    });
+
 });
 
 /**
@@ -3730,18 +3723,15 @@ function mostrarDocumentosPendientes(data, codigoSolicitud) {
     document.getElementById('pendientes-contador').textContent = 
         `${data.total_documentos} documento${data.total_documentos !== 1 ? 's' : ''}`;
     
-    // Guardar solicitud ID para el botón de marcar completa
-    document.getElementById('btn-marcar-completa').setAttribute('data-solicitud-id', data.solicitud_id);
+
     
     const listaContainer = document.getElementById('pendientes-lista');
     const sinDocumentosDiv = document.getElementById('pendientes-sin-documentos');
     const yaCompletaDiv = document.getElementById('pendientes-ya-completa');
-    const btnMarcarCompleta = document.getElementById('btn-marcar-completa');
     
     // Verificar si ya está marcada como completa
     if (data.solicitud_completa) {
         yaCompletaDiv.style.display = 'block';
-        btnMarcarCompleta.style.display = 'none';
         listaContainer.innerHTML = '';
         sinDocumentosDiv.style.display = 'none';
         return;
@@ -3750,7 +3740,6 @@ function mostrarDocumentosPendientes(data, codigoSolicitud) {
     // Verificar si hay documentos para mostrar
     if (data.total_documentos === 0) {
         sinDocumentosDiv.style.display = 'block';
-        btnMarcarCompleta.style.display = 'inline-block';
         listaContainer.innerHTML = '';
         yaCompletaDiv.style.display = 'none';
         return;
@@ -3759,7 +3748,6 @@ function mostrarDocumentosPendientes(data, codigoSolicitud) {
     // Mostrar documentos
     yaCompletaDiv.style.display = 'none';
     sinDocumentosDiv.style.display = 'none';
-    btnMarcarCompleta.style.display = 'inline-block';
     
     let html = '';
     
@@ -3916,63 +3904,7 @@ function mostrarErrorPendientes(mensaje) {
     document.getElementById('pendientes-error-mensaje').textContent = mensaje;
 }
 
-/**
- * Marca una solicitud como completa en Back Office
- */
-function marcarSolicitudCompleta(solicitudId) {
-    const button = document.getElementById('btn-marcar-completa');
-    const originalText = button.innerHTML;
-    
-    // Mostrar loading en el botón
-    button.disabled = true;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Marcando...';
-    
-    console.log('📝 Marcando solicitud como completa:', solicitudId);
-    
-    fetch(`/workflow/api/solicitudes/${solicitudId}/marcar-completa-backoffice/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        console.log('✅ Solicitud marcada como completa:', data);
-        
-        if (data.success) {
-            // Mostrar mensaje de éxito
-            mostrarNotificacion('Solicitud marcada como completa exitosamente', 'success');
-            
-            // Actualizar el modal para mostrar estado completo
-            document.getElementById('pendientes-ya-completa').style.display = 'block';
-            document.getElementById('pendientes-lista').innerHTML = '';
-            document.getElementById('pendientes-sin-documentos').style.display = 'none';
-            button.style.display = 'none';
-            
-            // Opcional: Recargar la página después de un momento
-            setTimeout(() => {
-                window.location.reload();
-            }, 2000);
-        } else {
-            throw new Error(data.error || 'Error desconocido');
-        }
-    })
-    .catch(error => {
-        console.error('❌ Error marcando solicitud como completa:', error);
-        mostrarNotificacion(`Error: ${error.message}`, 'error');
-    })
-    .finally(() => {
-        // Restaurar botón
-        button.disabled = false;
-        button.innerHTML = originalText;
-    });
-}
+
 
 
 

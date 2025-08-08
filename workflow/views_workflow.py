@@ -191,6 +191,9 @@ def api_marcar_solicitud_completa_backoffice(request, solicitud_id):
         return JsonResponse({'error': 'Método no permitido'}, status=405)
     
     try:
+        # Importar HistorialBackoffice
+        from .models import HistorialBackoffice
+        
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         
         # Verificar permisos
@@ -201,16 +204,24 @@ def api_marcar_solicitud_completa_backoffice(request, solicitud_id):
         if not solicitud.etapa_actual or solicitud.etapa_actual.nombre != "Back Office":
             return JsonResponse({'error': 'Esta funcionalidad solo está disponible para solicitudes en Back Office'}, status=400)
         
-        # Verificar que no se haya marcado ya como completa
-        ya_completa = HistorialSolicitud.objects.filter(
+        # Verificar que no se haya marcado ya como completa en HistorialBackoffice
+        ya_completa = HistorialBackoffice.objects.filter(
             solicitud=solicitud,
-            comentarios__icontains="Solicitud Completa - Back Office"
+            tipo_evento='solicitud_completa'
         ).exists()
         
         if ya_completa:
             return JsonResponse({'error': 'Esta solicitud ya fue marcada como completa'}, status=400)
         
-        # Crear registro en HistorialSolicitud
+        # Crear registro en HistorialBackoffice con el nuevo tipo de evento
+        HistorialBackoffice.objects.create(
+            tipo_evento='solicitud_completa',
+            solicitud=solicitud,
+            usuario=request.user,
+            observaciones=f"Solicitud marcada como completa en Back Office. Todos los documentos pendientes han sido revisados y calificados por {request.user.get_full_name() or request.user.username}."
+        )
+        
+        # También mantener el registro en HistorialSolicitud para compatibilidad
         HistorialSolicitud.objects.create(
             solicitud=solicitud,
             etapa=solicitud.etapa_actual,

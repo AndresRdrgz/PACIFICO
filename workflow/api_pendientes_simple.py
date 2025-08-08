@@ -324,6 +324,10 @@ def api_calificar_documento_modal(request, requisito_solicitud_id):
             requisito_solicitud.save()
             print(f"✅ DEBUG CALIFICAR MODAL: RequisitoSolicitud marcado como cumplido por '{estado}'")
         
+        # Determinar si el documento debe desaparecer del modal
+        # Los documentos calificos como "bueno" o "subsanado" desaparecen para que el usuario se enfoque en los pendientes
+        desaparece_del_modal = estado in ['bueno', 'subsanado']
+        
         return JsonResponse({
             'success': True,
             'message': f'Documento calificado como {estado}',
@@ -331,7 +335,7 @@ def api_calificar_documento_modal(request, requisito_solicitud_id):
             'calificacion_id': calificacion.id,
             'fecha_calificacion': calificacion.fecha_calificacion.isoformat(),
             'calificado_por': request.user.get_full_name() or request.user.username,
-            'desaparece_del_modal': False  # El modal ahora muestra todos los documentos siempre
+            'desaparece_del_modal': desaparece_del_modal
         })
         
     except Exception as e:
