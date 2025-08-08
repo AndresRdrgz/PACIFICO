@@ -1322,6 +1322,31 @@ class PlantillaOrdenExpedienteAdmin(admin.ModelAdmin):
 # HISTORIAL BACK OFFICE ADMIN
 # --------------------------------------
 
+class SubsanadoFilter(admin.SimpleListFilter):
+    """Filtro personalizado para eventos de subsanado"""
+    title = 'Eventos de Subsanado'
+    parameter_name = 'es_subsanado'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('si', 'Sí - Eventos de Subsanado'),
+            ('no', 'No - Otros Eventos'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'si':
+            return queryset.filter(
+                tipo_evento='calificacion',
+                observaciones__icontains='SUBSANADO'
+            )
+        elif self.value() == 'no':
+            return queryset.exclude(
+                tipo_evento='calificacion',
+                observaciones__icontains='SUBSANADO'
+            )
+        return queryset
+
+
 @admin.register(HistorialBackoffice)
 class HistorialBackofficeAdmin(admin.ModelAdmin):
     """
@@ -1333,6 +1358,7 @@ class HistorialBackofficeAdmin(admin.ModelAdmin):
         'tipo_evento', 
         'usuario', 
         'evento_descripcion',
+        'es_subsanado',
         'tiempo_formateado',
         'tiempo_bandeja_grupal_formateado'
     ]
@@ -1345,6 +1371,7 @@ class HistorialBackofficeAdmin(admin.ModelAdmin):
         ('solicitud__pipeline', admin.RelatedOnlyFieldListFilter),
         ('solicitud__etapa_actual', admin.RelatedOnlyFieldListFilter),
         ('subestado_destino', admin.RelatedOnlyFieldListFilter),
+        SubsanadoFilter,
     ]
     
     search_fields = [
@@ -1423,7 +1450,11 @@ class HistorialBackofficeAdmin(admin.ModelAdmin):
         if obj.tipo_evento == 'devolucion':
             return f"Devuelto por: {obj.motivo_devolucion[:50]}..." if obj.motivo_devolucion else "Devuelto"
         elif obj.tipo_evento == 'calificacion':
-            return f"{obj.documento_nombre}: {obj.calificacion_anterior} → {obj.calificacion_nueva}"
+            descripcion = f"{obj.documento_nombre}: {obj.calificacion_anterior} → {obj.calificacion_nueva}"
+            # Agregar información de subsanado si está presente en las observaciones
+            if obj.observaciones and 'SUBSANADO' in obj.observaciones:
+                descripcion += " [SUBSANADO]"
+            return descripcion
         elif obj.tipo_evento == 'subestado':
             origen = obj.subestado_origen.nombre if obj.subestado_origen else "Inicio"
             destino = obj.subestado_destino.nombre if obj.subestado_destino else "N/A"
@@ -1438,6 +1469,15 @@ class HistorialBackofficeAdmin(admin.ModelAdmin):
             return f"Asignado a {usuario_asignado} en {subestado} (Tiempo en bandeja: {tiempo})"
         return "N/A"
     evento_descripcion.short_description = 'Descripción del Evento'
+    
+    def es_subsanado(self, obj):
+        """Indica si el evento es de subsanado"""
+        if obj.tipo_evento == 'calificacion' and obj.observaciones:
+            if 'SUBSANADO' in obj.observaciones:
+                return "✅ Sí"
+        return "❌ No"
+    es_subsanado.short_description = 'Subsanado'
+    es_subsanado.admin_order_field = 'observaciones'
     
     def tiempo_formateado(self, obj):
         """Tiempo en subestado formateado"""

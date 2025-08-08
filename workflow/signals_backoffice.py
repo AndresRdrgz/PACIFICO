@@ -21,15 +21,21 @@ def capturar_calificacion_anterior(sender, instance, **kwargs):
         try:
             # Obtener el registro anterior de la base de datos
             old_instance = CalificacionDocumentoBackoffice.objects.get(pk=instance.pk)
-            # Almacenar TANTO el estado como el motivo anterior
+            # Almacenar TANTO el estado como el motivo anterior Y el estado de subsanado
             instance._calificacion_anterior = old_instance.estado
             instance._motivo_anterior = old_instance.opcion_desplegable
+            instance._subsanado_anterior = old_instance.subsanado
+            instance._subsanado_por_anterior = old_instance.subsanado_por
         except CalificacionDocumentoBackoffice.DoesNotExist:
             instance._calificacion_anterior = None
             instance._motivo_anterior = None
+            instance._subsanado_anterior = None
+            instance._subsanado_por_anterior = None
     else:
         instance._calificacion_anterior = None
         instance._motivo_anterior = None
+        instance._subsanado_anterior = None
+        instance._subsanado_por_anterior = None
 
 
 @receiver(post_save, sender=CalificacionDocumentoBackoffice)
@@ -65,30 +71,72 @@ def registrar_cambio_calificacion(sender, instance, created, **kwargs):
     
     if created:
         print(f"🔄 Signal de reseteo de campos temporalmente deshabilitado - ejecutar migration primero")
+        
+        # NUEVO: Registrar cuando se crea una calificación directamente como subsanado
+        print(f"🔍 DEBUG SIGNAL CREATED: instance.subsanado={instance.subsanado}, estado={instance.estado}")
+        if instance.subsanado:
+            try:
+                HistorialBackoffice.objects.create(
+                    tipo_evento='calificacion',
+                    solicitud=instance.requisito_solicitud.solicitud,
+                    usuario=instance.calificado_por,
+                    documento_nombre=instance.requisito_solicitud.requisito.nombre,
+                    calificacion_anterior='sin_calificar',
+                    calificacion_nueva=instance.estado,
+                    requisito_solicitud_id=instance.requisito_solicitud.id,
+                    observaciones=f"Documento marcado como SUBSANADO directamente por {instance.subsanado_por.get_full_name() if instance.subsanado_por else 'usuario'}"
+                )
+                print(f"📋 Historial registrado: Subsanado directo para documento {instance.requisito_solicitud.requisito.nombre}")
+            except Exception as e:
+                print(f"Error registrando subsanado directo: {e}")
     
-    # LÓGICA MEJORADA: Registrar si cambia el estado O el motivo
+    # LÓGICA MEJORADA: Registrar si cambia el estado, el motivo O el subsanado
     if not created and hasattr(instance, '_calificacion_anterior'):
         calificacion_anterior = instance._calificacion_anterior
         calificacion_nueva = instance.estado
         motivo_anterior = instance._motivo_anterior
         motivo_nuevo = instance.opcion_desplegable
+        subsanado_anterior = getattr(instance, '_subsanado_anterior', False)
+        subsanado_nuevo = instance.subsanado
+        subsanado_por_anterior = getattr(instance, '_subsanado_por_anterior', None)
+        subsanado_por_nuevo = instance.subsanado_por
         
-        # Registrar si cambió el estado O el motivo (incluso si el estado es igual)
+        # Registrar si cambió el estado, el motivo O el subsanado
         cambio_estado = calificacion_anterior != calificacion_nueva
         cambio_motivo = motivo_anterior != motivo_nuevo
+        cambio_subsanado = subsanado_anterior != subsanado_nuevo
         
-        if cambio_estado or cambio_motivo:
+        print(f"🔍 DEBUG SIGNAL: cambio_estado={cambio_estado}, cambio_motivo={cambio_motivo}, cambio_subsanado={cambio_subsanado}")
+        print(f"🔍 DEBUG SIGNAL: subsanado_anterior={subsanado_anterior}, subsanado_nuevo={subsanado_nuevo}")
+        print(f"🔍 DEBUG SIGNAL: calificacion_anterior={calificacion_anterior}, calificacion_nueva={calificacion_nueva}")
+        
+        if cambio_estado or cambio_motivo or cambio_subsanado:
             try:
                 # Preparar descripción del cambio
-                if cambio_estado and cambio_motivo:
-                    observaciones = f"Cambio de estado ({calificacion_anterior} → {calificacion_nueva}) y motivo"
-                elif cambio_estado:
-                    observaciones = f"Cambio de estado: {calificacion_anterior} → {calificacion_nueva}"
+                observaciones_partes = []
+                
+                if cambio_estado:
+                    observaciones_partes.append(f"estado ({calificacion_anterior} → {calificacion_nueva})")
+                
+                if cambio_motivo:
+                    observaciones_partes.append("motivo")
+                
+                if cambio_subsanado:
+                    if subsanado_nuevo:
+                        observaciones_partes.append(f"marcado como SUBSANADO por {subsanado_por_nuevo.get_full_name() if subsanado_por_nuevo else 'usuario'}")
+                    else:
+                        observaciones_partes.append("removido marca de subsanado")
+                
+                if len(observaciones_partes) == 1:
+                    observaciones = f"Cambio de {observaciones_partes[0]}"
                 else:
-                    observaciones = f"Cambio de motivo (estado: {calificacion_nueva})"
+                    observaciones = f"Cambios: {', '.join(observaciones_partes)}"
+                
+                # Siempre usar 'calificacion' como tipo de evento (subsanado se diferencia en observaciones)
+                tipo_evento = 'calificacion'
                 
                 HistorialBackoffice.objects.create(
-                    tipo_evento='calificacion',
+                    tipo_evento=tipo_evento,
                     solicitud=instance.requisito_solicitud.solicitud,
                     usuario=instance.calificado_por,
                     documento_nombre=instance.requisito_solicitud.requisito.nombre,
@@ -344,6 +392,26 @@ def obtener_historial_solicitud(solicitud_id, tipo_evento=None):
         queryset = queryset.filter(tipo_evento=tipo_evento)
     
     return queryset.select_related('usuario', 'subestado_origen', 'subestado_destino', 'usuario_asignado')
+
+
+def registrar_subsanado_manual(solicitud, usuario, documento_nombre, requisito_solicitud_id, observaciones=""):
+    """
+    Función para registrar manualmente un evento de subsanado
+    """
+    try:
+        HistorialBackoffice.objects.create(
+            tipo_evento='calificacion',
+            solicitud=solicitud,
+            usuario=usuario,
+            documento_nombre=documento_nombre,
+            requisito_solicitud_id=requisito_solicitud_id,
+            observaciones=observaciones or f"Documento {documento_nombre} marcado como SUBSANADO por {usuario.get_full_name() or usuario.username}"
+        )
+        print(f"📋 Historial manual registrado: Subsanado para documento {documento_nombre}")
+        return True
+    except Exception as e:
+        print(f"Error registrando subsanado manual: {e}")
+        return False
 
 
 def obtener_estadisticas_bandeja_grupal(subestado=None, fecha_desde=None, fecha_hasta=None):

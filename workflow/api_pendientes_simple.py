@@ -141,7 +141,14 @@ def api_obtener_documentos_pendientes_backoffice_simple(request, solicitud_id):
                     # Determinar estado actual
                     try:
                         calificacion_actual = calificaciones.first() if calificaciones.exists() else None
-                        estado_calificacion = calificacion_actual.estado if calificacion_actual else 'sin_calificar'
+                        if calificacion_actual:
+                            # Si está marcado como subsanado, mostrar 'subsanado' en lugar del estado original
+                            if calificacion_actual.subsanado:
+                                estado_calificacion = 'subsanado'
+                            else:
+                                estado_calificacion = calificacion_actual.estado
+                        else:
+                            estado_calificacion = 'sin_calificar'
                     except Exception as e:
                         print(f"❌ DEBUG MODAL CHECKLIST: Error determinando estado para req_sol {req_sol.id}: {str(e)}")
                         calificacion_actual = None
@@ -170,10 +177,11 @@ def api_obtener_documentos_pendientes_backoffice_simple(request, solicitud_id):
                             'observaciones': '',  # CalificacionDocumentoBackoffice no tiene campo observaciones
                             'cumplido': req_sol.cumplido,
                             'mensaje_personalizado': req_info['mensaje_personalizado'],
-                            # Lógica de botones (misma que checklist)
+                            # Lógica de botones (misma que checklist + subsanado)
                             'puede_calificar_bueno': tiene_archivo,
                             'puede_calificar_malo': tiene_archivo,
-                            'puede_calificar_pendiente': not req_info['obligatorio']  # Solo opcionales
+                            'puede_calificar_pendiente': not req_info['obligatorio'],  # Solo opcionales
+                            'puede_calificar_subsanado': True  # Siempre disponible
                         }
                         documentos.append(documento)
                         print(f"✅ DEBUG MODAL CHECKLIST: Documento agregado: {req_sol.requisito.nombre}")
@@ -241,10 +249,10 @@ def api_calificar_documento_modal(request, requisito_solicitud_id):
         
         # Obtener datos del request
         data = json.loads(request.body)
-        estado = data.get('estado')  # 'bueno', 'malo', 'pendiente'
+        estado = data.get('estado')  # 'bueno', 'malo', 'pendiente', 'subsanado'
         observaciones = data.get('observaciones', '')  # No se usa pero se mantiene por compatibilidad
         
-        if estado not in ['bueno', 'malo', 'pendiente']:
+        if estado not in ['bueno', 'malo', 'pendiente', 'subsanado']:
             return JsonResponse({'error': 'Estado de calificación inválido'}, status=400)
         
         # Obtener RequisitoSolicitud
@@ -269,31 +277,52 @@ def api_calificar_documento_modal(request, requisito_solicitud_id):
                 'error': 'Debe subir un archivo antes de calificar como bueno o malo'
             }, status=400)
         
+        # Subsanado se puede aplicar directamente sin validaciones previas
+        
         # Crear o actualizar calificación (sin observaciones porque el modelo no lo tiene)
         calificacion, created = CalificacionDocumentoBackoffice.objects.get_or_create(
             requisito_solicitud=requisito_solicitud,
             defaults={
                 'calificado_por': request.user,
-                'estado': estado,
-                'fecha_calificacion': timezone.now()
+                'estado': estado if estado != 'subsanado' else 'bueno',  # Si es subsanado directo, usar 'bueno' como base
+                'fecha_calificacion': timezone.now(),
+                'subsanado': estado == 'subsanado',
+                'subsanado_por': request.user if estado == 'subsanado' else None,
+                'fecha_subsanado': timezone.now() if estado == 'subsanado' else None
             }
         )
         
         if not created:
             # Actualizar calificación existente
-            calificacion.estado = estado
+            if estado == 'subsanado':
+                # Para subsanado, si no hay estado previo o es sin_calificar, usar 'bueno' como base
+                if not calificacion.estado or calificacion.estado == 'sin_calificar':
+                    calificacion.estado = 'bueno'
+                # Marcar como subsanado
+                calificacion.subsanado = True
+                calificacion.subsanado_por = request.user
+                calificacion.fecha_subsanado = timezone.now()
+                print(f"🔄 DEBUG SUBSANADO: Marcando como subsanado - estado: {calificacion.estado}, subsanado: {calificacion.subsanado}, por: {request.user}")
+            else:
+                # Para otros estados, actualizar normalmente y resetear subsanado
+                calificacion.estado = estado
+                calificacion.subsanado = False
+                calificacion.subsanado_por = None
+                calificacion.fecha_subsanado = None
+                print(f"🔄 DEBUG ESTADO: Cambiando a estado: {estado}, reseteando subsanado")
+            
             calificacion.calificado_por = request.user
             calificacion.fecha_calificacion = timezone.now()
             calificacion.save()
         
         print(f"✅ DEBUG CALIFICAR MODAL: Calificación {'creada' if created else 'actualizada'} como '{estado}'")
         
-        # Si es "bueno", marcar requisito como cumplido
-        if estado == 'bueno':
+        # Si es "bueno" o "subsanado", marcar requisito como cumplido
+        if estado in ['bueno', 'subsanado']:
             requisito_solicitud.cumplido = True
             requisito_solicitud.fecha_cumplimiento = timezone.now()
             requisito_solicitud.save()
-            print(f"✅ DEBUG CALIFICAR MODAL: RequisitoSolicitud marcado como cumplido")
+            print(f"✅ DEBUG CALIFICAR MODAL: RequisitoSolicitud marcado como cumplido por '{estado}'")
         
         return JsonResponse({
             'success': True,
