@@ -1450,7 +1450,7 @@ class HistorialBackofficeAdmin(admin.ModelAdmin):
         if obj.tipo_evento == 'devolucion':
             return f"Devuelto por: {obj.motivo_devolucion[:50]}..." if obj.motivo_devolucion else "Devuelto"
         elif obj.tipo_evento == 'calificacion':
-            descripcion = f"{obj.documento_nombre}: {obj.calificacion_anterior} → {obj.calificacion_nueva}"
+            descripcion = f"{obj.documento_nombre}: {obj.calificacion_anterior} -> {obj.calificacion_nueva}"
             # Agregar información de subsanado si está presente en las observaciones
             if obj.observaciones and 'SUBSANADO' in obj.observaciones:
                 descripcion += " [SUBSANADO]"
@@ -1458,7 +1458,7 @@ class HistorialBackofficeAdmin(admin.ModelAdmin):
         elif obj.tipo_evento == 'subestado':
             origen = obj.subestado_origen.nombre if obj.subestado_origen else "Inicio"
             destino = obj.subestado_destino.nombre if obj.subestado_destino else "N/A"
-            return f"{origen} → {destino}"
+            return f"{origen} -> {destino}"
         elif obj.tipo_evento == 'entrada_bandeja_grupal':
             subestado = obj.subestado_destino.nombre if obj.subestado_destino else "N/A"
             return f"Entrada a bandeja grupal: {subestado}"

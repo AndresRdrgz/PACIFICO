@@ -8570,6 +8570,72 @@ def api_kpis(request):
 
 
 @login_required
+def api_kpis_subestado(request):
+    """API para obtener número de solicitudes por subestado"""
+    try:
+        from django.db.models import Count
+        
+        # Obtener todas las solicitudes activas agrupadas por subestado
+        solicitudes_por_subestado = Solicitud.objects.filter(
+            etapa_actual__isnull=False,
+            subestado_actual__isnull=False
+        ).values(
+            'subestado_actual__nombre'
+        ).annotate(
+            cantidad=Count('id')
+        ).order_by('subestado_actual__nombre')
+        
+        # Calcular total
+        total = sum(item['cantidad'] for item in solicitudes_por_subestado)
+        
+        # Inicializar contadores específicos
+        kpis = {
+            'total': total,
+            'checklist': 0,
+            'captura': 0,
+            'firma': 0,
+            'orden': 0,
+            'tramite': 0,
+            'subsanacion': 0
+        }
+        
+        # Mapear los subestados a los KPIs
+        for item in solicitudes_por_subestado:
+            nombre = item['subestado_actual__nombre'].lower()
+            cantidad = item['cantidad']
+            
+            if 'checklist' in nombre:
+                kpis['checklist'] = cantidad
+            elif 'captura' in nombre:
+                kpis['captura'] = cantidad
+            elif 'firma' in nombre:
+                kpis['firma'] = cantidad
+            elif 'orden' in nombre or 'expediente' in nombre:
+                kpis['orden'] = cantidad
+            elif 'tramite' in nombre or 'trámite' in nombre:
+                kpis['tramite'] = cantidad
+            elif 'subsanacion' in nombre or 'subsanación' in nombre:
+                kpis['subsanacion'] = cantidad
+        
+        # Debug: mostrar todos los subestados encontrados
+        print(f"📊 Subestados encontrados:")
+        for item in solicitudes_por_subestado:
+            print(f"   - {item['subestado_actual__nombre']}: {item['cantidad']}")
+        
+        return JsonResponse({
+            'success': True,
+            **kpis
+        })
+        
+    except Exception as e:
+        print(f"❌ Error en api_kpis_subestado: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@login_required
 def api_bandejas(request):
     """API para obtener contenido actualizado de las bandejas"""
     try:
@@ -15839,6 +15905,7 @@ def api_validar_documentos_backoffice(request, solicitud_id):
         documentos_pendientes = []
         documentos_buenos = 0
         documentos_malos = 0
+        documentos_subsanados = 0
         
         # 🔍 DEBUG SIMPLIFICADO: Solo información esencial
         print(f"📋 Validando solicitud {solicitud_id}: {len(requisitos_definidos)} requisitos definidos")
@@ -15876,13 +15943,14 @@ def api_validar_documentos_backoffice(request, solicitud_id):
                         })
                     continue
                 
-                # Contar por estado (solo bueno/malo, pendiente se ignora)
+                # Contar por estado (bueno/malo/subsanado, pendiente se ignora)
                 if estado == 'bueno':
                     documentos_buenos += 1
                 elif estado == 'malo':
                     documentos_malos += 1
                     # ✅ LÓGICA CORRECTA: Solo documentos OBLIGATORIOS "malo" bloquean
-                    if es_obligatorio:
+                    # PERO: Si está subsanado, NO bloquea aunque sea malo
+                    if es_obligatorio and not (calificacion and calificacion.subsanado):
                         documentos_problematicos.append({
                             'nombre': req_sol.requisito.nombre,
                             'problema': 'calificado_como_malo',
@@ -15890,6 +15958,10 @@ def api_validar_documentos_backoffice(request, solicitud_id):
                             'es_obligatorio': True
                         })
                     # Los documentos opcionales "malo" NO bloquean el avance
+                
+                # Contar documentos subsanados (independientemente del estado base)
+                if calificacion and calificacion.subsanado:
+                    documentos_subsanados += 1
             else:
                 # Sin calificación = pendiente automático (permite avanzar)
                 documentos_pendientes.append({
@@ -15966,6 +16038,8 @@ def api_validar_documentos_backoffice(request, solicitud_id):
             mensaje_partes = []
             if documentos_buenos > 0:
                 mensaje_partes.append(f"{documentos_buenos} documento(s) bueno(s)")
+            if documentos_subsanados > 0:
+                mensaje_partes.append(f"{documentos_subsanados} documento(s) subsanado(s)")
             if documentos_malos > 0:
                 mensaje_partes.append(f"{documentos_malos} documento(s) malo(s) - NO bloquean")
             if len(documentos_pendientes) > 0:
@@ -15973,7 +16047,7 @@ def api_validar_documentos_backoffice(request, solicitud_id):
             
             if mensaje_partes:
                 detalle = ", ".join(mensaje_partes)
-                mensaje = f'✅ Puede avanzar. Estado: {detalle}. (Documentos "pendiente" y opcionales "malo" NO bloquean)'
+                mensaje = f'✅ Puede avanzar. Estado: {detalle}. (Documentos "pendiente", "subsanado" y opcionales "malo" NO bloquean)'
             else:
                 mensaje = '✅ Puede avanzar. No hay documentos obligatorios que bloqueen el avance.'
             
@@ -15985,6 +16059,7 @@ def api_validar_documentos_backoffice(request, solicitud_id):
                 'total_documentos': len(requisitos_definidos),  # ✅ Total según RequisitoTransicion
                 'documentos_buenos': documentos_buenos,
                 'documentos_malos': documentos_malos,
+                'documentos_subsanados': documentos_subsanados,
                 'documentos_pendientes_count': len(documentos_pendientes)
             })
         else:
@@ -16130,14 +16205,29 @@ def api_avanzar_subestado_backoffice(request, solicitud_id):
             })
         
         else:
-            # No hay siguiente subestado, avanzar a la siguiente etapa
+            # No hay siguiente subestado, verificar si hay siguiente etapa o si estamos al final del pipeline
             transiciones_salida = solicitud.etapa_actual.transiciones_salida.all()
             
             if not transiciones_salida.exists():
-                return JsonResponse({
-                    'success': False,
-                    'error': 'No hay transiciones disponibles desde esta etapa'
-                }, status=400)
+                # Verificar si hay una siguiente etapa en el pipeline
+                siguiente_etapa_pipeline = solicitud.pipeline.etapas.filter(
+                    orden__gt=solicitud.etapa_actual.orden
+                ).order_by('orden').first()
+                
+                if not siguiente_etapa_pipeline:
+                    # Estamos al final del pipeline - marcar como completada
+                    return JsonResponse({
+                        'success': True,
+                        'mensaje': 'La solicitud ha completado todo el flujo del pipeline. No hay más etapas disponibles.',
+                        'redirect_url': '/workflow/bandeja-mixta/',
+                        'completada': True
+                    })
+                else:
+                    # Hay siguiente etapa pero no hay transición configurada
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'No hay transiciones configuradas desde esta etapa. Se requiere configurar una transición hacia "{siguiente_etapa_pipeline.nombre}" o completar manualmente la solicitud.'
+                    }, status=400)
             
             # Tomar la primera transición disponible (puede mejorarse con lógica más específica)
             transicion = transiciones_salida.first()

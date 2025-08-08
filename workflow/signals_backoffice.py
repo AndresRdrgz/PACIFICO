@@ -116,7 +116,7 @@ def registrar_cambio_calificacion(sender, instance, created, **kwargs):
                 observaciones_partes = []
                 
                 if cambio_estado:
-                    observaciones_partes.append(f"estado ({calificacion_anterior} → {calificacion_nueva})")
+                    observaciones_partes.append(f"estado ({calificacion_anterior} -> {calificacion_nueva})")
                 
                 if cambio_motivo:
                     observaciones_partes.append("motivo")

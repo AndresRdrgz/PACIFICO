@@ -20,7 +20,7 @@ def calificar_documento(request):
         print(f"DEBUG: Calificando documento - requisito_id: {requisito_solicitud_id}, estado: {estado}, opcion_id: {opcion_desplegable_id}")
         
         # Validar datos
-        if not requisito_solicitud_id or estado not in ['bueno', 'malo', 'pendiente']:
+        if not requisito_solicitud_id or estado not in ['bueno', 'malo', 'pendiente', 'subsanado']:
             return JsonResponse({'error': 'Datos inválidos'}, status=400)
         
         requisito_solicitud = get_object_or_404(RequisitoSolicitud, id=requisito_solicitud_id)
@@ -35,27 +35,55 @@ def calificar_documento(request):
         
         # Obtener o crear calificación (un usuario solo puede tener una calificación por documento)
         # IMPORTANTE: Para documentos subsanados, preservar los campos de subsanado durante la actualización
+        from django.utils import timezone
+        
         try:
             calificacion = CalificacionDocumentoBackoffice.objects.get(
                 requisito_solicitud=requisito_solicitud,
                 calificado_por=request.user
             )
-            # Actualización de calificación existente - preservar campos de subsanado si existen
-            calificacion.estado = estado
+            # Actualización de calificación existente
+            if estado == 'subsanado':
+                # Para subsanado, mantener el estado base y marcar como subsanado
+                if not calificacion.estado or calificacion.estado == 'sin_calificar':
+                    calificacion.estado = 'bueno'  # Estado base para subsanado directo
+                calificacion.subsanado = True
+                calificacion.subsanado_por = request.user
+                calificacion.fecha_subsanado = timezone.now()
+            else:
+                # Para otros estados, actualizar normalmente y resetear subsanado
+                calificacion.estado = estado
+                calificacion.subsanado = False
+                calificacion.subsanado_por = None
+                calificacion.fecha_subsanado = None
+            
             calificacion.opcion_desplegable = opcion_desplegable
             calificacion.save()
             created = False
-            print(f"📋 Actualizando calificación existente - subsanado: {calificacion.subsanado}")
+            print(f"📋 Actualizando calificación existente - estado: {estado}, subsanado: {calificacion.subsanado}")
         except CalificacionDocumentoBackoffice.DoesNotExist:
             # Crear nueva calificación
-            calificacion = CalificacionDocumentoBackoffice.objects.create(
-                requisito_solicitud=requisito_solicitud,
-                calificado_por=request.user,
-                estado=estado,
-                opcion_desplegable=opcion_desplegable
-            )
+            if estado == 'subsanado':
+                # Crear como subsanado directo
+                calificacion = CalificacionDocumentoBackoffice.objects.create(
+                    requisito_solicitud=requisito_solicitud,
+                    calificado_por=request.user,
+                    estado='bueno',  # Estado base para subsanado
+                    opcion_desplegable=opcion_desplegable,
+                    subsanado=True,
+                    subsanado_por=request.user,
+                    fecha_subsanado=timezone.now()
+                )
+            else:
+                # Crear calificación normal
+                calificacion = CalificacionDocumentoBackoffice.objects.create(
+                    requisito_solicitud=requisito_solicitud,
+                    calificado_por=request.user,
+                    estado=estado,
+                    opcion_desplegable=opcion_desplegable
+                )
             created = True
-            print(f"📋 Creando nueva calificación")
+            print(f"📋 Creando nueva calificación - estado: {estado}, subsanado: {getattr(calificacion, 'subsanado', False)}")
         
         # 🆕 LÓGICA PARA DOCUMENTOS SUBSANADOS:
         if not created and calificacion.subsanado:
@@ -89,10 +117,10 @@ def calificar_documento(request):
                 'estado': calificacion.estado,
                 'usuario': calificacion.calificado_por.username,
                 'opcion': opcion_nombre,
-                'fecha': calificacion.fecha_calificacion.strftime('%d/%m/%Y %H:%M')
-                # NUEVOS CAMPOS temporalmente comentados hasta migration
-                # 'subsanado_por_oficial': calificacion.subsanado_por_oficial,
-                # 'pendiente_completado': calificacion.pendiente_completado
+                'fecha': calificacion.fecha_calificacion.strftime('%d/%m/%Y %H:%M'),
+                'subsanado': getattr(calificacion, 'subsanado', False),
+                'subsanado_por': calificacion.subsanado_por.username if getattr(calificacion, 'subsanado_por', None) else None,
+                'fecha_subsanado': calificacion.fecha_subsanado.strftime('%d/%m/%Y %H:%M') if getattr(calificacion, 'fecha_subsanado', None) else None
             }
         })
         

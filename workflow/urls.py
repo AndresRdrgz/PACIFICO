@@ -96,6 +96,7 @@ urlpatterns = [
     # Bandejas de trabajo URLs
     path('bandejas/', views_workflow.vista_mixta_bandejas, name='vista_mixta_bandejas'),
     path('api/kpis/', views_workflow.api_kpis, name='api_kpis'),
+    path('api/kpis-subestado/', views_workflow.api_kpis_subestado, name='api_kpis_subestado'),
     path('api/bandejas/', views_workflow.api_bandejas, name='api_bandejas'),
     path('api/check-updates/', views_workflow.api_check_updates, name='api_check_updates'),
     path('api/notifications-stream/', views_workflow.api_notifications_stream, name='api_notifications_stream'),
@@ -261,4 +262,8 @@ urlpatterns = [
     # APIs para Admin Back Office - Catálogos
     path('api/admin-backoffice/catalogos/', api_admin_backoffice.api_catalogos_crud, name='api_catalogos_crud'),
     path('api/admin-backoffice/catalogos/<int:catalogo_id>/', api_admin_backoffice.api_catalogos_crud_detail, name='api_catalogos_crud_detail'),
+    
+    # APIs para Admin Back Office - Opciones Desplegables
+    path('api/admin-backoffice/opciones/', api_admin_backoffice.api_opciones_crud, name='api_opciones_crud'),
+    path('api/admin-backoffice/opciones/<int:opcion_id>/', api_admin_backoffice.api_opciones_crud_detail, name='api_opciones_crud_detail'),
 ]

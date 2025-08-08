@@ -680,9 +680,7 @@
                     <button type="button" class="modern-btn modern-btn-primary" id="toggle-supervisor-view">
                         <i class="fas fa-eye me-1"></i>Mostrar/Ocultar Vista Completa
                     </button>
-                    <button type="button" class="modern-btn modern-btn-success" id="export-supervisor-data">
-                        <i class="fas fa-download me-1"></i>Exportar Datos
-                    </button>
+
                     <button type="button" class="modern-btn modern-btn-info" id="export-backoffice-data">
                         <i class="fas fa-file-excel me-1"></i>Exportar Back Office
                     </button>
@@ -1394,6 +1392,97 @@
         </div>
     </div>
 
+    <!-- KPIs por Subestado -->
+    <div class="mt-4" id="kpis-subestado-section">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0 text-dark fw-bold">
+                <i class="fas fa-chart-bar me-2"></i>
+                KPIs por Subestado
+            </h5>
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary btn-sm" onclick="actualizarKPIsSubestado()">
+                    <i class="fas fa-sync-alt me-1"></i>
+                    Actualizar
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="toggleKPIsSubestado()">
+                    <i class="fas fa-eye me-1" id="toggle-kpis-icon"></i>
+                    <span id="toggle-kpis-text">Ocultar</span>
+                </button>
+            </div>
+        </div>
+        
+        <div id="kpis-subestado-container">
+            <div class="row g-3">
+                <div class="col-2">
+                    <div class="kpi-card-modern kpi-activas">
+                        <div class="kpi-icon-modern">
+                            <i class="fas fa-play-circle"></i>
+                        </div>
+                        <div class="kpi-content-modern">
+                            <p class="kpi-label-modern">Checklist</p>
+                            <h4 class="kpi-number-modern" id="kpi-checklist">0</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-2">
+                    <div class="kpi-card-modern kpi-completadas">
+                        <div class="kpi-icon-modern">
+                            <i class="fas fa-camera"></i>
+                        </div>
+                        <div class="kpi-content-modern">
+                            <p class="kpi-label-modern">Captura</p>
+                            <h4 class="kpi-number-modern" id="kpi-captura">0</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-2">
+                    <div class="kpi-card-modern kpi-vencidas">
+                        <div class="kpi-icon-modern">
+                            <i class="fas fa-signature"></i>
+                        </div>
+                        <div class="kpi-content-modern">
+                            <p class="kpi-label-modern">Firma</p>
+                            <h4 class="kpi-number-modern" id="kpi-firma">0</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-2">
+                    <div class="kpi-card-modern kpi-warning">
+                        <div class="kpi-icon-modern">
+                            <i class="fas fa-folder-open"></i>
+                        </div>
+                        <div class="kpi-content-modern">
+                            <p class="kpi-label-modern">Orden Expediente</p>
+                            <h4 class="kpi-number-modern" id="kpi-orden">0</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-2">
+                    <div class="kpi-card-modern kpi-info">
+                        <div class="kpi-icon-modern">
+                            <i class="fas fa-cogs"></i>
+                        </div>
+                        <div class="kpi-content-modern">
+                            <p class="kpi-label-modern">Trámite</p>
+                            <h4 class="kpi-number-modern" id="kpi-tramite">0</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-2">
+                    <div class="kpi-card-modern kpi-danger">
+                        <div class="kpi-icon-modern">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                        <div class="kpi-content-modern">
+                            <p class="kpi-label-modern">Subsanación</p>
+                            <h4 class="kpi-number-modern" id="kpi-subsanacion">0</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Instrucciones Compactas para el Usuario -->
 <div class="mt-4 mb-3">
     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -1920,22 +2009,23 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Función para obtener token CSRF de las cookies
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
+    // Función global para obtener token CSRF de las cookies
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
                 }
             }
-            return cookieValue;
         }
+        return cookieValue;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
 
         // =====================================
         // MODAL DE CONFIRMACIÓN PERSONALIZADO
@@ -2784,13 +2874,7 @@
             actualizarContadoresSupervisor();
         }
 
-        // Función para exportar datos de supervisor
-        const exportSupervisorData = document.getElementById('export-supervisor-data');
-        if (exportSupervisorData) {
-            exportSupervisorData.addEventListener('click', function () {
-                exportarDatosSupervisor();
-            });
-        }
+
 
         // Función para exportar datos de Back Office
         const exportBackofficeData = document.getElementById('export-backoffice-data');
@@ -2808,74 +2892,9 @@
             });
         }
 
-        function exportarDatosSupervisor() {
-            const supervisorFilas = document.querySelectorAll('.supervisor-row');
-            const datos = [];
 
-            // Encabezados
-            datos.push([
-                'Código', 'Cliente', 'Pipeline', 'Etapa', 'Asignado a',
-                'SLA', 'Fecha Creación', 'Última Actualización', 'Creado por', 'Monto', 'Tipo'
-            ]);
 
-            // Datos de cada fila
-            supervisorFilas.forEach(fila => {
-                if (fila.style.display !== 'none') {
-                    try {
-                        const codigoEl = fila.querySelector('td:nth-child(1) strong');
-                        const clienteEl = fila.querySelector('td:nth-child(2) strong');
-                        const pipelineEl = fila.querySelector('td:nth-child(3) .badge');
-                        const etapaEl = fila.querySelector('td:nth-child(4) .badge');
-                        const asignadoEl = fila.querySelector('td:nth-child(5) .badge');
-                        const slaEl = fila.querySelector('td:nth-child(6) span');
-                        const fechaCreacionEl = fila.querySelector('td:nth-child(7) small');
-                        const ultimaActualizacionEl = fila.querySelector('td:nth-child(8) small');
-                        const creadoPorEl = fila.querySelector('td:nth-child(9) small');
-                        const montoEl = fila.querySelector('td:nth-child(10) strong');
 
-                        const codigo = codigoEl ? codigoEl.textContent : 'N/A';
-                        const cliente = clienteEl ? clienteEl.textContent : 'N/A';
-                        const pipeline = pipelineEl ? pipelineEl.textContent : 'N/A';
-                        const etapa = etapaEl ? etapaEl.textContent : 'N/A';
-                        const asignado = asignadoEl ? asignadoEl.textContent : 'N/A';
-                        const sla = slaEl ? slaEl.textContent.trim() : 'N/A';
-                        const fechaCreacion = fechaCreacionEl ? fechaCreacionEl.textContent : 'N/A';
-                        const ultimaActualizacion = ultimaActualizacionEl ? ultimaActualizacionEl.textContent : 'N/A';
-                        const creadoPor = creadoPorEl ? creadoPorEl.textContent : 'N/A';
-                        const monto = montoEl ? montoEl.textContent : 'N/A';
-                        const tipo = fila.dataset.tipo === 'grupal' ? 'Bandeja Grupal' : 'Asignada';
-
-                        datos.push([
-                            codigo, cliente, pipeline, etapa, asignado, sla,
-                            fechaCreacion, ultimaActualizacion, creadoPor, monto, tipo
-                        ]);
-                    } catch (error) {
-                        console.error('Error procesando fila supervisor:', error, fila);
-                        // Continuar con la siguiente fila
-                    }
-                }
-            });
-
-            // Crear CSV
-            const csvContent = datos.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-
-            if (link.download !== undefined) {
-                const url = URL.createObjectURL(blob);
-                link.setAttribute('href', url);
-                link.setAttribute('download', `solicitudes_supervisor_${new Date().toISOString().split('T')[0]}.csv`);
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-        }
-
-        // Función para obtener CSRF token
-        function getCsrfToken() {
-            return document.querySelector('[name=csrfmiddlewaretoken]').value;
-        }
 
         function exportarDatosBackOffice() {
             // Mostrar indicador de carga
@@ -2888,7 +2907,7 @@
             fetch('/workflow/api/exportar-backoffice/', {
                 method: 'GET',
                 headers: {
-                    'X-CSRFToken': getCsrfToken(),
+                    'X-CSRFToken': getCookie('csrftoken'),
                     'Content-Type': 'application/json'
                 }
             })
@@ -3456,6 +3475,81 @@
         color: var(--danger-color);
     }
 
+    /* Nuevos estilos para KPIs por subestado */
+    .kpi-warning .kpi-icon-modern {
+        background: linear-gradient(135deg, #f59e0b, #fbbf24);
+        color: white;
+    }
+
+    .kpi-warning .kpi-number-modern {
+        color: #f59e0b;
+    }
+
+    .kpi-info .kpi-icon-modern {
+        background: linear-gradient(135deg, #3b82f6, #60a5fa);
+        color: white;
+    }
+
+    .kpi-info .kpi-number-modern {
+        color: #3b82f6;
+    }
+
+    .kpi-danger .kpi-icon-modern {
+        background: linear-gradient(135deg, #ef4444, #f87171);
+        color: white;
+    }
+
+    .kpi-danger .kpi-number-modern {
+        color: #ef4444;
+    }
+
+    .kpi-neutral .kpi-icon-modern {
+        background: linear-gradient(135deg, #6b7280, #9ca3af);
+        color: white;
+    }
+
+    .kpi-neutral .kpi-number-modern {
+        color: #6b7280;
+    }
+
+    /* Animaciones para KPIs por subestado */
+    #kpis-subestado-container .kpi-card-modern {
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    #kpis-subestado-container .kpi-card-modern:nth-child(1) { animation-delay: 0.1s; }
+    #kpis-subestado-container .kpi-card-modern:nth-child(2) { animation-delay: 0.2s; }
+    #kpis-subestado-container .kpi-card-modern:nth-child(3) { animation-delay: 0.3s; }
+    #kpis-subestado-container .kpi-card-modern:nth-child(4) { animation-delay: 0.4s; }
+
+    /* Hover effects específicos para KPIs de subestado */
+    #kpis-subestado-container .kpi-card-modern:hover {
+        transform: translateY(-6px) scale(1.02);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    /* Ajustes para KPIs de subestado en una línea */
+    #kpis-subestado-container .kpi-card-modern {
+        height: 85px;
+        padding: 16px 20px;
+    }
+
+    #kpis-subestado-container .kpi-icon-modern {
+        width: 42px;
+        height: 42px;
+        font-size: 1.1rem;
+        margin-right: 12px;
+    }
+
+    #kpis-subestado-container .kpi-label-modern {
+        font-size: 0.85rem;
+        margin-bottom: 4px;
+    }
+
+    #kpis-subestado-container .kpi-number-modern {
+        font-size: 1.4rem;
+    }
+
     /* Responsive Adjustments */
     @media (max-width: 768px) {
         .kpi-card-modern {
@@ -3470,6 +3564,33 @@
             font-size: 1.2rem;
             margin-right: 12px;
         }
+
+        /* Ajustes específicos para KPIs de subestado en móviles */
+        #kpis-subestado-container .col-2 {
+            flex: 0 0 50% !important;
+            max-width: 50% !important;
+        }
+
+        #kpis-subestado-container .kpi-card-modern {
+            height: 75px;
+            padding: 12px 16px;
+        }
+
+        #kpis-subestado-container .kpi-icon-modern {
+            width: 36px;
+            height: 36px;
+            font-size: 1rem;
+            margin-right: 8px;
+        }
+
+        #kpis-subestado-container .kpi-label-modern {
+            font-size: 0.75rem;
+        }
+
+        #kpis-subestado-container .kpi-number-modern {
+            font-size: 1.2rem;
+        }
+    }
 
         .kpi-number-modern {
             font-size: 1.4rem;
@@ -3570,7 +3691,7 @@ function cargarDocumentosPendientes(solicitudId, codigoSolicitud) {
         method: 'GET',
         credentials: 'same-origin',
         headers: {
-            'X-CSRFToken': getCsrfToken(),
+            'X-CSRFToken': getCookie('csrftoken'),
             'Content-Type': 'application/json'
         }
     })
@@ -3812,7 +3933,7 @@ function marcarSolicitudCompleta(solicitudId) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
+            'X-CSRFToken': getCookie('csrftoken')
         }
     })
     .then(response => {
@@ -3853,21 +3974,7 @@ function marcarSolicitudCompleta(solicitudId) {
     });
 }
 
-/**
- * Obtiene el token CSRF
- */
-function getCsrfToken() {
-    const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
-    if (csrfInput) {
-        return csrfInput.value;
-    }
-    
-    const csrfCookie = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('csrftoken='));
-    
-    return csrfCookie ? csrfCookie.split('=')[1] : '';
-}
+
 
 /**
  * Muestra notificaciones toast
@@ -3901,6 +4008,17 @@ function mostrarNotificacion(mensaje, tipo = 'info') {
 function calificarDocumentoModal(requisitoSolicitudId, estado, botonElement) {
     console.log(`📝 Calificando documento ${requisitoSolicitudId} como ${estado}`);
     
+    // Si es "malo", mostrar modal de opciones
+    if (estado === 'malo') {
+        // Obtener el nombre del documento desde el contenedor padre
+        const documentoContainer = botonElement.closest('.documento-item');
+        const documentoNombre = documentoContainer ? documentoContainer.querySelector('.fw-bold')?.textContent || 'Documento' : 'Documento';
+        
+        mostrarModalOpciones(requisitoSolicitudId, documentoNombre, botonElement);
+        return;
+    }
+    
+    // Para otros estados, proceder normalmente
     // Guardar estado original del botón
     const originalText = botonElement.innerHTML;
     const originalDisabled = botonElement.disabled;
@@ -3913,7 +4031,7 @@ function calificarDocumentoModal(requisitoSolicitudId, estado, botonElement) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': getCsrfToken()
+            'X-CSRFToken': getCookie('csrftoken')
         },
         body: JSON.stringify({
             estado: estado,
@@ -3962,9 +4080,11 @@ function calificarDocumentoModal(requisitoSolicitudId, estado, botonElement) {
                 // Actualizar el estado visual del documento
                 actualizarEstadoDocumentoModal(requisitoSolicitudId, estado, data);
                 
-                // Restaurar botón
-                botonElement.disabled = originalDisabled;
-                botonElement.innerHTML = originalText;
+                // Restaurar botón solo si existe
+                if (botonElement) {
+                    botonElement.disabled = originalDisabled;
+                    botonElement.innerHTML = originalText;
+                }
                 
                 // Actualizar estado de los botones
                 const documentoCard = document.getElementById(`documento-${requisitoSolicitudId}`);
@@ -3994,9 +4114,11 @@ function calificarDocumentoModal(requisitoSolicitudId, estado, botonElement) {
         console.error('❌ Error calificando documento:', error);
         mostrarNotificacion(`Error: ${error.message}`, 'error');
         
-        // Restaurar botón
-        botonElement.disabled = originalDisabled;
-        botonElement.innerHTML = originalText;
+        // Restaurar botón solo si existe
+        if (botonElement) {
+            botonElement.disabled = originalDisabled;
+            botonElement.innerHTML = originalText;
+        }
     });
 }
 
@@ -4053,6 +4175,381 @@ function actualizarEstadoDocumentoModal(requisitoSolicitudId, estado, data) {
     }
 }
 
+// ========================================
+// FUNCIONES PARA KPIs POR SUBESTADO
+// ========================================
+
+/**
+ * Actualiza los KPIs por subestado
+ */
+function actualizarKPIsSubestado() {
+    console.log('🔄 Actualizando KPIs por subestado...');
+    
+    // Mostrar indicador de carga
+    const contenedor = document.getElementById('kpis-subestado-container');
+    const originalContent = contenedor.innerHTML;
+    
+    contenedor.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2 text-muted">Calculando KPIs por subestado...</p>
+        </div>
+    `;
+    
+    // Hacer llamada a la API
+    fetch('/workflow/api/kpis-subestado/', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Restaurar contenido original
+            contenedor.innerHTML = originalContent;
+            
+            // Actualizar los valores
+            document.getElementById('kpi-checklist').textContent = data.checklist || 0;
+            document.getElementById('kpi-captura').textContent = data.captura || 0;
+            document.getElementById('kpi-firma').textContent = data.firma || 0;
+            document.getElementById('kpi-orden').textContent = data.orden || 0;
+            document.getElementById('kpi-tramite').textContent = data.tramite || 0;
+            document.getElementById('kpi-subsanacion').textContent = data.subsanacion || 0;
+            
+            // Animar los números
+            animarKPIs();
+            
+            console.log('✅ KPIs por subestado actualizados');
+        } else {
+            console.error('❌ Error al obtener KPIs:', data.error);
+            contenedor.innerHTML = `
+                <div class="alert alert-warning text-center">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error al cargar KPIs: ${data.error || 'Error desconocido'}
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error de conexión:', error);
+        contenedor.innerHTML = `
+            <div class="alert alert-danger text-center">
+                <i class="fas fa-wifi me-2"></i>
+                Error de conexión. <button class="btn btn-link p-0" onclick="actualizarKPIsSubestado()">Reintentar</button>
+            </div>
+        `;
+    });
+}
+
+/**
+ * Toggle para mostrar/ocultar KPIs por subestado
+ */
+function toggleKPIsSubestado() {
+    const container = document.getElementById('kpis-subestado-container');
+    const icon = document.getElementById('toggle-kpis-icon');
+    const text = document.getElementById('toggle-kpis-text');
+    
+    if (container.style.display === 'none') {
+        container.style.display = 'block';
+        icon.className = 'fas fa-eye me-1';
+        text.textContent = 'Ocultar';
+        
+        // Actualizar KPIs al mostrar
+        actualizarKPIsSubestado();
+    } else {
+        container.style.display = 'none';
+        icon.className = 'fas fa-eye-slash me-1';
+        text.textContent = 'Mostrar';
+    }
+}
+
+/**
+ * Anima los números de los KPIs
+ */
+function animarKPIs() {
+    const kpiNumbers = document.querySelectorAll('#kpis-subestado-container .kpi-number-modern');
+    
+    kpiNumbers.forEach(element => {
+        const finalValue = parseInt(element.textContent) || 0;
+        let currentValue = 0;
+        const increment = Math.ceil(finalValue / 20);
+        
+        const timer = setInterval(() => {
+            currentValue += increment;
+            if (currentValue >= finalValue) {
+                currentValue = finalValue;
+                clearInterval(timer);
+            }
+            element.textContent = currentValue;
+        }, 50);
+    });
+}
+
+// ========================================
+// FUNCIONES PARA MODAL DE OPCIONES
+// ========================================
+
+// Variable global para almacenar el requisito actual
+let currentRequisitoForOpciones = null;
+let currentBotonForOpciones = null;
+
+/**
+ * Muestra el modal de opciones para calificar como malo
+ */
+async function mostrarModalOpciones(requisitoSolicitudId, documentoNombre, botonElement) {
+    currentRequisitoForOpciones = requisitoSolicitudId;
+    currentBotonForOpciones = botonElement;
+
+    // Actualizar el nombre del documento en el modal
+    document.getElementById('opciones-documento-nombre').textContent = documentoNombre;
+
+    // Mostrar el modal primero
+    const modal = new bootstrap.Modal(document.getElementById('modalOpciones'));
+    modal.show();
+
+    // Cargar las opciones disponibles
+    await cargarOpcionesDisponibles();
+}
+
+/**
+ * Carga las opciones disponibles desde la API
+ */
+async function cargarOpcionesDisponibles() {
+    const opcionesContainer = document.getElementById('opciones-container');
+    
+    try {
+        // Mostrar loading
+        opcionesContainer.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando opciones...</div>';
+        
+        // Obtener opciones desde la API
+        const response = await fetch('/workflow/api/opciones-desplegables/', {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarOpcionesEnModal(data.data);
+        } else {
+            opcionesContainer.innerHTML = '<div class="alert alert-danger">Error al cargar opciones: ' + data.error + '</div>';
+        }
+        
+    } catch (error) {
+        console.error('Error al cargar opciones:', error);
+        opcionesContainer.innerHTML = '<div class="alert alert-danger">Error de conexión al cargar opciones</div>';
+    }
+}
+
+/**
+ * Muestra las opciones en el modal
+ */
+function mostrarOpcionesEnModal(opciones) {
+    const container = document.getElementById('opciones-container');
+    
+    if (!opciones || opciones.length === 0) {
+        container.innerHTML = '<div class="alert alert-warning">No hay opciones disponibles</div>';
+        return;
+    }
+    
+    let html = '<div class="list-group">';
+    
+    opciones.forEach(opcion => {
+        html += `
+            <button type="button" class="list-group-item list-group-item-action" onclick="seleccionarOpcion(${opcion.id}, '${opcion.nombre}')">
+                <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">${opcion.nombre}</h6>
+                </div>
+                ${opcion.descripcion ? `<p class="mb-1 text-muted">${opcion.descripcion}</p>` : ''}
+            </button>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+/**
+ * Selecciona una opción y califica el documento como malo
+ */
+function seleccionarOpcion(opcionId, opcionNombre) {
+    console.log(`📝 Opción seleccionada: ${opcionNombre} (ID: ${opcionId})`);
+    
+    // Calificar automáticamente como malo con la opción seleccionada
+    calificarDocumentoConOpcion(currentRequisitoForOpciones, 'malo', opcionId);
+    
+    // Cerrar el modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalOpciones'));
+    modal.hide();
+}
+
+/**
+ * Actualiza la interfaz después de calificar un documento
+ */
+function actualizarInterfazCalificacion(botonElement, estado) {
+    if (!botonElement) {
+        console.warn('⚠️ botonElement es null en actualizarInterfazCalificacion');
+        return;
+    }
+    
+    // Buscar el contenedor de botones
+    const grupoContainer = botonElement.closest('.d-flex');
+    if (!grupoContainer) {
+        console.warn('⚠️ No se encontró el contenedor de botones');
+        return;
+    }
+    
+    // Remover clases activas de todos los botones del mismo grupo
+    const grupoButtons = grupoContainer.querySelectorAll('.calificar-modal-btn');
+    grupoButtons.forEach(btn => {
+        btn.classList.remove('btn-success', 'btn-danger', 'btn-warning', 'btn-info');
+        const estadoBtn = btn.getAttribute('data-estado');
+        const outlineClass = 'btn-outline-' + (estadoBtn === 'bueno' ? 'success' : 
+                                               estadoBtn === 'malo' ? 'danger' :
+                                               estadoBtn === 'pendiente' ? 'warning' : 'info');
+        btn.classList.add(outlineClass);
+    });
+    
+    // Activar el botón correspondiente solo si existe
+    if (botonElement) {
+        if (estado === 'bueno') {
+            botonElement.classList.remove('btn-outline-success');
+            botonElement.classList.add('btn-success');
+        } else if (estado === 'malo') {
+            botonElement.classList.remove('btn-outline-danger');
+            botonElement.classList.add('btn-danger');
+        } else if (estado === 'pendiente') {
+            botonElement.classList.remove('btn-outline-warning');
+            botonElement.classList.add('btn-warning');
+        } else if (estado === 'subsanado') {
+            botonElement.classList.remove('btn-outline-info');
+            botonElement.classList.add('btn-info');
+        }
+    }
+}
+
+/**
+ * Califica un documento con una opción específica
+ */
+function calificarDocumentoConOpcion(requisitoSolicitudId, estado, opcionId) {
+    console.log(`📝 Calificando documento ${requisitoSolicitudId} como ${estado} con opción ${opcionId}`);
+    
+    const botonElement = currentBotonForOpciones;
+    
+    if (!botonElement) {
+        console.error('❌ currentBotonForOpciones es null');
+        mostrarNotificacion('Error interno: elemento de botón no encontrado', 'error');
+        return;
+    }
+    
+    // Guardar estado original del botón
+    const originalText = botonElement.innerHTML;
+    const originalDisabled = botonElement.disabled;
+    
+    // Mostrar loading en el botón
+    botonElement.disabled = true;
+    botonElement.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Calificando...';
+    
+    fetch(`/workflow/api/requisito-solicitud/${requisitoSolicitudId}/calificar-modal/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            estado: estado,
+            opcion_desplegable_id: opcionId,
+            observaciones: ''
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('✅ Documento calificado con opción:', data);
+        
+        if (data.success) {
+            // Actualizar la interfaz
+            actualizarInterfazCalificacion(botonElement, estado);
+            
+            // Recargar la lista de pendientes si está abierto el modal
+            const modalPendientes = document.getElementById('modalPendientes');
+            if (modalPendientes && modalPendientes.classList.contains('show')) {
+                const solicitudId = modalPendientes.dataset.solicitudId;
+                if (solicitudId) {
+                    cargarPendientesSolicitud(solicitudId);
+                }
+            }
+            
+            // Mostrar mensaje de éxito
+            mostrarNotificacion('Documento calificado exitosamente', 'success');
+        } else {
+            throw new Error(data.error || 'Error desconocido');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error al calificar documento:', error);
+        mostrarNotificacion('Error al calificar documento: ' + error.message, 'error');
+    })
+    .finally(() => {
+        // Restaurar estado del botón solo si existe
+        if (botonElement) {
+            botonElement.disabled = originalDisabled;
+            botonElement.innerHTML = originalText;
+        }
+    });
+}
+
+// Inicializar KPIs por subestado al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    // Cargar KPIs después de un breve delay para no sobrecargar la carga inicial
+    setTimeout(() => {
+        actualizarKPIsSubestado();
+    }, 1000);
+});
+
 </script>
+
+<!-- Modal para Opciones de Calificación -->
+<div class="modal fade" id="modalOpciones" tabindex="-1" aria-labelledby="modalOpcionesLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalOpcionesLabel">
+          <i class="fas fa-cog me-2"></i>Opciones de Calificación
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <strong>Documento:</strong> <span id="opciones-documento-nombre"></span>
+        </div>
+        <div class="mb-3">
+          <p class="text-muted"><strong>Debes seleccionar una opción</strong> para calificar este documento como "malo":</p>
+        </div>
+        <div id="opciones-container">
+          <!-- Las opciones se cargan dinámicamente aquí -->
+        </div>
+        <div class="alert alert-info mt-3">
+          <i class="fas fa-info-circle me-2"></i>
+          <strong>Nota:</strong> Selecciona una opción de la lista para continuar. El documento se calificará automáticamente como "malo" con la razón seleccionada.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
     

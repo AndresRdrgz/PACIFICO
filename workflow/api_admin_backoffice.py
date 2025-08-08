@@ -11,6 +11,7 @@ import json
 from .modelsWorkflow import (
     Pipeline, PlantillaOrdenExpediente, CatalogoPendienteAntesFirma
 )
+from .models import OpcionDesplegable
 
 
 def is_superuser(user):
@@ -418,4 +419,210 @@ def api_catalogos_delete(request, catalogo_id):
     except Exception as e:
         return JsonResponse({
             'error': f'Error al eliminar pendiente: {str(e)}'
+        }, status=500)
+
+
+# ==========================================================
+# APIs PARA OPCIONES DESPLEGABLES
+# ==========================================================
+
+@login_required
+@user_passes_test(is_superuser)
+@require_http_methods(["GET", "POST"])
+def api_opciones_crud(request):
+    """API CRUD para opciones desplegables - GET (listar) y POST (crear)"""
+    
+    if request.method == 'GET':
+        return api_opciones_list(request)
+    elif request.method == 'POST':
+        return api_opciones_create(request)
+
+
+def api_opciones_list(request):
+    """API para listar opciones desplegables"""
+    try:
+        opciones = OpcionDesplegable.objects.all().order_by('orden', 'nombre')
+        
+        opciones_data = []
+        for opcion in opciones:
+            opciones_data.append({
+                'id': opcion.id,
+                'nombre': opcion.nombre,
+                'valor': opcion.nombre,  # Usar nombre como valor por ahora
+                'categoria': 'general',  # Categoría por defecto
+                'descripcion': opcion.descripcion or '',
+                'orden': opcion.orden,
+                'activo': opcion.activo,
+                'fecha_creacion': opcion.fecha_creacion.strftime('%Y-%m-%d') if opcion.fecha_creacion else ''
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'data': opciones_data
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Error al obtener opciones: {str(e)}'
+        }, status=500)
+
+
+def api_opciones_create(request):
+    """API para crear una nueva opción desplegable"""
+    try:
+        data = json.loads(request.body)
+        
+        # Validar campos requeridos
+        nombre = data.get('nombre', '').strip()
+        if not nombre:
+            return JsonResponse({
+                'error': 'El nombre es requerido'
+            }, status=400)
+        
+        # Verificar que no exista otra opción con el mismo nombre
+        if OpcionDesplegable.objects.filter(nombre=nombre).exists():
+            return JsonResponse({
+                'error': 'Ya existe una opción con ese nombre'
+            }, status=400)
+        
+        # Crear nueva opción
+        opcion = OpcionDesplegable.objects.create(
+            nombre=nombre,
+            descripcion=data.get('descripcion', '').strip(),
+            orden=int(data.get('orden', 0)),
+            activo=data.get('activo', True)
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Opción creada exitosamente',
+            'data': {
+                'id': opcion.id,
+                'nombre': opcion.nombre,
+                'valor': opcion.nombre,
+                'categoria': 'general',
+                'descripcion': opcion.descripcion or '',
+                'orden': opcion.orden,
+                'activo': opcion.activo,
+                'fecha_creacion': opcion.fecha_creacion.strftime('%Y-%m-%d')
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'error': 'Formato JSON inválido'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Error al crear opción: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@user_passes_test(is_superuser)
+@require_http_methods(["GET", "PUT", "DELETE"])
+def api_opciones_crud_detail(request, opcion_id):
+    """API CRUD para una opción específica - GET, PUT (actualizar), DELETE"""
+    
+    if request.method == 'GET':
+        return api_opciones_get(request, opcion_id)
+    elif request.method == 'PUT':
+        return api_opciones_update(request, opcion_id)
+    elif request.method == 'DELETE':
+        return api_opciones_delete(request, opcion_id)
+
+
+def api_opciones_get(request, opcion_id):
+    """API para obtener una opción específica"""
+    try:
+        opcion = get_object_or_404(OpcionDesplegable, id=opcion_id)
+        
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'id': opcion.id,
+                'nombre': opcion.nombre,
+                'valor': opcion.nombre,
+                'categoria': 'general',
+                'descripcion': opcion.descripcion or '',
+                'orden': opcion.orden,
+                'activo': opcion.activo,
+                'fecha_creacion': opcion.fecha_creacion.strftime('%Y-%m-%d')
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Error al obtener opción: {str(e)}'
+        }, status=500)
+
+
+def api_opciones_update(request, opcion_id):
+    """API para actualizar una opción desplegable"""
+    try:
+        opcion = get_object_or_404(OpcionDesplegable, id=opcion_id)
+        data = json.loads(request.body)
+        
+        # Validar campos requeridos
+        nombre = data.get('nombre', '').strip()
+        if not nombre:
+            return JsonResponse({
+                'error': 'El nombre es requerido'
+            }, status=400)
+        
+        # Verificar que no exista otra opción con el mismo nombre (excluyendo la actual)
+        if OpcionDesplegable.objects.filter(nombre=nombre).exclude(id=opcion_id).exists():
+            return JsonResponse({
+                'error': 'Ya existe otra opción con ese nombre'
+            }, status=400)
+        
+        # Actualizar opción
+        opcion.nombre = nombre
+        opcion.descripcion = data.get('descripcion', '').strip()
+        opcion.orden = int(data.get('orden', opcion.orden))
+        opcion.activo = data.get('activo', opcion.activo)
+        opcion.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Opción actualizada exitosamente',
+            'data': {
+                'id': opcion.id,
+                'nombre': opcion.nombre,
+                'valor': opcion.nombre,
+                'categoria': 'general',
+                'descripcion': opcion.descripcion or '',
+                'orden': opcion.orden,
+                'activo': opcion.activo,
+                'fecha_creacion': opcion.fecha_creacion.strftime('%Y-%m-%d')
+            }
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'error': 'Formato JSON inválido'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Error al actualizar opción: {str(e)}'
+        }, status=500)
+
+
+def api_opciones_delete(request, opcion_id):
+    """API para eliminar una opción desplegable"""
+    try:
+        opcion = get_object_or_404(OpcionDesplegable, id=opcion_id)
+        
+        # En lugar de eliminar, marcar como inactivo por seguridad
+        opcion.activo = False
+        opcion.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Opción eliminada exitosamente'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Error al eliminar opción: {str(e)}'
         }, status=500)
