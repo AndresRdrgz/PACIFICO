@@ -61,7 +61,7 @@ def nivelEndeudamiento(resultado):
 
     totalIngresosMensuales = round(totalIngresosMensuales,2)
     totalIngresosMensualesCompleto = round(totalIngresosMensualesCompleto,2)
-    ##print("Total de ingresos mensuales: ", totalIngresosMensuales)
+    print("Total de ingresos mensuales: ", totalIngresosMensuales)
 
      
      #SEGURO SOCIAL

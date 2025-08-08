@@ -10,8 +10,8 @@ STATIC_URL = '/static/'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 
-
-DEBUG = False
+# DEBUG = False
+DEBUG = True
 if DEBUG:
     DATABASES = {
         'default': {

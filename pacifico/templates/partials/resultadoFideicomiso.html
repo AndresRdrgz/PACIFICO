@@ -239,7 +239,11 @@
                                 }
                                 if (document.getElementById('id_tiempoServicio')) document.getElementById('cc-tiempoServicio').value = document.getElementById('id_tiempoServicio').value || '';
                                 if (document.getElementById('id_nombreEmpresa')) document.getElementById('cc-nombreEmpresa').value = document.getElementById('id_nombreEmpresa').value || '';
-                                if (document.getElementById('id_ingresos')) document.getElementById('cc-ingresos').value = document.getElementById('id_ingresos').value || '';
+                                if (document.getElementById('id_ingresos')) {
+                                    document.getElementById('cc-ingresos').value = document.getElementById('id_ingresos').value || '';
+                                    // Immediately sync to salarioBaseMensual when prefilling
+                                    syncIngresosToSalarioBase();
+                                }
                                 if (document.getElementById('id_posicion')) document.getElementById('cc-posicion').value = document.getElementById('id_posicion').value || '';
                                 if (document.getElementById('id_apcScore')) document.getElementById('cc-apcScore').value = document.getElementById('id_apcScore').value || '';
                                 if (document.getElementById('id_apcPI')) document.getElementById('cc-apcPI').value = document.getElementById('id_apcPI').value || '';
@@ -271,6 +275,39 @@
                                 selectEl.innerHTML = '<option value="">Error cargando políticas</option>';
                             }
                         }
+                        function syncIngresosToSalarioBase(){
+                            const ccIngresosEl = document.getElementById('cc-ingresos');
+                            const salarioBaseMensualEl = document.getElementById('id_salarioBaseMensual');
+                            const ingresosEl = document.getElementById('id_ingresos');
+                            const prorrateoSalarioEl = document.getElementById('prorrateoSalario');
+                            console.log("cc-ingreso");
+                            if (ccIngresosEl) {
+                                const ingresosValue = ccIngresosEl.value;
+                                
+                                // Sync to salarioBaseMensual
+                                if (salarioBaseMensualEl) {
+                                    salarioBaseMensualEl.value = ingresosValue;
+                                    // Trigger change event on salarioBaseMensual to ensure any dependent calculations are updated
+                                    salarioBaseMensualEl.dispatchEvent(new Event('input', { bubbles: true }));
+                                    salarioBaseMensualEl.dispatchEvent(new Event('change', { bubbles: true }));
+                                }
+                                
+                                // Sync to id_ingresos in deudor modal
+                                if (ingresosEl) {
+                                    ingresosEl.value = ingresosValue;
+                                    // Trigger change event on ingresos to ensure any dependent calculations are updated
+                                    ingresosEl.dispatchEvent(new Event('input', { bubbles: true }));
+                                    ingresosEl.dispatchEvent(new Event('change', { bubbles: true }));
+                                }
+                                
+                                // Also update prorrateoSalario if it exists (following existing pattern from deudor.html)
+                                if (prorrateoSalarioEl) {
+                                    prorrateoSalarioEl.value = ingresosValue;
+                                }
+                                
+                                console.log("Synced cc-ingresos to salarioBaseMensual and id_ingresos:", ingresosValue);
+                            }
+                        }
                         function setupCcValidation(){
                             const ids = ['cc-sector','cc-politica','cc-observaciones','cc-tiempoServicio','cc-nombreEmpresa','cc-ingresos','cc-posicion','cc-apcScore','cc-apcPI'];
                             ids.forEach(id => {
@@ -278,6 +315,16 @@
                                 if (!el) return;
                                 el.addEventListener('input', validateCcForm);
                                 el.addEventListener('change', validateCcForm);
+                                
+                                // Special handling for cc-ingresos to sync with salarioBaseMensual
+                                if (id === 'cc-ingresos') {
+                                    el.addEventListener('input', function() {
+                                        syncIngresosToSalarioBase();
+                                    });
+                                    el.addEventListener('change', function() {
+                                        syncIngresosToSalarioBase();
+                                    });
+                                }
                             });
                             validateCcForm();
                         }
@@ -423,7 +470,11 @@
                                 if (document.getElementById('id_observaciones')) document.getElementById('id_observaciones').value = observaciones;
                                 if (document.getElementById('id_tiempoServicio')) document.getElementById('id_tiempoServicio').value = tiempoServicio;
                                 if (document.getElementById('id_nombreEmpresa')) document.getElementById('id_nombreEmpresa').value = nombreEmpresa;
-                                if (document.getElementById('id_ingresos')) document.getElementById('id_ingresos').value = ingresos;
+                                if (document.getElementById('id_ingresos')) {
+                                    document.getElementById('id_ingresos').value = ingresos;
+                                    // Trigger the existing sync mechanism for ingresos -> salarioBaseMensual
+                                    document.getElementById('id_ingresos').dispatchEvent(new Event('input', { bubbles: true }));
+                                }
                                 if (document.getElementById('id_posicion')) document.getElementById('id_posicion').value = posicion;
                                 if (document.getElementById('id_apcScore')) document.getElementById('id_apcScore').value = apcScore;
                                 if (document.getElementById('id_apcPI')) document.getElementById('id_apcPI').value = apcPI;
