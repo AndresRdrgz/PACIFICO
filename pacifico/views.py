@@ -151,8 +151,9 @@ def update_consulta_fields(request, numero_cotizacion):
     ingresos = data.get('ingresos')
     salarioBaseMensual = data.get('ingresos')
     posicion = data.get('posicion')
-    apc_score = data.get('apcScore')
-    apc_pi = data.get('apcPI')
+    no_apc_data = data.get('noApcData', False)  # New flag for clients without APC data
+    apc_score = data.get('apcScore') if not no_apc_data else None
+    apc_pi = data.get('apcPI') if not no_apc_data else None
 
     # Basic validation
     missing = []
@@ -171,10 +172,13 @@ def update_consulta_fields(request, numero_cotizacion):
         missing.append('ingresos')
     if not posicion:
         missing.append('posicion')
-    if apc_score in (None, ""):
-        missing.append('apcScore')
-    if apc_pi in (None, ""):
-        missing.append('apcPI')
+    
+    # APC fields validation - only required if no_apc_data is False
+    if not no_apc_data:
+        if apc_score in (None, ""):
+            missing.append('apcScore')
+        if apc_pi in (None, ""):
+            missing.append('apcPI')
 
     if missing:
         return JsonResponse({'ok': False, 'missing': missing, 'error': 'Campos requeridos faltantes'}, status=400)
@@ -208,8 +212,18 @@ def update_consulta_fields(request, numero_cotizacion):
         cotizacion.ingresos = to_dec(ingresos, 'Ingresos')
         cotizacion.salarioBaseMensual = to_dec(salarioBaseMensual, 'Salario Base Mensual')
         cotizacion.posicion = posicion
-        cotizacion.apcScore = to_int(apc_score, 'APC Score')
-        cotizacion.apcPI = to_dec(apc_pi, 'APC PI')
+        
+        # Only update APC fields if they have values (not skipped by user)
+        if not no_apc_data and apc_score is not None and apc_score != "":
+            cotizacion.apcScore = to_int(apc_score, 'APC Score')
+        elif no_apc_data:
+            cotizacion.apcScore = None  # Clear APC Score when client doesn't have APC data
+            
+        if not no_apc_data and apc_pi is not None and apc_pi != "":
+            cotizacion.apcPI = to_dec(apc_pi, 'APC PI')
+        elif no_apc_data:
+            cotizacion.apcPI = None  # Clear APC PI when client doesn't have APC data
+            
         print("salarioBaseMensual", salarioBaseMensual, "ingresos", ingresos)
         cotizacion.save(update_fields=['sector', 'politica', 'observaciones', 'tiempoServicio', 'nombreEmpresa', 'ingresos', 'salarioBaseMensual', 'posicion', 'apcScore', 'apcPI'])
     except ValueError as ve:

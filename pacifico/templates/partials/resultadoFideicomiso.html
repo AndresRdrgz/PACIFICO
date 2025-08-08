@@ -7,14 +7,14 @@
         </span>
         <div class="ml-auto flex space-x-2">
             {% if resultado.numero_cotizacion %}
-                {% if form.sector.value and form.politica.value and form.observaciones.value and form.tiempoServicio.value and form.nombreEmpresa.value and form.ingresos.value and form.posicion.value and form.apcScore.value and form.apcPI.value %}
+                {% if form.sector.value and form.politica.value and form.observaciones.value and form.tiempoServicio.value and form.nombreEmpresa.value and form.ingresos.value and form.posicion.value %}
                     <a href="{% url 'generate_report' resultado.numero_cotizacion %}" class="bg-black text-white px-4 py-2 rounded hover:bg-black inline-block">
                         Reporte de Consulta 📄
                     </a>
                 {% else %}
                     <div class="flex flex-col items-end">
                         <div class="flex gap-2">
-                            <button type="button" class="bg-black text-white px-4 py-2 rounded opacity-50 cursor-not-allowed" disabled title="Complete Sector, Política y Observaciones para habilitar el reporte.">
+                            <button type="button" class="bg-black text-white px-4 py-2 rounded opacity-50 cursor-not-allowed" disabled title="Complete los campos requeridos para habilitar el reporte.">
                                 Reporte de Consulta 📄
                             </button>
                             <button type="button" class="px-3 py-2 rounded bg-[#f57722] text-white shadow hover:bg-[#e46d1f] focus:outline-none focus:ring-2 focus:ring-[#f57722] focus:ring-offset-2 transition" onclick="openCompleteConsultaModal('{{ resultado.numero_cotizacion }}')" aria-label="Abrir modal para completar datos de consulta">
@@ -30,9 +30,10 @@
                             {% if not form.nombreEmpresa.value %}{% if not form.sector.value or not form.politica.value or not form.observaciones.value or not form.tiempoServicio.value %}, {% endif %}Nombre de la Empresa{% endif %}
                             {% if not form.ingresos.value %}{% if not form.sector.value or not form.politica.value or not form.observaciones.value or not form.tiempoServicio.value or not form.nombreEmpresa.value %}, {% endif %}Ingresos{% endif %}
                             {% if not form.posicion.value %}{% if not form.sector.value or not form.politica.value or not form.observaciones.value or not form.tiempoServicio.value or not form.nombreEmpresa.value or not form.ingresos.value %}, {% endif %}Posición{% endif %}
-                            {% if not form.apcScore.value %}{% if not form.sector.value or not form.politica.value or not form.observaciones.value or not form.tiempoServicio.value or not form.nombreEmpresa.value or not form.ingresos.value or not form.posicion.value %}, {% endif %}APC Score{% endif %}
-                            {% if not form.apcPI.value %}{% if not form.sector.value or not form.politica.value or not form.observaciones.value or not form.tiempoServicio.value or not form.nombreEmpresa.value or not form.ingresos.value or not form.posicion.value or not form.apcScore.value %}, {% endif %}APC PI{% endif %}
                             para habilitar el reporte.
+                            {% if not form.apcScore.value or not form.apcPI.value %}
+                            <br><em class="text-xs text-gray-500">Nota: Los campos APC Score y APC PI son opcionales si el cliente no tiene datos APC.</em>
+                            {% endif %}
                         </p>
                     </div>
                 {% endif %}
@@ -97,8 +98,8 @@
                                         </div>
                                         <div class="ml-3">
                                             <p class="text-sm text-blue-800">
-                                                <span class="font-semibold">Todos los campos son obligatorios.</span> 
-                                                Complete la información faltante para generar el reporte de consulta. Los campos incompletos aparecerán resaltados en rojo.
+                                                <span class="font-semibold">Los campos básicos son obligatorios.</span> 
+                                                Complete la información requerida para generar el reporte de consulta. Los campos APC Score y APC PI son opcionales si el cliente no tiene datos APC disponibles.
                                             </p>
                                         </div>
                                     </div>
@@ -151,15 +152,36 @@
                                         </label>
                                         <textarea id="cc-observaciones" rows="4" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#f57722] focus:border-transparent transition-all duration-200 bg-white text-gray-900 resize-none" placeholder="Describe el motivo de la consulta y observaciones relevantes..." aria-required="true"></textarea>
                                     </div>
-                                    <div class="form-group">
+                                    
+                                    <!-- APC Data Toggle -->
+                                    <div class="md:col-span-2 form-group">
+                                        <div class="flex items-center p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-md">
+                                            <div class="flex items-center">
+                                                <input type="checkbox" id="cc-noApcData" class="w-4 h-4 text-[#f57722] bg-gray-100 border-gray-300 rounded focus:ring-[#f57722] focus:ring-2">
+                                                <label for="cc-noApcData" class="ml-2 text-sm font-medium text-yellow-800">
+                                                    El cliente no tiene datos de APC Score / APC PI
+                                                </label>
+                                            </div>
+                                            <div class="ml-auto">
+                                                <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                        <p class="text-xs text-gray-600 mt-2">
+                                            Active esta opción si el cliente es nuevo o no cuenta con evaluación APC previa. Los campos de APC se volverán opcionales.
+                                        </p>
+                                    </div>
+
+                                    <div class="form-group" id="cc-apcScore-group">
                                         <label class="block text-sm font-semibold mb-2 text-gray-700">
-                                            APC Score <span class="text-red-500">*</span>
+                                            APC Score <span class="text-red-500" id="cc-apcScore-required">*</span>
                                         </label>
                                         <input id="cc-apcScore" type="number" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#f57722] focus:border-transparent transition-all duration-200 bg-white text-gray-900" aria-required="true" placeholder="Puntuación APC" />
                                     </div>
-                                    <div class="form-group">
+                                    <div class="form-group" id="cc-apcPI-group">
                                         <label class="block text-sm font-semibold mb-2 text-gray-700">
-                                            APC PI <span class="text-red-500">*</span>
+                                            APC PI <span class="text-red-500" id="cc-apcPI-required">*</span>
                                         </label>
                                         <input id="cc-apcPI" type="number" step="0.01" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#f57722] focus:border-transparent transition-all duration-200 bg-white text-gray-900" aria-required="true" placeholder="Índice APC PI" />
                                     </div>
@@ -178,7 +200,7 @@
                                 </div>
                                 <div class="flex justify-between items-center pt-6 border-t border-gray-200">
                                     <div class="text-sm text-gray-500">
-                                        <span id="cc-progress-text">0 de 9 campos completados</span>
+                                        <span id="cc-progress-text">0 de 7 campos completados</span>
                                     </div>
                                     <div class="flex space-x-3">
                                         <button type="button" class="px-6 py-3 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-all duration-200" onclick="closeCompleteConsultaModal()">
@@ -223,6 +245,8 @@
                             const sector = document.getElementById('cc-sector');
                             const politica = document.getElementById('cc-politica');
                             const obs = document.getElementById('cc-observaciones');
+                            const noApcToggle = document.getElementById('cc-noApcData');
+                            
                             // Prefill from form if present
                             try {
                                 if (document.getElementById('id_sector')) {
@@ -245,10 +269,27 @@
                                     syncIngresosToSalarioBase();
                                 }
                                 if (document.getElementById('id_posicion')) document.getElementById('cc-posicion').value = document.getElementById('id_posicion').value || '';
-                                if (document.getElementById('id_apcScore')) document.getElementById('cc-apcScore').value = document.getElementById('id_apcScore').value || '';
-                                if (document.getElementById('id_apcPI')) document.getElementById('cc-apcPI').value = document.getElementById('id_apcPI').value || '';
+                                
+                                // Handle APC fields - check if they have values, if not, suggest toggling
+                                const apcScoreValue = document.getElementById('id_apcScore')?.value || '';
+                                const apcPIValue = document.getElementById('id_apcPI')?.value || '';
+                                
+                                if (apcScoreValue || apcPIValue) {
+                                    // Client has APC data, populate fields
+                                    document.getElementById('cc-apcScore').value = apcScoreValue;
+                                    document.getElementById('cc-apcPI').value = apcPIValue;
+                                    noApcToggle.checked = false;
+                                    toggleApcFields(false);
+                                } else {
+                                    // Client might not have APC data, suggest using toggle
+                                    noApcToggle.checked = true;
+                                    toggleApcFields(true);
+                                }
                             } catch (e) {
                                 await loadPoliticasIntoSelect(politica, null);
+                                // Default to showing APC fields if there's an error
+                                noApcToggle.checked = false;
+                                toggleApcFields(false);
                             }
                             // setup live validation state and button toggle
                             setupCcValidation();
@@ -326,7 +367,50 @@
                                     });
                                 }
                             });
+                            
+                            // Add toggle functionality for APC data
+                            const noApcToggle = document.getElementById('cc-noApcData');
+                            if (noApcToggle) {
+                                noApcToggle.addEventListener('change', function() {
+                                    toggleApcFields(this.checked);
+                                    validateCcForm();
+                                });
+                            }
+                            
                             validateCcForm();
+                        }
+                        
+                        function toggleApcFields(hideApc) {
+                            const apcScoreGroup = document.getElementById('cc-apcScore-group');
+                            const apcPIGroup = document.getElementById('cc-apcPI-group');
+                            const apcScoreInput = document.getElementById('cc-apcScore');
+                            const apcPIInput = document.getElementById('cc-apcPI');
+                            const apcScoreRequired = document.getElementById('cc-apcScore-required');
+                            const apcPIRequired = document.getElementById('cc-apcPI-required');
+                            
+                            if (hideApc) {
+                                // Hide APC fields and make them optional
+                                if (apcScoreGroup) apcScoreGroup.style.display = 'none';
+                                if (apcPIGroup) apcPIGroup.style.display = 'none';
+                                if (apcScoreInput) {
+                                    apcScoreInput.removeAttribute('aria-required');
+                                    apcScoreInput.value = ''; // Clear values when hiding
+                                }
+                                if (apcPIInput) {
+                                    apcPIInput.removeAttribute('aria-required');
+                                    apcPIInput.value = ''; // Clear values when hiding
+                                }
+                                if (apcScoreRequired) apcScoreRequired.style.display = 'none';
+                                if (apcPIRequired) apcPIRequired.style.display = 'none';
+                            } else {
+                                // Show APC fields and make them required
+                                if (apcScoreGroup) apcScoreGroup.style.display = 'block';
+                                if (apcPIGroup) apcPIGroup.style.display = 'block';
+                                if (apcScoreInput) apcScoreInput.setAttribute('aria-required', 'true');
+                                if (apcPIInput) apcPIInput.setAttribute('aria-required', 'true');
+                                if (apcScoreRequired) apcScoreRequired.style.display = 'inline';
+                                if (apcPIRequired) apcPIRequired.style.display = 'inline';
+                            }
                         }
                         function setFieldErrorState(el, hasError){
                             if (!el) return;
@@ -365,6 +449,8 @@
                         }
                         function validateCcForm(){
                             const get = id => document.getElementById(id);
+                            const noApcData = get('cc-noApcData')?.checked || false;
+                            
                             const values = {
                                 sector: get('cc-sector')?.value,
                                 politica: get('cc-politica')?.value,
@@ -377,7 +463,11 @@
                                 apcPI: get('cc-apcPI')?.value,
                             };
                             const missing = [];
-                            const totalFields = 9;
+                            // Base required fields (always 7)
+                            const baseFields = 7;
+                            // APC fields (2 fields when required)
+                            const apcFields = noApcData ? 0 : 2;
+                            const totalFields = baseFields + apcFields;
                             let completedFields = 0;
                             
                             const pushIfEmpty = (cond, label, el) => { 
@@ -390,6 +480,7 @@
                                 } 
                             };
                             
+                            // Always required fields
                             pushIfEmpty(!values.sector, 'sector', get('cc-sector'));
                             pushIfEmpty(!values.politica, 'política', get('cc-politica'));
                             pushIfEmpty(!values.observaciones, 'observaciones', get('cc-observaciones'));
@@ -397,8 +488,16 @@
                             pushIfEmpty(!values.nombreEmpresa, 'nombre de la empresa', get('cc-nombreEmpresa'));
                             pushIfEmpty(!values.ingresos && values.ingresos !== 0, 'ingresos', get('cc-ingresos'));
                             pushIfEmpty(!values.posicion, 'posición', get('cc-posicion'));
-                            pushIfEmpty(values.apcScore === '' || values.apcScore === null || values.apcScore === undefined, 'APC score', get('cc-apcScore'));
-                            pushIfEmpty(values.apcPI === '' || values.apcPI === null || values.apcPI === undefined, 'APC PI', get('cc-apcPI'));
+                            
+                            // Conditionally required APC fields
+                            if (!noApcData) {
+                                pushIfEmpty(values.apcScore === '' || values.apcScore === null || values.apcScore === undefined, 'APC score', get('cc-apcScore'));
+                                pushIfEmpty(values.apcPI === '' || values.apcPI === null || values.apcPI === undefined, 'APC PI', get('cc-apcPI'));
+                            } else {
+                                // Clear any error states on APC fields when they're not required
+                                setFieldErrorState(get('cc-apcScore'), false);
+                                setFieldErrorState(get('cc-apcPI'), false);
+                            }
                             
                             const saveBtn = document.getElementById('cc-save-btn');
                             const errorEl = document.getElementById('cc-error');
@@ -434,9 +533,12 @@
                             const nombreEmpresa = document.getElementById('cc-nombreEmpresa').value.trim();
                             const ingresos = document.getElementById('cc-ingresos').value;
                             const posicion = document.getElementById('cc-posicion').value.trim();
-                            const apcScore = document.getElementById('cc-apcScore').value;
-                            const apcPI = document.getElementById('cc-apcPI').value;
+                            const noApcData = document.getElementById('cc-noApcData').checked;
+                            const apcScore = noApcData ? null : document.getElementById('cc-apcScore').value;
+                            const apcPI = noApcData ? null : document.getElementById('cc-apcPI').value;
                             const errorEl = document.getElementById('cc-error');
+                            
+                            // Base validation (always required)
                             const missing = [];
                             if (!sector) missing.push('sector');
                             if (!politica) missing.push('política');
@@ -445,8 +547,13 @@
                             if (!nombreEmpresa) missing.push('nombre de la empresa');
                             if (!ingresos) missing.push('ingresos');
                             if (!posicion) missing.push('posición');
-                            if (apcScore === '') missing.push('APC score');
-                            if (apcPI === '') missing.push('APC PI');
+                            
+                            // APC validation (only if not skipped)
+                            if (!noApcData) {
+                                if (apcScore === '' || apcScore === null) missing.push('APC score');
+                                if (apcPI === '' || apcPI === null) missing.push('APC PI');
+                            }
+                            
                             if (missing.length) {
                                 errorEl.textContent = 'Faltan: ' + missing.join(', ');
                                 errorEl.classList.remove('hidden');
@@ -460,7 +567,7 @@
                                         'Content-Type': 'application/json',
                                         'X-CSRFToken': getCsrfToken(),
                                     },
-                                    body: JSON.stringify({ sector, politica, observaciones, tiempoServicio, nombreEmpresa, ingresos, posicion, apcScore, apcPI })
+                                    body: JSON.stringify({ sector, politica, observaciones, tiempoServicio, nombreEmpresa, ingresos, posicion, apcScore, apcPI, noApcData })
                                 });
                                 const data = await res.json();
                                 if (!data.ok) throw new Error(data.error || 'Error al guardar');
