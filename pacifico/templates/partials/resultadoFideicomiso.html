@@ -7,7 +7,7 @@
         </span>
         <div class="ml-auto flex space-x-2">
             {% if resultado.numero_cotizacion %}
-                {% if form.sector.value and form.politica.value and form.observaciones.value and form.tiempoServicio.value and form.nombreEmpresa.value and form.ingresos.value and form.posicion.value %}
+                {% if form.sector.value and form.politica.value and form.observaciones.value and form.tiempoServicio.value and form.nombreEmpresa.value and form.ingresos.value and form.posicion.value and form.cartera.value %}
                     <a href="{% url 'generate_report' resultado.numero_cotizacion %}" class="bg-black text-white px-4 py-2 rounded hover:bg-black inline-block">
                         Reporte de Consulta 📄
                     </a>
@@ -30,6 +30,7 @@
                             {% if not form.nombreEmpresa.value %}{% if not form.sector.value or not form.politica.value or not form.observaciones.value or not form.tiempoServicio.value %}, {% endif %}Nombre de la Empresa{% endif %}
                             {% if not form.ingresos.value %}{% if not form.sector.value or not form.politica.value or not form.observaciones.value or not form.tiempoServicio.value or not form.nombreEmpresa.value %}, {% endif %}Ingresos{% endif %}
                             {% if not form.posicion.value %}{% if not form.sector.value or not form.politica.value or not form.observaciones.value or not form.tiempoServicio.value or not form.nombreEmpresa.value or not form.ingresos.value %}, {% endif %}Posición{% endif %}
+                            {% if not form.cartera.value %}{% if not form.sector.value or not form.politica.value or not form.observaciones.value or not form.tiempoServicio.value or not form.nombreEmpresa.value or not form.ingresos.value or not form.posicion.value %}, {% endif %}Cartera{% endif %}
                             para habilitar el reporte.
                             {% if not form.apcScore.value or not form.apcPI.value %}
                             <br><em class="text-xs text-gray-500">Nota: Los campos APC Score y APC PI son opcionales si el cliente no tiene datos APC.</em>
@@ -74,14 +75,15 @@
                         <th scope="col" class="px-6 py-3">
                     {# Modal to complete missing consulta fields #}
                     <div id="complete-consulta-modal" class="fixed inset-0 bg-black bg-opacity-60 overflow-y-auto h-full w-full hidden backdrop-blur-sm" style="z-index: 60;" role="dialog" aria-modal="true" aria-labelledby="cc-modal-title">
-                        <div class="relative top-10 mx-auto p-0 w-11/12 md:w-2/3 lg:w-1/2 shadow-2xl rounded-xl bg-white border border-gray-200">
-                            <div class="bg-gradient-to-r from-[#f57722] to-[#e46d1f] px-6 py-4 rounded-t-xl">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center space-x-3">
-                                        <div class="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                            </svg>
+                        <div class="relative min-h-screen flex items-center justify-center p-4">
+                            <div class="w-full max-w-2xl max-h-screen overflow-y-auto shadow-2xl rounded-xl bg-white border border-gray-200">
+                                <div class="bg-gradient-to-r from-[#f57722] to-[#e46d1f] px-6 py-4 rounded-t-xl sticky top-0">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                                </svg>
                                         </div>
                                         <h3 id="cc-modal-title" class="text-xl font-bold text-white">Completar datos de consulta</h3>
                                     </div>
@@ -146,6 +148,27 @@
                                         </label>
                                         <input id="cc-posicion" type="text" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#f57722] focus:border-transparent transition-all duration-200 bg-white text-gray-900" aria-required="true" placeholder="Cargo o posición" />
                                     </div>
+                                    <div class="form-group">
+                                        <label class="block text-sm font-semibold mb-2 text-gray-700">
+                                            Cartera <span class="text-red-500">*</span>
+                                        </label>
+                                        <select id="cc-cartera" class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#f57722] focus:border-transparent transition-all duration-200 bg-white text-gray-900" aria-required="true">
+                                            <option value="">Seleccionar cartera...</option>
+                                            <option value="CONTRALORÍA">CONTRALORÍA</option>
+                                            <option value="EMP. CSS">EMP. CSS</option>
+                                            <option value="AUTÓNOMAS">AUTÓNOMAS</option>
+                                            <option value="ACP">ACP</option>
+                                            <option value="JUBILADO CSS">JUBILADO CSS</option>
+                                            <option value="EMP. PRIVADA">EMP. PRIVADA</option>
+                                            <option value="JUBILADO DE LA ZONA">JUBILADO DE LA ZONA</option>
+                                            <option value="JUBI ACTIVO CONTRALORIA">JUBI ACTIVO CONTRALORIA</option>
+                                            <option value="JUBI ACTIVO CSS">JUBI ACTIVO CSS</option>
+                                            <option value="JUBILADO CONTRALORIA">JUBILADO CONTRALORIA</option>
+                                            <option value="JUBI ACTIVO AUTÓNOMA">JUBI ACTIVO AUTÓNOMA</option>
+                                            <option value="JUBILADO RIESGOS PROF. CSS">JUBILADO RIESGOS PROF. CSS</option>
+                                            <option value="INDEPENDIENTE">INDEPENDIENTE</option>
+                                        </select>
+                                    </div>
                                     <div class="md:col-span-2 form-group">
                                         <label class="block text-sm font-semibold mb-2 text-gray-700">
                                             Observaciones <span class="text-red-500">*</span>
@@ -198,9 +221,9 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="flex justify-between items-center pt-6 border-t border-gray-200">
+                                <div class="flex justify-between items-center pt-6 border-t border-gray-200 sticky bottom-0 bg-white rounded-b-xl">
                                     <div class="text-sm text-gray-500">
-                                        <span id="cc-progress-text">0 de 7 campos completados</span>
+                                        <span id="cc-progress-text">0 de 8 campos completados</span>
                                     </div>
                                     <div class="flex space-x-3">
                                         <button type="button" class="px-6 py-3 rounded-lg border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-all duration-200" onclick="closeCompleteConsultaModal()">
@@ -269,6 +292,7 @@
                                     syncIngresosToSalarioBase();
                                 }
                                 if (document.getElementById('id_posicion')) document.getElementById('cc-posicion').value = document.getElementById('id_posicion').value || '';
+                                if (document.getElementById('id_cartera')) document.getElementById('cc-cartera').value = document.getElementById('id_cartera').value || '';
                                 
                                 // Handle APC fields - check if they have values, if not, suggest toggling
                                 const apcScoreValue = document.getElementById('id_apcScore')?.value || '';
@@ -350,7 +374,7 @@
                             }
                         }
                         function setupCcValidation(){
-                            const ids = ['cc-sector','cc-politica','cc-observaciones','cc-tiempoServicio','cc-nombreEmpresa','cc-ingresos','cc-posicion','cc-apcScore','cc-apcPI'];
+                            const ids = ['cc-sector','cc-politica','cc-observaciones','cc-tiempoServicio','cc-nombreEmpresa','cc-ingresos','cc-posicion','cc-cartera','cc-apcScore','cc-apcPI'];
                             ids.forEach(id => {
                                 const el = document.getElementById(id);
                                 if (!el) return;
@@ -459,12 +483,13 @@
                                 nombreEmpresa: (get('cc-nombreEmpresa')?.value || '').trim(),
                                 ingresos: get('cc-ingresos')?.value,
                                 posicion: (get('cc-posicion')?.value || '').trim(),
+                                cartera: get('cc-cartera')?.value,
                                 apcScore: get('cc-apcScore')?.value,
                                 apcPI: get('cc-apcPI')?.value,
                             };
                             const missing = [];
-                            // Base required fields (always 7)
-                            const baseFields = 7;
+                            // Base required fields (always 8 now with cartera)
+                            const baseFields = 8;
                             // APC fields (2 fields when required)
                             const apcFields = noApcData ? 0 : 2;
                             const totalFields = baseFields + apcFields;
@@ -488,6 +513,7 @@
                             pushIfEmpty(!values.nombreEmpresa, 'nombre de la empresa', get('cc-nombreEmpresa'));
                             pushIfEmpty(!values.ingresos && values.ingresos !== 0, 'ingresos', get('cc-ingresos'));
                             pushIfEmpty(!values.posicion, 'posición', get('cc-posicion'));
+                            pushIfEmpty(!values.cartera, 'cartera', get('cc-cartera'));
                             
                             // Conditionally required APC fields
                             if (!noApcData) {
@@ -533,6 +559,7 @@
                             const nombreEmpresa = document.getElementById('cc-nombreEmpresa').value.trim();
                             const ingresos = document.getElementById('cc-ingresos').value;
                             const posicion = document.getElementById('cc-posicion').value.trim();
+                            const cartera = document.getElementById('cc-cartera').value;
                             const noApcData = document.getElementById('cc-noApcData').checked;
                             const apcScore = noApcData ? null : document.getElementById('cc-apcScore').value;
                             const apcPI = noApcData ? null : document.getElementById('cc-apcPI').value;
@@ -547,6 +574,7 @@
                             if (!nombreEmpresa) missing.push('nombre de la empresa');
                             if (!ingresos) missing.push('ingresos');
                             if (!posicion) missing.push('posición');
+                            if (!cartera) missing.push('cartera');
                             
                             // APC validation (only if not skipped)
                             if (!noApcData) {
@@ -567,7 +595,7 @@
                                         'Content-Type': 'application/json',
                                         'X-CSRFToken': getCsrfToken(),
                                     },
-                                    body: JSON.stringify({ sector, politica, observaciones, tiempoServicio, nombreEmpresa, ingresos, posicion, apcScore, apcPI, noApcData })
+                                    body: JSON.stringify({ sector, politica, observaciones, tiempoServicio, nombreEmpresa, ingresos, posicion, cartera, apcScore, apcPI, noApcData })
                                 });
                                 const data = await res.json();
                                 if (!data.ok) throw new Error(data.error || 'Error al guardar');
@@ -583,6 +611,7 @@
                                     document.getElementById('id_ingresos').dispatchEvent(new Event('input', { bubbles: true }));
                                 }
                                 if (document.getElementById('id_posicion')) document.getElementById('id_posicion').value = posicion;
+                                if (document.getElementById('id_cartera')) document.getElementById('id_cartera').value = cartera;
                                 if (document.getElementById('id_apcScore')) document.getElementById('id_apcScore').value = apcScore;
                                 if (document.getElementById('id_apcPI')) document.getElementById('id_apcPI').value = apcPI;
                                 // Enable the report link by reloading this header block
