@@ -337,6 +337,53 @@ def enrich_solicitud_data(solicitud):
         solicitud.estado_actual = 'Sin estado'
         solicitud.estado_color = 'secondary'
     
+    # Fecha estado (fecha cuando se cambió a la etapa actual)
+    if solicitud.etapa_actual:
+        historial_estado = solicitud.historial.filter(etapa=solicitud.etapa_actual).order_by('-fecha_inicio').first()
+        if historial_estado and historial_estado.fecha_inicio:
+            solicitud.fecha_estado = historial_estado.fecha_inicio
+        else:
+            # Fallback to fecha_ultima_actualizacion if no historial
+            solicitud.fecha_estado = solicitud.fecha_ultima_actualizacion
+    else:
+        solicitud.fecha_estado = solicitud.fecha_ultima_actualizacion
+    
+    # Fecha subestado (fecha cuando se cambió al subestado actual)
+    if solicitud.subestado_actual:
+        try:
+            # Try to get from HistorialBackoffice first (more precise for Back Office)
+            from .models import HistorialBackoffice
+            historial_subestado = HistorialBackoffice.objects.filter(
+                solicitud=solicitud,
+                subestado_destino=solicitud.subestado_actual
+            ).order_by('-fecha_entrada_subestado').first()
+            
+            if historial_subestado and historial_subestado.fecha_entrada_subestado:
+                solicitud.fecha_subestado = historial_subestado.fecha_entrada_subestado
+            else:
+                # Fallback to HistorialSolicitud
+                historial_general = solicitud.historial.filter(
+                    subestado=solicitud.subestado_actual
+                ).order_by('-fecha_inicio').first()
+                
+                if historial_general and historial_general.fecha_inicio:
+                    solicitud.fecha_subestado = historial_general.fecha_inicio
+                else:
+                    # Last fallback to fecha_ultima_actualizacion
+                    solicitud.fecha_subestado = solicitud.fecha_ultima_actualizacion
+        except ImportError:
+            # If HistorialBackoffice is not available, use general historial
+            historial_general = solicitud.historial.filter(
+                subestado=solicitud.subestado_actual
+            ).order_by('-fecha_inicio').first()
+            
+            if historial_general and historial_general.fecha_inicio:
+                solicitud.fecha_subestado = historial_general.fecha_inicio
+            else:
+                solicitud.fecha_subestado = solicitud.fecha_ultima_actualizacion
+    else:
+        solicitud.fecha_subestado = solicitud.fecha_ultima_actualizacion
+    
     # SLA information
     if solicitud.etapa_actual and solicitud.etapa_actual.sla:
         # Get the historial entry for the current etapa to calculate SLA from the correct start date
