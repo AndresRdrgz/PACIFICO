@@ -151,6 +151,7 @@ def update_consulta_fields(request, numero_cotizacion):
     ingresos = data.get('ingresos')
     salarioBaseMensual = data.get('ingresos')
     posicion = data.get('posicion')
+    cartera = data.get('cartera')
     no_apc_data = data.get('noApcData', False)  # New flag for clients without APC data
     apc_score = data.get('apcScore') if not no_apc_data else None
     apc_pi = data.get('apcPI') if not no_apc_data else None
@@ -172,6 +173,8 @@ def update_consulta_fields(request, numero_cotizacion):
         missing.append('ingresos')
     if not posicion:
         missing.append('posicion')
+    if not cartera:
+        missing.append('cartera')
     
     # APC fields validation - only required if no_apc_data is False
     if not no_apc_data:
@@ -212,6 +215,7 @@ def update_consulta_fields(request, numero_cotizacion):
         cotizacion.ingresos = to_dec(ingresos, 'Ingresos')
         cotizacion.salarioBaseMensual = to_dec(salarioBaseMensual, 'Salario Base Mensual')
         cotizacion.posicion = posicion
+        cotizacion.cartera = cartera
         
         # Only update APC fields if they have values (not skipped by user)
         if not no_apc_data and apc_score is not None and apc_score != "":
@@ -225,7 +229,7 @@ def update_consulta_fields(request, numero_cotizacion):
             cotizacion.apcPI = None  # Clear APC PI when client doesn't have APC data
             
         print("salarioBaseMensual", salarioBaseMensual, "ingresos", ingresos)
-        cotizacion.save(update_fields=['sector', 'politica', 'observaciones', 'tiempoServicio', 'nombreEmpresa', 'ingresos', 'salarioBaseMensual', 'posicion', 'apcScore', 'apcPI'])
+        cotizacion.save(update_fields=['sector', 'politica', 'observaciones', 'tiempoServicio', 'nombreEmpresa', 'ingresos', 'salarioBaseMensual', 'posicion', 'cartera', 'apcScore', 'apcPI'])
     except ValueError as ve:
         return JsonResponse({'ok': False, 'error': str(ve)}, status=400)
 
@@ -252,6 +256,7 @@ def get_cotizacion_data(request, numero_cotizacion):
             'nombreEmpresa': cotizacion.nombreEmpresa if hasattr(cotizacion, 'nombreEmpresa') else None,
             'ingresos': float(cotizacion.ingresos) if hasattr(cotizacion, 'ingresos') and cotizacion.ingresos else None,
             'posicion': cotizacion.posicion if hasattr(cotizacion, 'posicion') else None,
+            'cartera': cotizacion.cartera if hasattr(cotizacion, 'cartera') else None,
             'apcScore': cotizacion.apcScore if hasattr(cotizacion, 'apcScore') else None,
             'apcPI': float(cotizacion.apcPI) if hasattr(cotizacion, 'apcPI') and cotizacion.apcPI else None,
             # Additional fields for context
