@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
         # This is a minimal no-op migration to replace the problematic ones
         # The actual table should be created manually using the emergency script
         migrations.RunSQL(
-            sql="SELECT 1 FROM sqlite_master WHERE type='table' AND name='workflow_clienteentrevista';",
+            sql="SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'workflow_clienteentrevista';",
             reverse_sql="SELECT 1;",
         ),
     ]
