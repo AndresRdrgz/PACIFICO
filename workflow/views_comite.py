@@ -101,7 +101,32 @@ def detalle_solicitud_comite(request, solicitud_id):
     cliente = solicitud.cliente if hasattr(solicitud, 'cliente') else None
     cotizacion = solicitud.cotizacion if hasattr(solicitud, 'cotizacion') else None
     historial = solicitud.historial.all().order_by('-fecha_inicio')
-    requisitos = solicitud.requisitos.all().select_related('requisito')
+    # Filtrar requisitos por tipo de préstamo
+    requisitos_query = solicitud.requisitos.all().select_related('requisito')
+    if solicitud.cotizacion and hasattr(solicitud.cotizacion, 'tipoPrestamo'):
+        # Obtener el tipo de préstamo de la cotización
+        tipo_prestamo = solicitud.cotizacion.tipoPrestamo
+        
+        # Filtrar requisitos considerando su tipo_prestamo_aplicable
+        from .modelsWorkflow import RequisitoPipeline
+        requisitos_aplicables = []
+        for req in requisitos_query:
+            requisito_pipeline = RequisitoPipeline.objects.filter(
+                pipeline=solicitud.pipeline,
+                requisito=req.requisito
+            ).first()
+            
+            # Si no existe RequisitoPipeline o si aplica para este tipo de préstamo
+            if (not requisito_pipeline or 
+                requisito_pipeline.tipo_prestamo_aplicable == 'todos' or
+                (requisito_pipeline.tipo_prestamo_aplicable == 'personal' and tipo_prestamo == 'personal') or
+                (requisito_pipeline.tipo_prestamo_aplicable == 'auto' and tipo_prestamo == 'auto')):
+                requisitos_aplicables.append(req)
+        
+        requisitos = requisitos_aplicables
+    else:
+        # Si no hay cotización, mostrar todos los requisitos
+        requisitos = list(requisitos_query)
     
     # Obtener participaciones del comité para esta solicitud
     participaciones = ParticipacionComite.objects.filter(

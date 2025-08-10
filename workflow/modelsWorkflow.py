@@ -206,6 +206,10 @@ class Solicitud(models.Model):
     # Origen de la solicitud (para etiquetas distintivas)
     origen = models.CharField(max_length=100, blank=True, null=True, help_text="Origen de la solicitud (ej: Canal Digital, Presencial, etc.)")
     
+    # Campo para identificar solicitudes creadas via API externa
+    creada_via_api = models.BooleanField(default=False, help_text="Indica si la solicitud fue creada mediante API externa")
+    api_source = models.CharField(max_length=100, blank=True, null=True, help_text="Identificador de la aplicación externa que creó la solicitud")
+    
     # Campos adicionales para solicitudes del canal digital
     cliente_nombre = models.CharField(max_length=200, blank=True, null=True, help_text="Nombre completo del cliente")
     cliente_cedula = models.CharField(max_length=50, blank=True, null=True, help_text="Cédula del cliente")
@@ -560,15 +564,43 @@ class Requisito(models.Model):
 
 
 class RequisitoPipeline(models.Model):
+    TIPO_PRESTAMO_CHOICES = [
+        ('todos', 'Todos los préstamos'),
+        ('personal', 'Solo préstamo personal'),
+        ('auto', 'Solo préstamo de auto'),
+    ]
+    
     pipeline = models.ForeignKey(Pipeline, on_delete=models.CASCADE, related_name='requisitos_pipeline')
     requisito = models.ForeignKey(Requisito, on_delete=models.CASCADE)
     obligatorio = models.BooleanField(default=True)
+    tipo_prestamo_aplicable = models.CharField(
+        max_length=20,
+        choices=TIPO_PRESTAMO_CHOICES,
+        default='todos',
+        help_text="Tipo de préstamo al que aplica este requisito"
+    )
 
     class Meta:
         unique_together = ('pipeline', 'requisito')
 
     def __str__(self):
         return f"{self.pipeline.nombre} - {self.requisito.nombre}"
+    
+    def aplica_para_cotizacion(self, cotizacion):
+        """
+        Determina si este requisito aplica para una cotización específica
+        """
+        if not cotizacion:
+            return True  # Si no hay cotización, mostrar todos los requisitos
+        
+        if self.tipo_prestamo_aplicable == 'todos':
+            return True
+        elif self.tipo_prestamo_aplicable == 'personal':
+            return cotizacion.tipoPrestamo == 'personal'
+        elif self.tipo_prestamo_aplicable == 'auto':
+            return cotizacion.tipoPrestamo == 'auto'
+        
+        return True  # Default: mostrar el requisito
 
 
 class RequisitoSolicitud(models.Model):

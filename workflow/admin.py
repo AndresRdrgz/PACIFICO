@@ -41,6 +41,8 @@ class TransicionEtapaInline(admin.TabularInline):
 class RequisitoPipelineInline(admin.TabularInline):
     model = RequisitoPipeline
     extra = 1
+    fields = ('requisito', 'obligatorio', 'tipo_prestamo_aplicable')
+    list_display = ('requisito', 'obligatorio', 'tipo_prestamo_aplicable')
 
 class CampoPersonalizadoInline(admin.TabularInline):
     model = CampoPersonalizado
@@ -156,9 +158,9 @@ class PermisoEtapaAdmin(admin.ModelAdmin):
 @admin.register(Solicitud)
 class SolicitudAdmin(admin.ModelAdmin):
     form = SolicitudAdminForm
-    list_display = ('id', 'codigo', 'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por', 'asignada_a', 'entrevista_cliente', 'fecha_creacion', 'fecha_ultima_actualizacion')
-    search_fields = ('codigo', 'pipeline__nombre', 'entrevista_cliente__primer_nombre', 'entrevista_cliente__primer_apellido', 'entrevista_cliente__email')
-    list_filter = ('pipeline', 'etapa_actual', 'subestado_actual', 'entrevista_cliente__tipo_producto')
+    list_display = ('id', 'codigo', 'pipeline', 'etapa_actual', 'subestado_actual', 'creada_por', 'asignada_a', 'entrevista_cliente', 'creada_via_api', 'api_source', 'fecha_creacion', 'fecha_ultima_actualizacion')
+    search_fields = ('codigo', 'pipeline__nombre', 'entrevista_cliente__primer_nombre', 'entrevista_cliente__primer_apellido', 'entrevista_cliente__email', 'api_source')
+    list_filter = ('pipeline', 'etapa_actual', 'subestado_actual', 'entrevista_cliente__tipo_producto', 'creada_via_api', 'api_source')
     autocomplete_fields = ('entrevista_cliente',)
     
     fieldsets = (
@@ -173,6 +175,10 @@ class SolicitudAdmin(admin.ModelAdmin):
         }),
         ('Información Adicional', {
             'fields': ('motivo_consulta', 'como_se_entero', 'prioridad', 'etiquetas_oficial', 'origen')
+        }),
+        ('API Externa', {
+            'fields': ('creada_via_api', 'api_source'),
+            'classes': ('collapse',)
         }),
         ('Canal Digital', {
             'fields': ('cliente_nombre', 'cliente_cedula', 'cliente_telefono', 'cliente_email', 'producto_solicitado', 'monto_solicitado'),
@@ -203,9 +209,10 @@ class RequisitoAdmin(admin.ModelAdmin):
 
 @admin.register(RequisitoPipeline)
 class RequisitoPipelineAdmin(admin.ModelAdmin):
-    list_display = ('id', 'pipeline', 'requisito', 'obligatorio')
+    list_display = ('id', 'pipeline', 'requisito', 'obligatorio', 'tipo_prestamo_aplicable')
     search_fields = ('pipeline__nombre', 'requisito__nombre')
-    list_filter = ('pipeline',)
+    list_filter = ('pipeline', 'tipo_prestamo_aplicable', 'obligatorio')
+    fields = ('pipeline', 'requisito', 'obligatorio', 'tipo_prestamo_aplicable')
 
 
 @admin.register(RequisitoSolicitud)

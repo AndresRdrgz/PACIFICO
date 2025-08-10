@@ -496,12 +496,23 @@ def bandeja_trabajo(request):
             sura_marca = request.POST.get('sura_marca', '') if cotizar_sura_makito else None
             sura_modelo = request.POST.get('sura_modelo', '') if cotizar_sura_makito else None
             
+            # Obtener propietario del formulario (por defecto el usuario actual)
+            propietario_id = request.POST.get('propietario')
+            propietario = request.user  # Default to current user
+            if propietario_id:
+                try:
+                    from django.contrib.auth.models import User
+                    propietario = User.objects.get(id=propietario_id, is_active=True)
+                except User.DoesNotExist:
+                    # Si el usuario seleccionado no existe, usar el usuario actual
+                    propietario = request.user
+            
             # Crear solicitud (el código se generará automáticamente via signal)
             solicitud = Solicitud.objects.create(
                 pipeline=pipeline,
                 etapa_actual=primera_etapa,
                 creada_por=request.user,
-                propietario=request.user,  # Set propietario to the user who created the solicitud
+                propietario=propietario,  # Set propietario from form or default to current user
                 cliente=cliente,
                 cotizacion=cotizacion,
                 motivo_consulta=motivo_consulta,
@@ -694,8 +705,31 @@ def detalle_solicitud(request, solicitud_id):
     # Obtener historial
     historial = solicitud.historial.all().order_by('-fecha_inicio')
     
-    # Obtener requisitos
-    requisitos = solicitud.requisitos.all()
+    # Obtener requisitos - Filtrar por tipo de préstamo
+    requisitos_query = solicitud.requisitos.all()
+    if solicitud.cotizacion and hasattr(solicitud.cotizacion, 'tipoPrestamo'):
+        # Obtener el tipo de préstamo de la cotización
+        tipo_prestamo = solicitud.cotizacion.tipoPrestamo
+        
+        # Filtrar requisitos considerando su tipo_prestamo_aplicable
+        requisitos_aplicables = []
+        for req in requisitos_query:
+            requisito_pipeline = RequisitoPipeline.objects.filter(
+                pipeline=solicitud.pipeline,
+                requisito=req.requisito
+            ).first()
+            
+            # Si no existe RequisitoPipeline o si aplica para este tipo de préstamo
+            if (not requisito_pipeline or 
+                requisito_pipeline.tipo_prestamo_aplicable == 'todos' or
+                (requisito_pipeline.tipo_prestamo_aplicable == 'personal' and tipo_prestamo == 'personal') or
+                (requisito_pipeline.tipo_prestamo_aplicable == 'auto' and tipo_prestamo == 'auto')):
+                requisitos_aplicables.append(req)
+        
+        requisitos = requisitos_aplicables
+    else:
+        # Si no hay cotización, mostrar todos los requisitos
+        requisitos = list(requisitos_query)
     
     # Obtener campos personalizados
     campos_personalizados = CampoPersonalizado.objects.filter(pipeline=solicitud.pipeline)
@@ -2021,6 +2055,7 @@ def api_asignar_requisito_pipeline(request, pipeline_id):
             
             requisito_id = request.POST.get('requisito_id')
             obligatorio = request.POST.get('obligatorio') == 'true'
+            tipo_prestamo_aplicable = request.POST.get('tipo_prestamo_aplicable', 'todos')
             
             if not requisito_id:
                 return JsonResponse({'success': False, 'error': 'El requisito es obligatorio'})
@@ -2030,11 +2065,15 @@ def api_asignar_requisito_pipeline(request, pipeline_id):
             requisito_pipeline, created = RequisitoPipeline.objects.get_or_create(
                 pipeline=pipeline,
                 requisito=requisito,
-                defaults={'obligatorio': obligatorio}
+                defaults={
+                    'obligatorio': obligatorio,
+                    'tipo_prestamo_aplicable': tipo_prestamo_aplicable
+                }
             )
             
             if not created:
                 requisito_pipeline.obligatorio = obligatorio
+                requisito_pipeline.tipo_prestamo_aplicable = tipo_prestamo_aplicable
                 requisito_pipeline.save()
             
             return JsonResponse({
@@ -2042,7 +2081,8 @@ def api_asignar_requisito_pipeline(request, pipeline_id):
                 'requisito_pipeline': {
                     'id': requisito_pipeline.id,
                     'requisito_nombre': requisito.nombre,
-                    'obligatorio': requisito_pipeline.obligatorio
+                    'obligatorio': requisito_pipeline.obligatorio,
+                    'tipo_prestamo_aplicable': requisito_pipeline.tipo_prestamo_aplicable
                 }
             })
         except Exception as e:
@@ -2208,6 +2248,7 @@ def api_editar_requisito_pipeline(request, requisito_pipeline_id):
             nombre = request.POST.get('nombre')
             descripcion = request.POST.get('descripcion', '')
             obligatorio = request.POST.get('obligatorio') == 'on'
+            tipo_prestamo_aplicable = request.POST.get('tipo_prestamo_aplicable', 'todos')
             
             # Validaciones
             if not nombre:
@@ -2224,6 +2265,7 @@ def api_editar_requisito_pipeline(request, requisito_pipeline_id):
             
             # Actualizar el requisito del pipeline
             requisito_pipeline.obligatorio = obligatorio
+            requisito_pipeline.tipo_prestamo_aplicable = tipo_prestamo_aplicable
             requisito_pipeline.save()
             
             return JsonResponse({'success': True})
@@ -2298,7 +2340,8 @@ def api_obtener_datos_pipeline(request, pipeline_id):
                 'id': req_pipeline.id,
                 'requisito_nombre': req_pipeline.requisito.nombre,
                 'requisito_descripcion': req_pipeline.requisito.descripcion or '',
-                'obligatorio': req_pipeline.obligatorio
+                'obligatorio': req_pipeline.obligatorio,
+                'tipo_prestamo_aplicable': req_pipeline.tipo_prestamo_aplicable
             })
         
         # Campos personalizados
@@ -2571,7 +2614,7 @@ def api_buscar_cotizaciones(request):
 
 @login_required
 def api_buscar_cotizaciones_drawer(request):
-    """API para buscar cotizaciones en el drawer - solo Préstamos de Auto"""
+    """API para buscar cotizaciones en el drawer - Préstamos de Auto y Personal"""
     if request.method == 'GET':
         query = request.GET.get('q', '').strip()
         limit = int(request.GET.get('limit', 10))
@@ -2579,12 +2622,12 @@ def api_buscar_cotizaciones_drawer(request):
         if not query:
             return JsonResponse({'success': True, 'cotizaciones': []})
         
-        # Base query - SOLO PRÉSTAMOS DE AUTO
+        # Base query - PRÉSTAMOS DE AUTO Y PERSONAL
         cotizaciones = Cotizacion.objects.filter(
             Q(nombreCliente__icontains=query) | 
             Q(cedulaCliente__icontains=query) |
             Q(id__icontains=query),
-            tipoPrestamo='auto'  # Solo cotizaciones de préstamos de auto
+            Q(tipoPrestamo='auto') | Q(tipoPrestamo='personal')  # Incluir ambos tipos
         )
         
         # Filtrar por permisos de usuario
@@ -3129,12 +3172,23 @@ def nueva_solicitud(request):
             sura_marca = request.POST.get('sura_marca', '') if cotizar_sura_makito else None
             sura_modelo = request.POST.get('sura_modelo', '') if cotizar_sura_makito else None
             
+            # Obtener propietario del formulario (por defecto el usuario actual)
+            propietario_id = request.POST.get('propietario')
+            propietario = request.user  # Default to current user
+            if propietario_id:
+                try:
+                    from django.contrib.auth.models import User
+                    propietario = User.objects.get(id=propietario_id, is_active=True)
+                except User.DoesNotExist:
+                    # Si el usuario seleccionado no existe, usar el usuario actual
+                    propietario = request.user
+            
             # Crear solicitud (el código se generará automáticamente via signal)
             solicitud = Solicitud.objects.create(
                 pipeline=pipeline,
                 etapa_actual=primera_etapa,
                 creada_por=request.user,
-                propietario=request.user,  # Set propietario to the user who created the solicitud
+                propietario=propietario,  # Set propietario from form or default to current user
                 cliente=cliente,
                 cotizacion=cotizacion,
                 motivo_consulta=motivo_consulta,
@@ -4298,6 +4352,7 @@ def api_asignar_requisito_pipeline(request, pipeline_id):
             
             requisito_id = request.POST.get('requisito_id')
             obligatorio = request.POST.get('obligatorio') == 'true'
+            tipo_prestamo_aplicable = request.POST.get('tipo_prestamo_aplicable', 'todos')
             
             if not requisito_id:
                 return JsonResponse({'success': False, 'error': 'El requisito es obligatorio'})
@@ -4307,11 +4362,15 @@ def api_asignar_requisito_pipeline(request, pipeline_id):
             requisito_pipeline, created = RequisitoPipeline.objects.get_or_create(
                 pipeline=pipeline,
                 requisito=requisito,
-                defaults={'obligatorio': obligatorio}
+                defaults={
+                    'obligatorio': obligatorio,
+                    'tipo_prestamo_aplicable': tipo_prestamo_aplicable
+                }
             )
             
             if not created:
                 requisito_pipeline.obligatorio = obligatorio
+                requisito_pipeline.tipo_prestamo_aplicable = tipo_prestamo_aplicable
                 requisito_pipeline.save()
             
             return JsonResponse({
@@ -4319,7 +4378,8 @@ def api_asignar_requisito_pipeline(request, pipeline_id):
                 'requisito_pipeline': {
                     'id': requisito_pipeline.id,
                     'requisito_nombre': requisito.nombre,
-                    'obligatorio': requisito_pipeline.obligatorio
+                    'obligatorio': requisito_pipeline.obligatorio,
+                    'tipo_prestamo_aplicable': requisito_pipeline.tipo_prestamo_aplicable
                 }
             })
         except Exception as e:
@@ -4485,6 +4545,7 @@ def api_editar_requisito_pipeline(request, requisito_pipeline_id):
             nombre = request.POST.get('nombre')
             descripcion = request.POST.get('descripcion', '')
             obligatorio = request.POST.get('obligatorio') == 'on'
+            tipo_prestamo_aplicable = request.POST.get('tipo_prestamo_aplicable', 'todos')
             
             # Validaciones
             if not nombre:
@@ -4501,6 +4562,7 @@ def api_editar_requisito_pipeline(request, requisito_pipeline_id):
             
             # Actualizar el requisito del pipeline
             requisito_pipeline.obligatorio = obligatorio
+            requisito_pipeline.tipo_prestamo_aplicable = tipo_prestamo_aplicable
             requisito_pipeline.save()
             
             return JsonResponse({'success': True})
@@ -4575,7 +4637,8 @@ def api_obtener_datos_pipeline(request, pipeline_id):
                 'id': req_pipeline.id,
                 'requisito_nombre': req_pipeline.requisito.nombre,
                 'requisito_descripcion': req_pipeline.requisito.descripcion or '',
-                'obligatorio': req_pipeline.obligatorio
+                'obligatorio': req_pipeline.obligatorio,
+                'tipo_prestamo_aplicable': req_pipeline.tipo_prestamo_aplicable
             })
         
         # Campos personalizados
@@ -4795,7 +4858,7 @@ def api_buscar_cotizaciones(request):
 
 @login_required
 def api_buscar_cotizaciones_drawer(request):
-    """API para buscar cotizaciones en el drawer - solo Préstamos de Auto"""
+    """API para buscar cotizaciones en el drawer - Préstamos de Auto y Personal"""
     if request.method == 'GET':
         query = request.GET.get('q', '').strip()
         limit = int(request.GET.get('limit', 10))
@@ -4803,12 +4866,12 @@ def api_buscar_cotizaciones_drawer(request):
         if not query:
             return JsonResponse({'success': True, 'cotizaciones': []})
         
-        # Base query - SOLO PRÉSTAMOS DE AUTO
+        # Base query - PRÉSTAMOS DE AUTO Y PERSONAL
         cotizaciones = Cotizacion.objects.filter(
             Q(nombreCliente__icontains=query) | 
             Q(cedulaCliente__icontains=query) |
             Q(id__icontains=query),
-            tipoPrestamo='auto'  # Solo cotizaciones de préstamos de auto
+            Q(tipoPrestamo='auto') | Q(tipoPrestamo='personal')  # Incluir ambos tipos
         )
         
         # Filtrar por permisos de usuario
@@ -7953,6 +8016,28 @@ def verificar_requisitos_transicion(solicitud, transicion):
         obligatorio=True
     ).select_related('requisito')
     
+    # Filtrar requisitos basado en el tipo de préstamo de la cotización
+    if solicitud.cotizacion:
+        # Obtener el tipo de préstamo de la cotización
+        tipo_prestamo = solicitud.cotizacion.tipoPrestamo
+        
+        # Filtrar requisitos considerando su tipo_prestamo_aplicable
+        requisitos_aplicables = []
+        for req_transicion in requisitos_transicion:
+            requisito_pipeline = RequisitoPipeline.objects.filter(
+                pipeline=solicitud.pipeline,
+                requisito=req_transicion.requisito
+            ).first()
+            
+            # Si no existe RequisitoPipeline o si aplica para este tipo de préstamo
+            if (not requisito_pipeline or 
+                requisito_pipeline.tipo_prestamo_aplicable == 'todos' or
+                (requisito_pipeline.tipo_prestamo_aplicable == 'personal' and tipo_prestamo == 'personal') or
+                (requisito_pipeline.tipo_prestamo_aplicable == 'auto' and tipo_prestamo == 'auto')):
+                requisitos_aplicables.append(req_transicion)
+        
+        requisitos_transicion = requisitos_aplicables
+    
     requisitos_faltantes = []
     
     for req_transicion in requisitos_transicion:
@@ -9228,8 +9313,34 @@ def api_solicitud_brief(request, solicitud_id):
         # Documentos (de requisitos) - CON INFORMACIÓN DE CALIFICACIÓN
         from .models import CalificacionDocumentoBackoffice, RequisitoTransicion
         
+        # Filtrar requisitos basado en el tipo de préstamo de la cotización
+        requisitos_query = solicitud.requisitos.all()
+        if solicitud.cotizacion and hasattr(solicitud.cotizacion, 'tipoPrestamo'):
+            # Obtener el tipo de préstamo de la cotización
+            tipo_prestamo = solicitud.cotizacion.tipoPrestamo
+            
+            # Filtrar requisitos considerando su tipo_prestamo_aplicable
+            requisitos_aplicables = []
+            for req in requisitos_query:
+                requisito_pipeline = RequisitoPipeline.objects.filter(
+                    pipeline=solicitud.pipeline,
+                    requisito=req.requisito
+                ).first()
+                
+                # Si no existe RequisitoPipeline o si aplica para este tipo de préstamo
+                if (not requisito_pipeline or 
+                    requisito_pipeline.tipo_prestamo_aplicable == 'todos' or
+                    (requisito_pipeline.tipo_prestamo_aplicable == 'personal' and tipo_prestamo == 'personal') or
+                    (requisito_pipeline.tipo_prestamo_aplicable == 'auto' and tipo_prestamo == 'auto')):
+                    requisitos_aplicables.append(req)
+            
+            requisitos_filtrados = requisitos_aplicables
+        else:
+            # Si no hay cotización, mostrar todos los requisitos
+            requisitos_filtrados = list(requisitos_query)
+        
         documentos = []
-        for req in solicitud.requisitos.all():
+        for req in requisitos_filtrados:
             # Obtener calificación más reciente si existe
             calificacion = CalificacionDocumentoBackoffice.objects.filter(
                 requisito_solicitud=req
@@ -9255,7 +9366,6 @@ def api_solicitud_brief(request, solicitud_id):
             
             # 2. Si no se encontró en RequisitoTransicion, verificar en RequisitoPipeline
             if not es_obligatorio:
-                from .modelsWorkflow import RequisitoPipeline
                 req_pipeline = RequisitoPipeline.objects.filter(
                     pipeline=solicitud.pipeline,
                     requisito=req.requisito
@@ -9587,9 +9697,34 @@ def api_solicitud_detalle(request, solicitud_id):
                 'fecha_fin': h.fecha_fin.isoformat() if h.fecha_fin else None
             })
 
-        # Requisitos de la solicitud
+        # Requisitos de la solicitud - Filtrar por tipo de préstamo
+        requisitos_query = solicitud.requisitos.all()
+        if solicitud.cotizacion and hasattr(solicitud.cotizacion, 'tipoPrestamo'):
+            # Obtener el tipo de préstamo de la cotización
+            tipo_prestamo = solicitud.cotizacion.tipoPrestamo
+            
+            # Filtrar requisitos considerando su tipo_prestamo_aplicable
+            requisitos_aplicables = []
+            for req in requisitos_query:
+                requisito_pipeline = RequisitoPipeline.objects.filter(
+                    pipeline=solicitud.pipeline,
+                    requisito=req.requisito
+                ).first()
+                
+                # Si no existe RequisitoPipeline o si aplica para este tipo de préstamo
+                if (not requisito_pipeline or 
+                    requisito_pipeline.tipo_prestamo_aplicable == 'todos' or
+                    (requisito_pipeline.tipo_prestamo_aplicable == 'personal' and tipo_prestamo == 'personal') or
+                    (requisito_pipeline.tipo_prestamo_aplicable == 'auto' and tipo_prestamo == 'auto')):
+                    requisitos_aplicables.append(req)
+            
+            requisitos_filtrados = requisitos_aplicables
+        else:
+            # Si no hay cotización, mostrar todos los requisitos
+            requisitos_filtrados = list(requisitos_query)
+        
         requisitos = []
-        for req in solicitud.requisitos.all():
+        for req in requisitos_filtrados:
             requisitos.append({
                 'id': req.id,
                 'requisito': {
@@ -10526,6 +10661,29 @@ def api_obtener_requisitos_faltantes_detallado(request, solicitud_id):
             transicion=transicion
         ).select_related('requisito')
         
+        # Filtrar requisitos basado en el tipo de préstamo de la cotización
+        if solicitud.cotizacion:
+            # Obtener el tipo de préstamo de la cotización
+            tipo_prestamo = solicitud.cotizacion.tipoPrestamo
+            
+            # Filtrar requisitos considerando su tipo_prestamo_aplicable
+            # Buscar el RequisitoPipeline para cada requisito para verificar su aplicabilidad
+            requisitos_aplicables = []
+            for req_transicion in requisitos_transicion:
+                requisito_pipeline = RequisitoPipeline.objects.filter(
+                    pipeline=solicitud.pipeline,
+                    requisito=req_transicion.requisito
+                ).first()
+                
+                # Si no existe RequisitoPipeline o si aplica para este tipo de préstamo
+                if (not requisito_pipeline or 
+                    requisito_pipeline.tipo_prestamo_aplicable == 'todos' or
+                    (requisito_pipeline.tipo_prestamo_aplicable == 'personal' and tipo_prestamo == 'personal') or
+                    (requisito_pipeline.tipo_prestamo_aplicable == 'auto' and tipo_prestamo == 'auto')):
+                    requisitos_aplicables.append(req_transicion)
+            
+            requisitos_transicion = requisitos_aplicables
+        
         requisitos_detallados = []
         requisitos_obligatorios = []
         requisitos_opcionales = []
@@ -11231,7 +11389,31 @@ def detalle_solicitud_analisis(request, solicitud_id):
                 req_sol.transicion_nombre = requisitos_info_map[req_sol.requisito.id]['transicion_nombre']
     
     # Mantener requisitos originales para compatibilidad, pero agregar requisitos_consulta
-    requisitos = solicitud.requisitos.all().select_related('requisito')
+    # Filtrar requisitos por tipo de préstamo
+    requisitos_query = solicitud.requisitos.all().select_related('requisito')
+    if solicitud.cotizacion and hasattr(solicitud.cotizacion, 'tipoPrestamo'):
+        # Obtener el tipo de préstamo de la cotización
+        tipo_prestamo = solicitud.cotizacion.tipoPrestamo
+        
+        # Filtrar requisitos considerando su tipo_prestamo_aplicable
+        requisitos_aplicables = []
+        for req in requisitos_query:
+            requisito_pipeline = RequisitoPipeline.objects.filter(
+                pipeline=solicitud.pipeline,
+                requisito=req.requisito
+            ).first()
+            
+            # Si no existe RequisitoPipeline o si aplica para este tipo de préstamo
+            if (not requisito_pipeline or 
+                requisito_pipeline.tipo_prestamo_aplicable == 'todos' or
+                (requisito_pipeline.tipo_prestamo_aplicable == 'personal' and tipo_prestamo == 'personal') or
+                (requisito_pipeline.tipo_prestamo_aplicable == 'auto' and tipo_prestamo == 'auto')):
+                requisitos_aplicables.append(req)
+        
+        requisitos = requisitos_aplicables
+    else:
+        # Si no hay cotización, mostrar todos los requisitos
+        requisitos = list(requisitos_query)
     comentarios = solicitud.comentarios.all().order_by('-fecha_creacion')
     etapas_pipeline = solicitud.pipeline.etapas.all().order_by('orden')
     
@@ -17831,4 +18013,435 @@ def marcar_todos_documentos(request):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+# API Endpoints for External Apps
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_crear_solicitud_externa(request):
+    """
+    API endpoint para crear solicitudes desde aplicaciones externas.
+    
+    Parámetros esperados (JSON):
+    - pipeline_id: ID del pipeline a usar
+    - api_source: Identificador de la aplicación externa (requerido)
+    - cliente_nombre: Nombre completo del cliente
+    - cliente_cedula: Cédula del cliente
+    - cliente_telefono: Teléfono del cliente
+    - cliente_email: Email del cliente
+    - producto_solicitado: Producto de interés
+    - monto_solicitado: Monto solicitado
+    - motivo_consulta: Motivo de la consulta
+    - como_se_entero: Cómo se enteró del servicio
+    - observaciones: Observaciones adicionales
+    - propietario_username: Username del usuario propietario (opcional)
+    """
+    try:
+        # Verificar que sea POST
+        if request.method != 'POST':
+            return JsonResponse({'error': 'Método no permitido'}, status=405)
+        
+        # Obtener datos del request
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'JSON inválido'}, status=400)
+        
+        # Validar campos requeridos
+        required_fields = ['pipeline_id', 'api_source']
+        missing_fields = [field for field in required_fields if not data.get(field)]
+        if missing_fields:
+            return JsonResponse({
+                'error': f'Campos requeridos faltantes: {", ".join(missing_fields)}'
+            }, status=400)
+        
+        # Obtener pipeline
+        try:
+            pipeline = Pipeline.objects.get(id=data['pipeline_id'])
+        except Pipeline.DoesNotExist:
+            return JsonResponse({'error': f'Pipeline con ID {data["pipeline_id"]} no encontrado'}, status=404)
+        
+        # Obtener primera etapa del pipeline
+        primera_etapa = pipeline.etapas.order_by('orden').first()
+        if not primera_etapa:
+            return JsonResponse({'error': 'El pipeline no tiene etapas configuradas'}, status=400)
+        
+        # Obtener usuario propietario (si se especifica)
+        propietario = None
+        if data.get('propietario_username'):
+            try:
+                propietario = User.objects.get(username=data['propietario_username'])
+            except User.DoesNotExist:
+                return JsonResponse({'error': f'Usuario {data["propietario_username"]} no encontrado'}, status=404)
+        else:
+            # Usar el primer superuser como default
+            propietario = User.objects.filter(is_superuser=True).first()
+            if not propietario:
+                propietario = User.objects.first()
+        
+        # Buscar cliente si se proporciona cédula
+        cliente = None
+        if data.get('cliente_cedula'):
+            try:
+                cliente = Cliente.objects.filter(cedula=data['cliente_cedula']).first()
+            except Exception:
+                pass
+        
+        # Crear la solicitud
+        solicitud = Solicitud.objects.create(
+            pipeline=pipeline,
+            etapa_actual=primera_etapa,
+            creada_por=propietario,
+            propietario=propietario,
+            cliente=cliente,
+            motivo_consulta=data.get('motivo_consulta', ''),
+            como_se_entero=data.get('como_se_entero', ''),
+            # Campos específicos del canal digital
+            cliente_nombre=data.get('cliente_nombre', ''),
+            cliente_cedula=data.get('cliente_cedula', ''),
+            cliente_telefono=data.get('cliente_telefono', ''),
+            cliente_email=data.get('cliente_email', ''),
+            producto_solicitado=data.get('producto_solicitado', ''),
+            monto_solicitado=data.get('monto_solicitado'),
+            observaciones=data.get('observaciones', ''),
+            # Campos de identificación API
+            creada_via_api=True,
+            api_source=data['api_source'],
+            origen='API Externa'
+        )
+        
+        # Crear historial inicial
+        HistorialSolicitud.objects.create(
+            solicitud=solicitud,
+            etapa=primera_etapa,
+            usuario_responsable=propietario,
+            fecha_inicio=timezone.now()
+        )
+        
+        # Crear requisitos automáticamente
+        requisitos_pipeline = RequisitoPipeline.objects.filter(pipeline=pipeline)
+        for req_pipeline in requisitos_pipeline:
+            # Verificar si el requisito aplica para esta cotización/solicitud
+            if hasattr(req_pipeline, 'aplica_para_cotizacion'):
+                if solicitud.cotizacion and not req_pipeline.aplica_para_cotizacion(solicitud.cotizacion):
+                    continue
+            
+            RequisitoSolicitud.objects.create(
+                solicitud=solicitud,
+                requisito=req_pipeline.requisito,
+                cumplido=False
+            )
+        
+        # Respuesta exitosa
+        return JsonResponse({
+            'success': True,
+            'message': 'Solicitud creada exitosamente',
+            'solicitud': {
+                'id': solicitud.id,
+                'codigo': solicitud.codigo,
+                'pipeline': solicitud.pipeline.nombre,
+                'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else None,
+                'creada_via_api': solicitud.creada_via_api,
+                'api_source': solicitud.api_source,
+                'fecha_creacion': solicitud.fecha_creacion.isoformat(),
+                'cliente_nombre': solicitud.cliente_nombre,
+                'cliente_cedula': solicitud.cliente_cedula,
+                'producto_solicitado': solicitud.producto_solicitado,
+                'monto_solicitado': str(solicitud.monto_solicitado) if solicitud.monto_solicitado else None
+            }
+        }, status=201)
+        
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Error interno del servidor: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def api_listar_solicitudes_externas(request):
+    """
+    API endpoint para listar solicitudes creadas vía API externa.
+    
+    Parámetros de consulta opcionales:
+    - api_source: Filtrar por aplicación externa específica
+    - page: Número de página (default: 1)
+    - page_size: Tamaño de página (default: 20, máximo: 100)
+    - fecha_desde: Fecha desde (formato: YYYY-MM-DD)
+    - fecha_hasta: Fecha hasta (formato: YYYY-MM-DD)
+    """
+    try:
+        # Obtener parámetros de consulta
+        api_source = request.GET.get('api_source')
+        page = int(request.GET.get('page', 1))
+        page_size = min(int(request.GET.get('page_size', 20)), 100)
+        fecha_desde = request.GET.get('fecha_desde')
+        fecha_hasta = request.GET.get('fecha_hasta')
+        
+        # Filtrar solicitudes creadas vía API
+        queryset = Solicitud.objects.filter(creada_via_api=True).order_by('-fecha_creacion')
+        
+        # Aplicar filtros adicionales
+        if api_source:
+            queryset = queryset.filter(api_source=api_source)
+        
+        if fecha_desde:
+            try:
+                fecha_desde_obj = timezone.datetime.strptime(fecha_desde, '%Y-%m-%d').date()
+                queryset = queryset.filter(fecha_creacion__date__gte=fecha_desde_obj)
+            except ValueError:
+                return JsonResponse({'error': 'Formato de fecha_desde inválido. Use YYYY-MM-DD'}, status=400)
+        
+        if fecha_hasta:
+            try:
+                fecha_hasta_obj = timezone.datetime.strptime(fecha_hasta, '%Y-%m-%d').date()
+                queryset = queryset.filter(fecha_creacion__date__lte=fecha_hasta_obj)
+            except ValueError:
+                return JsonResponse({'error': 'Formato de fecha_hasta inválido. Use YYYY-MM-DD'}, status=400)
+        
+        # Paginación
+        paginator = Paginator(queryset, page_size)
+        if page > paginator.num_pages:
+            return JsonResponse({'error': 'Página no encontrada'}, status=404)
+        
+        page_obj = paginator.get_page(page)
+        
+        # Serializar resultados
+        solicitudes = []
+        for solicitud in page_obj:
+            solicitudes.append({
+                'id': solicitud.id,
+                'codigo': solicitud.codigo,
+                'pipeline': solicitud.pipeline.nombre,
+                'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else None,
+                'subestado_actual': solicitud.subestado_actual.nombre if solicitud.subestado_actual else None,
+                'api_source': solicitud.api_source,
+                'fecha_creacion': solicitud.fecha_creacion.isoformat(),
+                'fecha_ultima_actualizacion': solicitud.fecha_ultima_actualizacion.isoformat(),
+                'cliente_nombre': solicitud.cliente_nombre,
+                'cliente_cedula': solicitud.cliente_cedula,
+                'cliente_telefono': solicitud.cliente_telefono,
+                'cliente_email': solicitud.cliente_email,
+                'producto_solicitado': solicitud.producto_solicitado,
+                'monto_solicitado': str(solicitud.monto_solicitado) if solicitud.monto_solicitado else None,
+                'resultado_consulta': solicitud.resultado_consulta,
+                'prioridad': solicitud.prioridad,
+                'propietario': solicitud.propietario.username if solicitud.propietario else None,
+                'asignada_a': solicitud.asignada_a.username if solicitud.asignada_a else None
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'solicitudes': solicitudes,
+            'pagination': {
+                'page': page,
+                'page_size': page_size,
+                'total_pages': paginator.num_pages,
+                'total_count': paginator.count,
+                'has_next': page_obj.has_next(),
+                'has_previous': page_obj.has_previous()
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Error interno del servidor: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def api_detalle_solicitud_externa(request, solicitud_id):
+    """
+    API endpoint para obtener el detalle de una solicitud específica creada vía API externa.
+    
+    Parámetros:
+    - solicitud_id: ID de la solicitud
+    """
+    try:
+        # Obtener la solicitud
+        try:
+            solicitud = Solicitud.objects.select_related(
+                'pipeline', 'etapa_actual', 'subestado_actual', 
+                'creada_por', 'propietario', 'asignada_a', 'cliente', 'cotizacion'
+            ).get(id=solicitud_id, creada_via_api=True)
+        except Solicitud.DoesNotExist:
+            return JsonResponse({'error': 'Solicitud no encontrada o no fue creada vía API'}, status=404)
+        
+        # Obtener historial
+        historial = []
+        for registro in solicitud.historial.all().order_by('-fecha_inicio'):
+            historial.append({
+                'etapa': registro.etapa.nombre,
+                'subestado': registro.subestado.nombre if registro.subestado else None,
+                'usuario_responsable': registro.usuario_responsable.username if registro.usuario_responsable else None,
+                'fecha_inicio': registro.fecha_inicio.isoformat(),
+                'fecha_fin': registro.fecha_fin.isoformat() if registro.fecha_fin else None,
+                'sla_vencido': registro.sla_vencido()
+            })
+        
+        # Obtener requisitos
+        requisitos = []
+        for req in solicitud.requisitos.all():
+            requisitos.append({
+                'nombre': req.requisito.nombre,
+                'descripcion': req.requisito.descripcion,
+                'cumplido': req.cumplido,
+                'observaciones': req.observaciones,
+                'tiene_archivo': bool(req.archivo)
+            })
+        
+        # Obtener comentarios
+        comentarios = []
+        for comentario in solicitud.comentarios.all().order_by('-fecha_creacion'):
+            comentarios.append({
+                'usuario': comentario.usuario.username,
+                'comentario': comentario.comentario,
+                'tipo': comentario.tipo,
+                'resultado_analisis': comentario.resultado_analisis,
+                'fecha_creacion': comentario.fecha_creacion.isoformat(),
+                'es_editado': comentario.es_editado
+            })
+        
+        # Respuesta con detalle completo
+        return JsonResponse({
+            'success': True,
+            'solicitud': {
+                'id': solicitud.id,
+                'codigo': solicitud.codigo,
+                'pipeline': {
+                    'id': solicitud.pipeline.id,
+                    'nombre': solicitud.pipeline.nombre,
+                    'descripcion': solicitud.pipeline.descripcion
+                },
+                'etapa_actual': {
+                    'id': solicitud.etapa_actual.id,
+                    'nombre': solicitud.etapa_actual.nombre,
+                    'orden': solicitud.etapa_actual.orden
+                } if solicitud.etapa_actual else None,
+                'subestado_actual': {
+                    'id': solicitud.subestado_actual.id,
+                    'nombre': solicitud.subestado_actual.nombre,
+                    'orden': solicitud.subestado_actual.orden
+                } if solicitud.subestado_actual else None,
+                'api_source': solicitud.api_source,
+                'fecha_creacion': solicitud.fecha_creacion.isoformat(),
+                'fecha_ultima_actualizacion': solicitud.fecha_ultima_actualizacion.isoformat(),
+                'cliente_nombre': solicitud.cliente_nombre,
+                'cliente_cedula': solicitud.cliente_cedula,
+                'cliente_telefono': solicitud.cliente_telefono,
+                'cliente_email': solicitud.cliente_email,
+                'producto_solicitado': solicitud.producto_solicitado,
+                'monto_solicitado': str(solicitud.monto_solicitado) if solicitud.monto_solicitado else None,
+                'motivo_consulta': solicitud.motivo_consulta,
+                'como_se_entero': solicitud.como_se_entero,
+                'observaciones': solicitud.observaciones,
+                'resultado_consulta': solicitud.resultado_consulta,
+                'prioridad': solicitud.prioridad,
+                'propietario': solicitud.propietario.username if solicitud.propietario else None,
+                'asignada_a': solicitud.asignada_a.username if solicitud.asignada_a else None,
+                'creada_por': solicitud.creada_por.username if solicitud.creada_por else None,
+                'cliente': {
+                    'id': solicitud.cliente.id,
+                    'nombre': solicitud.cliente.nombre,
+                    'cedula': solicitud.cliente.cedula
+                } if solicitud.cliente else None,
+                'cotizacion': {
+                    'id': solicitud.cotizacion.id,
+                    'numero': solicitud.cotizacion.numero
+                } if solicitud.cotizacion else None
+            },
+            'historial': historial,
+            'requisitos': requisitos,
+            'comentarios': comentarios
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Error interno del servidor: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def api_estadisticas_solicitudes_externas(request):
+    """
+    API endpoint para obtener estadísticas de solicitudes creadas vía API externa.
+    
+    Parámetros de consulta opcionales:
+    - api_source: Filtrar por aplicación externa específica
+    - fecha_desde: Fecha desde (formato: YYYY-MM-DD)
+    - fecha_hasta: Fecha hasta (formato: YYYY-MM-DD)
+    """
+    try:
+        # Obtener parámetros de consulta
+        api_source = request.GET.get('api_source')
+        fecha_desde = request.GET.get('fecha_desde')
+        fecha_hasta = request.GET.get('fecha_hasta')
+        
+        # Filtrar solicitudes creadas vía API
+        queryset = Solicitud.objects.filter(creada_via_api=True)
+        
+        # Aplicar filtros adicionales
+        if api_source:
+            queryset = queryset.filter(api_source=api_source)
+        
+        if fecha_desde:
+            try:
+                fecha_desde_obj = timezone.datetime.strptime(fecha_desde, '%Y-%m-%d').date()
+                queryset = queryset.filter(fecha_creacion__date__gte=fecha_desde_obj)
+            except ValueError:
+                return JsonResponse({'error': 'Formato de fecha_desde inválido. Use YYYY-MM-DD'}, status=400)
+        
+        if fecha_hasta:
+            try:
+                fecha_hasta_obj = timezone.datetime.strptime(fecha_hasta, '%Y-%m-%d').date()
+                queryset = queryset.filter(fecha_creacion__date__lte=fecha_hasta_obj)
+            except ValueError:
+                return JsonResponse({'error': 'Formato de fecha_hasta inválido. Use YYYY-MM-DD'}, status=400)
+        
+        # Estadísticas generales
+        total_solicitudes = queryset.count()
+        
+        # Por estado de resultado
+        por_resultado = queryset.values('resultado_consulta').annotate(
+            count=Count('id')
+        ).order_by('-count')
+        
+        # Por aplicación externa
+        por_api_source = queryset.values('api_source').annotate(
+            count=Count('id')
+        ).order_by('-count')
+        
+        # Por pipeline
+        por_pipeline = queryset.values('pipeline__nombre').annotate(
+            count=Count('id')
+        ).order_by('-count')
+        
+        # Por etapa actual
+        por_etapa = queryset.values('etapa_actual__nombre').annotate(
+            count=Count('id')
+        ).order_by('-count')
+        
+        # Por prioridad
+        por_prioridad = queryset.values('prioridad').annotate(
+            count=Count('id')
+        ).order_by('-count')
+        
+        return JsonResponse({
+            'success': True,
+            'estadisticas': {
+                'total_solicitudes': total_solicitudes,
+                'por_resultado_consulta': list(por_resultado),
+                'por_api_source': list(por_api_source),
+                'por_pipeline': list(por_pipeline),
+                'por_etapa_actual': list(por_etapa),
+                'por_prioridad': list(por_prioridad)
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Error interno del servidor: {str(e)}'
+        }, status=500)
 

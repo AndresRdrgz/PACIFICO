@@ -98,8 +98,168 @@
         color: #6c757d;
         font-size: 0.9rem;
         font-weight: 500;
-        text-align: center;
-        margin: 0;
+    }
+
+    /* Multi-select Filter Styles */
+    .multiselect-wrapper {
+        position: relative;
+        width: 100%;
+        display: inline-block;
+    }
+
+    .multiselect-button {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        min-height: 38px;
+        padding: 8px 12px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        background: white;
+        color: #374151;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        outline: none;
+    }
+
+    .multiselect-button:hover {
+        border-color: #cbd5e1;
+        background-color: #f9fafb;
+    }
+
+    .multiselect-button:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .multiselect-button.active {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .multiselect-chevron {
+        margin-left: 8px;
+        font-size: 0.75rem;
+        transition: transform 0.2s ease;
+        color: #6b7280;
+    }
+
+    .multiselect-chevron.rotated {
+        transform: rotate(180deg);
+    }
+
+    .multiselect-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 1050;
+        margin-top: 4px;
+        background: white;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        max-height: 280px;
+        overflow: hidden;
+        min-width: 200px;
+    }
+
+    .multiselect-search {
+        padding: 12px;
+        border-bottom: 1px solid #e5e7eb;
+        background: #f9fafb;
+    }
+
+    .multiselect-options {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .multiselect-option {
+        display: flex;
+        align-items: center;
+        padding: 10px 12px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        font-size: 0.875rem;
+        border-bottom: 1px solid #f3f4f6;
+        user-select: none;
+    }
+
+    .multiselect-option:last-child {
+        border-bottom: none;
+    }
+
+    .multiselect-option:hover {
+        background-color: #f3f4f6;
+    }
+
+    .multiselect-option.selected {
+        background-color: #dbeafe;
+        color: #1e40af;
+        font-weight: 500;
+    }
+
+    .multiselect-checkbox {
+        width: 16px;
+        height: 16px;
+        margin-right: 10px;
+        accent-color: #3b82f6;
+        cursor: pointer;
+    }
+
+    .filter-badge {
+        display: inline-flex;
+        align-items: center;
+        background: #dbeafe;
+        color: #1e40af;
+        font-size: 0.75rem;
+        padding: 3px 8px;
+        border-radius: 12px;
+        margin: 2px;
+        max-width: 120px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 500;
+    }
+
+    .filter-badge .remove-badge {
+        margin-left: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        color: #1e40af;
+        opacity: 0.7;
+        transition: opacity 0.2s ease;
+        padding: 0 2px;
+    }
+
+    .filter-badge .remove-badge:hover {
+        opacity: 1;
+        background-color: rgba(30, 64, 175, 0.1);
+        border-radius: 50%;
+    }
+
+    /* Hide scrollbar for better appearance */
+    .multiselect-options::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .multiselect-options::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+
+    .multiselect-options::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+    }
+
+    .multiselect-options::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
     }
 
     /* Table Loading Overlay */
@@ -911,45 +1071,82 @@
                             </button>
                         </div>
 
-                        <!-- Compact Filters -->
-                        <div class="filter-group" style="margin: 0;">
-                            <select id="filtroEtapa" onchange="applyFilters()"
-                                style="padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem; background: white; color: #333; min-width: 140px;"
-                                title="Filtrar por etapa">
-                                <option value="">Todas las etapas</option>
-                            </select>
+                        <!-- Multi-Select Filters -->
+                        <!-- Producto Filter -->
+                        <div class="filter-group" style="margin: 0 8px 0 0; position: relative;">
+                            <div class="multiselect-wrapper">
+                                <button type="button" id="filtroProductoToggle" 
+                                    class="multiselect-button"
+                                    style="min-width: 160px;"
+                                    onclick="toggleMultiSelect('filtroProducto')">
+                                    <span id="filtroProductoLabel">Productos</span>
+                                    <i class="fas fa-chevron-down multiselect-chevron" id="filtroProductoChevron"></i>
+                                </button>
+                                <div id="filtroProductoDropdown" class="multiselect-dropdown d-none">
+                                    <div class="multiselect-search">
+                                        <input type="text" id="filtroProductoSearch" placeholder="Buscar productos..." 
+                                            class="form-control form-control-sm"
+                                            oninput="filterDropdownOptions('filtroProducto')">
+                                    </div>
+                                    <div id="filtroProductoOptions" class="multiselect-options">
+                                        <!-- Options will be populated by JavaScript -->
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
+                        <!-- Etapa Filter -->
+                        <div class="filter-group" style="margin: 0 8px 0 0; position: relative;">
+                            <div class="multiselect-wrapper">
+                                <button type="button" id="filtroEtapaToggle" 
+                                    class="multiselect-button"
+                                    style="min-width: 140px;"
+                                    onclick="toggleMultiSelect('filtroEtapa')">
+                                    <span id="filtroEtapaLabel">Etapas</span>
+                                    <i class="fas fa-chevron-down multiselect-chevron" id="filtroEtapaChevron"></i>
+                                </button>
+                                <div id="filtroEtapaDropdown" class="multiselect-dropdown d-none">
+                                    <div class="multiselect-search">
+                                        <input type="text" id="filtroEtapaSearch" placeholder="Buscar etapas..." 
+                                            class="form-control form-control-sm"
+                                            oninput="filterDropdownOptions('filtroEtapa')">
+                                    </div>
+                                    <div id="filtroEtapaOptions" class="multiselect-options">
+                                        <!-- Options will be populated by JavaScript -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Propietario Filter -->
+                        <div class="filter-group" style="margin: 0 8px 0 0; position: relative;">
+                            <div class="multiselect-wrapper">
+                                <button type="button" id="filtroPropietarioToggle" 
+                                    class="multiselect-button"
+                                    style="min-width: 160px;"
+                                    onclick="toggleMultiSelect('filtroPropietario')">
+                                    <span id="filtroPropietarioLabel">Propietarios</span>
+                                    <i class="fas fa-chevron-down multiselect-chevron" id="filtroPropietarioChevron"></i>
+                                </button>
+                                <div id="filtroPropietarioDropdown" class="multiselect-dropdown d-none">
+                                    <div class="multiselect-search">
+                                        <input type="text" id="filtroPropietarioSearch" placeholder="Buscar propietarios..." 
+                                            class="form-control form-control-sm"
+                                            oninput="filterDropdownOptions('filtroPropietario')">
+                                    </div>
+                                    <div id="filtroPropietarioOptions" class="multiselect-options">
+                                        <!-- Options will be populated by JavaScript -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Legacy SLA Filter (kept for compatibility) -->
                         <div class="filter-group" style="margin: 0;">
                             <select id="filtroSLA" onchange="applyFilters()"
                                 style="padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem; background: white; color: #333; min-width: 120px;"
                                 title="Filtrar por SLA">
                                 <option value="">Todos los SLA</option>
-                            </select>
-                        </div>
-                        <div class="filter-group" style="margin: 0;">
-                            <select id="filtroAsignado" onchange="applyFilters()"
-                                style="padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem; background: white; color: #333; min-width: 140px;"
-                                title="Filtrar por asignado">
-                                <option value="">Todos los asignados</option>
-                            </select>
-                        </div>
-                        <div class="filter-group" style="margin: 0;">
-                            <select id="filtroPrioridad" onchange="applyFilters()"
-                                style="padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem; background: white; color: #333; min-width: 120px;"
-                                title="Filtrar por prioridad">
-                                <option value="">Todas las prioridades</option>
-                            </select>
-                        </div>
-                        <div class="filter-group" style="margin: 0;">
-                            <select id="filtroOrigen" onchange="applyFilters()"
-                                style="padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem; background: white; color: #333; min-width: 140px;"
-                                title="Filtrar por origen">
-                                <option value="">Todos los orígenes</option>
-                                <option value="Canal Digital">
-                                    Canal Digital
-                                </option>
-                                <option value="Presencial">Presencial</option>
-                                <option value="Otro">Otros</option>
                             </select>
                         </div>
 
@@ -1000,9 +1197,9 @@
                                 <th style="width: 150px;">Propietario</th>
                                 <th style="width: 120px;">Etapa</th>
                                 <th style="width: 100px;">Estado</th>
-                                <th style="width: 140px;">Fecha estado</th>
-                                <th style="width: 140px;">Fecha subestado</th>
-                                <th style="width: 200px;">Fecha SLA</th>
+                                <th style="width: 140px;">Fecha - Etapa</th>
+                                <th style="width: 140px;">Fecha - Subestado</th>
+                                <th style="width: 200px;">Fecha - SLA</th>
                                 <th style="width: 80px;">
                                     <i class="fas fa-bell" title="Recordatorios"></i>
                                 </th>
@@ -1345,6 +1542,12 @@
 
 {% block extra_js %}
 <script>
+    // Set current user ID and role globally for use in drawer and other components
+    window.currentUserId = {{ request.user.id|default:0 }};
+    window.currentUserRole = '{{ request.user.userprofile.rol|default:"Usuario"|escapejs }}';
+    console.log('🔧 Current user ID set:', window.currentUserId);
+    console.log('🔧 Current user role set:', window.currentUserRole);
+
     /*
      * PROFILE PICTURE OPTIMIZATION SYSTEM
      * ===================================
@@ -1690,60 +1893,132 @@
 
     // Función para inicializar datos de la tabla desde el DOM
     function initializeTableData() {
+        console.log('🔄 Initializing table data...');
+        
         const tableBody = document.querySelector('#tablaSolicitudes tbody');
-        if (!tableBody) return;
+        if (!tableBody) {
+            console.warn('❌ Table body not found with selector: #tablaSolicitudes tbody');
+            // Try alternative selectors
+            const altTableBody = document.querySelector('.apc-table-container tbody') || 
+                                 document.querySelector('table tbody') || 
+                                 document.querySelector('[id*="tabla"] tbody');
+            if (altTableBody) {
+                console.log('✅ Found alternative table body:', altTableBody);
+                tableBody = altTableBody;
+            } else {
+                console.error('❌ No table body found at all');
+                return;
+            }
+        }
 
         currentSolicitudes = [];
         const rows = tableBody.querySelectorAll('tr');
+        console.log(`🔍 Found ${rows.length} rows in table`);
 
-        rows.forEach(row => {
-            if (row.querySelector('td[colspan]')) return; // Skip empty/no-data rows
+        rows.forEach((row, index) => {
+            if (row.querySelector('td[colspan]')) {
+                console.log(`⏭️ Skipping empty row ${index}`);
+                return; // Skip empty/no-data rows
+            }
 
             const cells = row.querySelectorAll('td');
-            if (cells.length < 10) return; // Ensure we have enough cells
+            console.log(`📋 Row ${index}: ${cells.length} cells`);
+            
+            if (cells.length < 8) { // Reduced minimum cell count
+                console.warn(`⚠️ Row ${index} has insufficient cells (${cells.length})`);
+                return;
+            }
 
             const solicitudId = row.getAttribute('data-solicitud-id');
             if (!solicitudId || solicitudId === '' || solicitudId === 'None') {
-                console.warn('⚠️ Row with missing or invalid solicitud ID found:', row);
-                return; // Skip rows without valid IDs
+                console.warn(`⚠️ Row ${index} with missing or invalid solicitud ID:`, solicitudId);
+                return;
             }
 
             const solicitud = {
                 id: solicitudId,
-                cliente: cells[0].textContent.trim(),
-                producto: cells[1].textContent.trim(),
-                monto: cells[2].textContent.trim(),
-                propietario: cells[3].textContent.trim(),
-                etapa: row.getAttribute('data-etapa') || cells[4].textContent.trim(),
-                estado: cells[5].textContent.trim(),
-                fechaSla: cells[6].textContent.trim(),
-                sla: row.getAttribute('data-sla') || cells[7].textContent.trim(),
-                etiquetas: cells[8].textContent.trim(),
-                prioridad: cells[9].textContent.trim(),
+                cliente: cells[0]?.textContent?.trim() || '',
+                producto: cells[1]?.textContent?.trim() || '',
+                monto: cells[2]?.textContent?.trim() || '',
+                propietario: cells[3]?.textContent?.trim() || '',
+                etapa: row.getAttribute('data-etapa') || cells[4]?.textContent?.trim() || '',
+                estado: cells[5]?.textContent?.trim() || '',
+                fechaSla: cells[6]?.textContent?.trim() || '',
+                sla: row.getAttribute('data-sla') || cells[7]?.textContent?.trim() || '',
+                etiquetas: cells[8]?.textContent?.trim() || '',
+                prioridad: cells[9]?.textContent?.trim() || '',
                 element: row
             };
+
+            console.log(`✅ Added solicitud ${index}:`, {
+                id: solicitud.id,
+                cliente: solicitud.cliente,
+                producto: solicitud.producto,
+                propietario: solicitud.propietario,
+                etapa: solicitud.etapa
+            });
 
             currentSolicitudes.push(solicitud);
         });
 
         console.log('📊 Datos de tabla inicializados:', currentSolicitudes.length, 'solicitudes');
+        
+        // If no data found, try to re-populate after a short delay
+        if (currentSolicitudes.length === 0) {
+            console.log('⏱️ No data found, retrying in 1 second...');
+            setTimeout(() => {
+                initializeTableData();
+                setupFilters(); // Re-setup filters after retry
+            }, 1000);
+        }
     }
 
     // Función para configurar filtros
     function setupFilters() {
-        // Poblar selectores de filtros con valores únicos
+        console.log('🔧 Setting up filters...');
+        
+        // First try to populate filter options from DOM
         populateFilterOptions();
+        
+        // If no options were populated from DOM, try template fallback
+        setTimeout(() => {
+            const productosContainer = document.getElementById('filtroProductoOptions');
+            const etapasContainer = document.getElementById('filtroEtapaOptions');
+            const propietariosContainer = document.getElementById('filtroPropietarioOptions');
+            
+            const hasProductos = productosContainer && productosContainer.children.length > 0;
+            const hasEtapas = etapasContainer && etapasContainer.children.length > 0;
+            const hasPropietarios = propietariosContainer && propietariosContainer.children.length > 0;
+            
+            if (!hasProductos || !hasEtapas || !hasPropietarios) {
+                console.log('⚠️ Some filters are empty, trying template fallback...');
+                populateFiltersFromTemplate();
+            }
+        }, 500);
 
-        // Configurar event listeners para filtros
-        const filterElements = [
-            'filtroCliente', 'filtroProducto', 'filtroEstado',
-            'filtroAsignado', 'filtroSLA', 'filtroPrioridad', 'filtroOrigen'
-        ];
-
-        filterElements.forEach(filterId => {
+        // Setup legacy filter event listeners
+        const legacyFilterElements = ['filtroSLA'];
+        legacyFilterElements.forEach(filterId => {
             const element = document.getElementById(filterId);
             if (element) {
                 element.addEventListener('change', applyFilters);
+            }
+        });
+
+        // Setup multiselect click outside handler
+        document.addEventListener('click', function(event) {
+            const isMultiselectElement = event.target.closest('.multiselect-wrapper');
+            if (!isMultiselectElement) {
+                // Close all multiselect dropdowns
+                document.querySelectorAll('.multiselect-dropdown').forEach(dropdown => {
+                    dropdown.classList.add('d-none');
+                });
+                document.querySelectorAll('.multiselect-button').forEach(button => {
+                    button.classList.remove('active');
+                });
+                document.querySelectorAll('.multiselect-chevron').forEach(chevron => {
+                    chevron.classList.remove('rotated');
+                });
             }
         });
 
@@ -1754,36 +2029,365 @@
         }
     }
 
-    // Función para poblar opciones de filtros
-    function populateFilterOptions() {
+    // Global filter state for multiselect filters
+    const multiSelectFilters = {
+        producto: [],
+        etapa: [],
+        propietario: []
+    };
+
+    // Ensure multiSelectFilters is properly initialized
+    function ensureFilterState() {
+        if (!multiSelectFilters.producto) multiSelectFilters.producto = [];
+        if (!multiSelectFilters.etapa) multiSelectFilters.etapa = [];
+        if (!multiSelectFilters.propietario) multiSelectFilters.propietario = [];
+    }
+
+    // Function to toggle multiselect dropdown
+    function toggleMultiSelect(filterType) {
+        const dropdown = document.getElementById(`${filterType}Dropdown`);
+        const button = document.getElementById(`${filterType}Toggle`);
+        const chevron = document.getElementById(`${filterType}Chevron`);
+
+        if (!dropdown || !button || !chevron) return;
+
+        const isOpen = !dropdown.classList.contains('d-none');
+
+        // Close all other dropdowns
+        document.querySelectorAll('.multiselect-dropdown').forEach(el => {
+            el.classList.add('d-none');
+        });
+        document.querySelectorAll('.multiselect-button').forEach(el => {
+            el.classList.remove('active');
+        });
+        document.querySelectorAll('.multiselect-chevron').forEach(el => {
+            el.classList.remove('rotated');
+        });
+
+        if (!isOpen) {
+            dropdown.classList.remove('d-none');
+            button.classList.add('active');
+            chevron.classList.add('rotated');
+        }
+    }
+
+    // Function to filter dropdown options based on search
+    function filterDropdownOptions(filterType) {
+        const searchInput = document.getElementById(`${filterType}Search`);
+        const optionsContainer = document.getElementById(`${filterType}Options`);
+        
+        if (!searchInput || !optionsContainer) return;
+
+        const searchTerm = searchInput.value.toLowerCase();
+        const options = optionsContainer.querySelectorAll('.multiselect-option');
+
+        options.forEach(option => {
+            const text = option.textContent.toLowerCase();
+            if (text.includes(searchTerm)) {
+                option.style.display = 'flex';
+            } else {
+                option.style.display = 'none';
+            }
+        });
+    }
+
+    // Function to handle option selection
+    function handleOptionSelect(filterType, value, checkbox) {
+        const selectedValues = multiSelectFilters[filterType];
+        const index = selectedValues.indexOf(value);
+
+        if (checkbox.checked && index === -1) {
+            selectedValues.push(value);
+        } else if (!checkbox.checked && index > -1) {
+            selectedValues.splice(index, 1);
+        }
+
+        updateFilterLabel(filterType);
+        applyMultiSelectFilters();
+    }
+
+    // Function to update filter button label
+    function updateFilterLabel(filterType) {
+        console.log('🏷️ Updating filter label for:', filterType);
+        
+        // Ensure filter state is properly initialized
+        ensureFilterState();
+        
+        const label = document.getElementById(`${filterType}Label`);
+        if (!label) {
+            console.warn(`❌ Label not found: ${filterType}Label`);
+            return;
+        }
+
+        // Map filter IDs to multiSelectFilters keys
+        const filterKeyMap = {
+            'filtroProducto': 'producto',
+            'filtroEtapa': 'etapa', 
+            'filtroPropietario': 'propietario',
+            'producto': 'producto',
+            'etapa': 'etapa',
+            'propietario': 'propietario'
+        };
+
+        const filterKey = filterKeyMap[filterType];
+        if (!filterKey || !multiSelectFilters[filterKey]) {
+            console.warn(`❌ Invalid filter type: ${filterType}, filterKey: ${filterKey}`);
+            return;
+        }
+
+        const selectedValues = multiSelectFilters[filterKey];
+        console.log(`📋 Selected values for ${filterType}:`, selectedValues);
+
+        const filterNames = {
+            'filtroProducto': 'Productos',
+            'filtroEtapa': 'Etapas',
+            'filtroPropietario': 'Propietarios',
+            'producto': 'Productos',
+            'etapa': 'Etapas',
+            'propietario': 'Propietarios'
+        };
+
+        const baseName = filterNames[filterType] || filterType;
+
+        if (!selectedValues || selectedValues.length === 0) {
+            label.innerHTML = baseName;
+        } else if (selectedValues.length === 1) {
+            label.innerHTML = `${baseName}: ${selectedValues[0]}`;
+        } else {
+            label.innerHTML = `${baseName} (${selectedValues.length})`;
+        }
+        
+        console.log(`✅ Updated label for ${filterType} to:`, label.innerHTML);
+    }
+
+    // Function to apply multiselect filters by navigating to new URL
+    function applyMultiSelectFilters() {
+        const currentUrl = new URL(window.location);
+        const params = currentUrl.searchParams;
+        
+        // Clear existing multiselect filter params
+        params.delete('productos');
+        params.delete('etapas');
+        params.delete('propietarios');
+        
+        // Add new multiselect filter params
+        if (multiSelectFilters.producto.length > 0) {
+            params.set('productos', multiSelectFilters.producto.join(','));
+        }
+        if (multiSelectFilters.etapa.length > 0) {
+            params.set('etapas', multiSelectFilters.etapa.join(','));
+        }
+        if (multiSelectFilters.propietario.length > 0) {
+            params.set('propietarios', multiSelectFilters.propietario.join(','));
+        }
+        
+        // Reset to first page when filters change
+        params.delete('page');
+        
+        // Navigate to new URL with filters
+        window.location.href = currentUrl.toString();
+    }
+
+    // Function to remove a specific filter value
+    function removeFilterValue(filterType, value) {
+        console.log('🗑️ Removing filter value:', filterType, value);
+        
+        // Map filter IDs to multiSelectFilters keys
+        const filterKeyMap = {
+            'filtroProducto': 'producto',
+            'filtroEtapa': 'etapa', 
+            'filtroPropietario': 'propietario',
+            'producto': 'producto',
+            'etapa': 'etapa',
+            'propietario': 'propietario'
+        };
+
+        const filterKey = filterKeyMap[filterType];
+        if (!filterKey || !multiSelectFilters[filterKey]) {
+            console.warn(`❌ Invalid filter type: ${filterType}, filterKey: ${filterKey}`);
+            return;
+        }
+
+        const selectedValues = multiSelectFilters[filterKey];
+        const index = selectedValues.indexOf(value);
+        
+        if (index > -1) {
+            selectedValues.splice(index, 1);
+            updateFilterLabel(filterType);
+            
+            // Update checkbox state
+            const checkbox = document.querySelector(`#${filterType}Options input[value="${value}"]`);
+            if (checkbox) {
+                checkbox.checked = false;
+            }
+            
+            applyMultiSelectFilters();
+        }
+    }
+
+    // Function to populate multiselect filter options
+    function populateMultiSelectOptions() {
+        console.log('🔍 Populating multiselect options...');
+        console.log('📊 Current solicitudes count:', currentSolicitudes.length);
+        
         const filterConfigs = [
-            { id: 'filtroCliente', field: 'cliente' },
-            { id: 'filtroProducto', field: 'producto' },
-            { id: 'filtroEstado', field: 'estado' },
-            { id: 'filtroAsignado', field: 'propietario' },
-            { id: 'filtroSLA', field: 'sla' },
-            { id: 'filtroPrioridad', field: 'prioridad' }
+            { id: 'filtroProducto', field: 'producto', type: 'producto' },
+            { id: 'filtroEtapa', field: 'etapa', type: 'etapa' },
+            { id: 'filtroPropietario', field: 'propietario', type: 'propietario' }
         ];
 
         filterConfigs.forEach(config => {
-            const select = document.getElementById(config.id);
-            if (!select) return;
+            const optionsContainer = document.getElementById(`${config.id}Options`);
+            if (!optionsContainer) {
+                console.warn(`❌ Options container not found: ${config.id}Options`);
+                return;
+            }
 
             const uniqueValues = [...new Set(
                 currentSolicitudes.map(s => s[config.field])
+                    .filter(value => value && value.trim() !== '' && value !== 'N/A' && value !== 'Sin asignar')
+            )].sort();
+
+            console.log(`📋 ${config.type} unique values:`, uniqueValues);
+
+            optionsContainer.innerHTML = '';
+
+            if (uniqueValues.length === 0) {
+                // Show a message if no options are available
+                const noOptionsDiv = document.createElement('div');
+                noOptionsDiv.className = 'multiselect-option';
+                noOptionsDiv.style.color = '#6b7280';
+                noOptionsDiv.style.fontStyle = 'italic';
+                noOptionsDiv.innerHTML = '<span>No hay opciones disponibles</span>';
+                optionsContainer.appendChild(noOptionsDiv);
+                return;
+            }
+
+            uniqueValues.forEach(value => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'multiselect-option';
+                
+                const isSelected = multiSelectFilters[config.type].includes(value);
+                if (isSelected) {
+                    optionDiv.classList.add('selected');
+                }
+
+                optionDiv.innerHTML = `
+                    <input type="checkbox" 
+                           class="multiselect-checkbox" 
+                           value="${value}" 
+                           ${isSelected ? 'checked' : ''}
+                           onchange="handleOptionSelect('${config.type}', '${value}', this)">
+                    <span>${value}</span>
+                `;
+
+                optionsContainer.appendChild(optionDiv);
+            });
+        });
+    }
+
+    // Function to populate legacy filter options (for compatibility)
+    function populateFilterOptions() {
+        populateMultiSelectOptions();
+        
+        // Populate legacy SLA filter
+        const slaSelect = document.getElementById('filtroSLA');
+        if (slaSelect) {
+            const uniqueSLAValues = [...new Set(
+                currentSolicitudes.map(s => s.sla)
                     .filter(value => value && value.trim() !== '')
             )].sort();
 
             // Clear existing options except first one
-            while (select.children.length > 1) {
-                select.removeChild(select.lastChild);
+            while (slaSelect.children.length > 1) {
+                slaSelect.removeChild(slaSelect.lastChild);
             }
 
-            uniqueValues.forEach(value => {
+            uniqueSLAValues.forEach(value => {
                 const option = document.createElement('option');
                 option.value = value;
                 option.textContent = value;
-                select.appendChild(option);
+                slaSelect.appendChild(option);
+            });
+        }
+    }
+
+    // Fallback function to get filter options from Django template data
+    function populateFiltersFromTemplate() {
+        console.log('🔄 Attempting to populate filters from template data...');
+        
+        // Get unique values from template context if available
+        const templateProductos = [
+            {% for s in solicitudes %}
+                {% if s.producto %}'{{ s.producto|escapejs }}',{% endif %}
+            {% endfor %}
+        ];
+        
+        const templateEtapas = [
+            {% for s in solicitudes %}
+                {% if s.etapa_actual.nombre %}'{{ s.etapa_actual.nombre|escapejs }}',{% endif %}
+            {% endfor %}
+        ];
+        
+        const templatePropietarios = [
+            {% for s in solicitudes %}
+                {% if s.asignada_a.get_full_name %}'{{ s.asignada_a.get_full_name|escapejs }}',{% endif %}
+            {% endfor %}
+        ];
+
+        // Remove duplicates and empty values
+        const uniqueProductos = [...new Set(templateProductos.filter(p => p && p.trim()))];
+        const uniqueEtapas = [...new Set(templateEtapas.filter(e => e && e.trim()))];
+        const uniquePropietarios = [...new Set(templatePropietarios.filter(p => p && p.trim()))];
+
+        console.log('📋 Template data found:', {
+            productos: uniqueProductos,
+            etapas: uniqueEtapas,
+            propietarios: uniquePropietarios
+        });
+
+        // Populate multiselect filters with template data
+        const filterConfigs = [
+            { id: 'filtroProducto', values: uniqueProductos, type: 'producto' },
+            { id: 'filtroEtapa', values: uniqueEtapas, type: 'etapa' },
+            { id: 'filtroPropietario', values: uniquePropietarios, type: 'propietario' }
+        ];
+
+        filterConfigs.forEach(config => {
+            const optionsContainer = document.getElementById(`${config.id}Options`);
+            if (!optionsContainer) return;
+
+            optionsContainer.innerHTML = '';
+
+            if (config.values.length === 0) {
+                const noOptionsDiv = document.createElement('div');
+                noOptionsDiv.className = 'multiselect-option';
+                noOptionsDiv.style.color = '#6b7280';
+                noOptionsDiv.style.fontStyle = 'italic';
+                noOptionsDiv.innerHTML = '<span>No hay opciones disponibles</span>';
+                optionsContainer.appendChild(noOptionsDiv);
+                return;
+            }
+
+            config.values.sort().forEach(value => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'multiselect-option';
+                
+                const isSelected = multiSelectFilters[config.type].includes(value);
+                if (isSelected) {
+                    optionDiv.classList.add('selected');
+                }
+
+                optionDiv.innerHTML = `
+                    <input type="checkbox" 
+                           class="multiselect-checkbox" 
+                           value="${value}" 
+                           ${isSelected ? 'checked' : ''}
+                           onchange="handleOptionSelect('${config.type}', '${value}', this)">
+                    <span>${value}</span>
+                `;
+
+                optionsContainer.appendChild(optionDiv);
             });
         });
     }
@@ -1941,36 +2545,35 @@
 
     // Función para aplicar filtros
     function applyFilters() {
-        // Actualizar filtros actuales
-        const filterElements = {
-            cliente: document.getElementById('filtroCliente'),
-            producto: document.getElementById('filtroProducto'),
-            estado: document.getElementById('filtroEstado'),
-            asignado: document.getElementById('filtroAsignado'),
-            sla: document.getElementById('filtroSLA'),
-            prioridad: document.getElementById('filtroPrioridad'),
-            origen: document.getElementById('filtroOrigen')
+        // Update legacy filters
+        const legacyFilterElements = {
+            sla: document.getElementById('filtroSLA')
         };
 
-        Object.keys(filterElements).forEach(key => {
-            const element = filterElements[key];
+        Object.keys(legacyFilterElements).forEach(key => {
+            const element = legacyFilterElements[key];
             if (element) {
                 currentFilters[key] = element.value;
             }
         });
 
-        // Filtrar solicitudes
+        // Filter solicitudes
         const filteredSolicitudes = currentSolicitudes.filter(solicitud => {
-            // Filtros de select
-            if (currentFilters.cliente && solicitud.cliente !== currentFilters.cliente) return false;
-            if (currentFilters.producto && solicitud.producto !== currentFilters.producto) return false;
-            if (currentFilters.estado && solicitud.estado !== currentFilters.estado) return false;
-            if (currentFilters.asignado && solicitud.propietario !== currentFilters.asignado) return false;
-            if (currentFilters.sla && solicitud.sla !== currentFilters.sla) return false;
-            if (currentFilters.prioridad && solicitud.prioridad !== currentFilters.prioridad) return false;
-            if (currentFilters.origen && solicitud.origen !== currentFilters.origen) return false;
+            // Multi-select filters
+            if (multiSelectFilters.producto.length > 0 && !multiSelectFilters.producto.includes(solicitud.producto)) {
+                return false;
+            }
+            if (multiSelectFilters.etapa.length > 0 && !multiSelectFilters.etapa.includes(solicitud.etapa)) {
+                return false;
+            }
+            if (multiSelectFilters.propietario.length > 0 && !multiSelectFilters.propietario.includes(solicitud.propietario)) {
+                return false;
+            }
 
-            // Búsqueda global
+            // Legacy filters
+            if (currentFilters.sla && solicitud.sla !== currentFilters.sla) return false;
+
+            // Global search
             if (currentFilters.search) {
                 const searchTerms = [
                     solicitud.cliente, solicitud.producto, solicitud.propietario,
@@ -1983,41 +2586,36 @@
             return true;
         });
 
-        // Mostrar/ocultar filas
+        // Show/hide rows
         currentSolicitudes.forEach(solicitud => {
             const isVisible = filteredSolicitudes.includes(solicitud);
-            solicitud.element.style.display = isVisible ? '' : 'none';
+            if (isVisible) {
+                solicitud.element.style.display = '';
+                solicitud.element.classList.remove('filter-hidden');
+            } else {
+                solicitud.element.style.display = 'none';
+                solicitud.element.classList.add('filter-hidden');
+            }
         });
 
-        // Actualizar contador de resultados
+        // Update results counter
         updateResultsCounter(filteredSolicitudes.length, currentSolicitudes.length);
     }
 
     // Función para limpiar filtros
     function clearFilters() {
-        const filterElements = [
-            'filtroCliente', 'filtroProducto', 'filtroEstado',
-            'filtroAsignado', 'filtroSLA', 'filtroPrioridad', 'filtroOrigen', 'busquedaGlobal'
-        ];
-
-        filterElements.forEach(id => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.value = '';
-            }
-        });
-
-        // Reset filters object
-        Object.keys(currentFilters).forEach(key => {
-            currentFilters[key] = '';
-        });
-
-        // Show all rows
-        currentSolicitudes.forEach(solicitud => {
-            solicitud.element.style.display = '';
-        });
-
-        updateResultsCounter(currentSolicitudes.length, currentSolicitudes.length);
+        // Clear all filters by navigating to the base URL
+        const currentUrl = new URL(window.location);
+        const baseUrl = currentUrl.pathname;
+        
+        // Keep only the pipeline parameter if it exists
+        const pipelineParam = currentUrl.searchParams.get('pipeline');
+        let newUrl = baseUrl;
+        if (pipelineParam) {
+            newUrl += `?pipeline=${pipelineParam}`;
+        }
+        
+        window.location.href = newUrl;
     }
 
     // Función para actualizar contador de resultados
@@ -2092,11 +2690,38 @@
         console.log('🚀 Inicializando sistema de tabla mejorado...');
 
         // =====================================
+        // INITIALIZE MULTISELECT FILTERS FROM URL
+        // =====================================
+        
+        // Initialize multiselect filters from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Load multiselect filter values from URL
+        const productosParam = urlParams.get('productos');
+        if (productosParam) {
+            multiSelectFilters.producto = productosParam.split(',').map(p => p.trim());
+        }
+        
+        const etapasParam = urlParams.get('etapas');
+        if (etapasParam) {
+            multiSelectFilters.etapa = etapasParam.split(',').map(e => e.trim());
+        }
+        
+        const propietariosParam = urlParams.get('propietarios');
+        if (propietariosParam) {
+            multiSelectFilters.propietario = propietariosParam.split(',').map(p => p.trim());
+        }
+        
+        // Update filter labels
+        updateFilterLabel('filtroProducto');
+        updateFilterLabel('filtroEtapa');
+        updateFilterLabel('filtroPropietario');
+
+        // =====================================
         // SISTEMA DE REDIRECCIÓN AUTOMÁTICA DE PIPELINE
         // =====================================
         
         // Verificar si hay pipeline seleccionado y guardarlo como preferencia
-        const urlParams = new URLSearchParams(window.location.search);
         const currentPipeline = urlParams.get('pipeline');
         
         // Si hay un pipeline en la URL, mostramos notificación de que se guardó
@@ -3378,6 +4003,7 @@
             const comoSeEnteroSection = document.getElementById('comoSeEnteroSection');
             const apcMakitoSection = document.getElementById('apcMakitoSection');
             const suraMakitoSection = document.getElementById('suraMakitoSection');
+            const cotizacionFieldsSection = document.getElementById('cotizacionFieldsSection');
 
             if (motivoSection) {
                 motivoSection.classList.remove('show');
@@ -3417,6 +4043,12 @@
                 if (suraSegundoApellido) suraSegundoApellido.value = '';
                 if (suraNoDocumento) suraNoDocumento.value = '';
             }
+            
+            // Hide cotización fields section
+            if (cotizacionFieldsSection) {
+                cotizacionFieldsSection.style.display = 'none';
+                console.log('🔧 Cotización fields section hidden on reset');
+            }
 
             hideSearchResults();
             console.log('✅ Form reset successfully');
@@ -3455,15 +4087,11 @@
         document.addEventListener('DOMContentLoaded', function () {
             console.log('🚀 Initializing drawer functionality...');
 
-            // Close drawer when clicking outside
+            // Drawer click outside handler disabled - drawer won't close when clicking outside
             const drawer = document.getElementById('solicitudDrawer');
             if (drawer) {
-                drawer.addEventListener('click', function (e) {
-                    if (e.target === this) {
-                        closeSolicitudDrawer();
-                    }
-                });
-                console.log('✅ Drawer click outside handler initialized');
+                // Event listener removed to prevent drawer from closing when clicking outside
+                console.log('✅ Drawer click outside handler disabled (drawer stays open when clicking outside)');
             }
 
             // Setup search functionality if elements exist
@@ -3842,11 +4470,13 @@
                     if (type === 'cotizacion') {
                         const montoFinanciado = item.montoFinanciado || item.auxMonto2 || 0;
                         const montoFormateado = typeof montoFinanciado === 'number' ? montoFinanciado.toLocaleString() : '0';
+                        const tipoIcon = item.tipoPrestamo === 'auto' ? '🚗' : item.tipoPrestamo === 'personal' ? '👤' : '📝';
+                        const tipoLabel = item.tipoPrestamo === 'auto' ? 'Auto' : item.tipoPrestamo === 'personal' ? 'Personal' : 'Sin tipo';
                         resultItem.innerHTML = `
                     <div class="search-result-name">${item.nombreCliente || 'Sin nombre'}</div>
                     <div class="search-result-details">
                         ${item.cedulaCliente || 'Sin cédula'} • 
-                        ${item.tipoPrestamo || 'Sin tipo'} • 
+                        <span class="badge badge-sm ${item.tipoPrestamo === 'auto' ? 'bg-primary' : 'bg-success'}">${tipoIcon} ${tipoLabel}</span> • 
                         Monto Financiado: $${montoFormateado}
                     </div>
                 `;
@@ -3887,7 +4517,9 @@
                     if (type === 'cotizacion') {
                         const montoFinanciado = item.montoFinanciado || item.auxMonto2 || 0;
                         const montoFormateado = typeof montoFinanciado === 'number' ? montoFinanciado.toLocaleString() : '0';
-                        detailsElement.textContent = `${item.cedulaCliente || 'Sin cédula'} • ${item.tipoPrestamo || 'Sin tipo'} • Monto Financiado: $${montoFormateado}`;
+                        const tipoIcon = item.tipoPrestamo === 'auto' ? '🚗' : item.tipoPrestamo === 'personal' ? '👤' : '📝';
+                        const tipoLabel = item.tipoPrestamo === 'auto' ? 'Auto' : item.tipoPrestamo === 'personal' ? 'Personal' : 'Sin tipo';
+                        detailsElement.textContent = `${item.cedulaCliente || 'Sin cédula'} • ${tipoIcon} ${tipoLabel} • Monto Financiado: $${montoFormateado}`;
 
                         // Show observaciones section and populate with observaciones from cotización
                         const observacionesSection = document.getElementById('observacionesSection');
@@ -3910,55 +4542,101 @@
                             }
                         }
 
-                        // Show motivo de consulta section and populate with observaciones
+                        // Show sections conditionally based on loan type
+                        const isAutoLoan = item.tipoPrestamo === 'auto';
+                        
+                        // Show motivo de consulta section only for auto loans
                         const motivoSection = document.getElementById('motivoConsultaSection');
                         const motivoTextarea = document.getElementById('motivoConsulta');
 
                         if (motivoSection && motivoTextarea) {
-                            motivoSection.classList.add('show');
+                            if (isAutoLoan) {
+                                motivoSection.classList.add('show');
 
-                            const observaciones = item.observaciones || '';
-                            motivoTextarea.value = observaciones;
-                            motivoTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                                const observaciones = item.observaciones || '';
+                                motivoTextarea.value = observaciones;
+                                motivoTextarea.dispatchEvent(new Event('input', { bubbles: true }));
 
-                            if (!observaciones.trim()) {
-                                setTimeout(() => {
-                                    motivoTextarea.focus();
-                                }, 100);
+                                if (!observaciones.trim()) {
+                                    setTimeout(() => {
+                                        motivoTextarea.focus();
+                                    }, 100);
+                                }
+                            } else {
+                                motivoSection.classList.remove('show');
+                                motivoTextarea.value = '';
                             }
                         }
 
-                        // Show como se entero section
+                        // Show como se entero section for all types
                         const comoSeEnteroSection = document.getElementById('comoSeEnteroSection');
                         if (comoSeEnteroSection) {
                             comoSeEnteroSection.classList.add('show');
                         }
 
-                        // Show APC Makito section
+                        // Show APC Makito section for all types
                         const apcMakitoSection = document.getElementById('apcMakitoSection');
                         if (apcMakitoSection) {
                             apcMakitoSection.classList.add('show');
                         }
 
-                        // Show SURA Makito section
+                        // Show SURA Makito section only for auto loans
                         const suraMakitoSection = document.getElementById('suraMakitoSection');
                         if (suraMakitoSection) {
-                            suraMakitoSection.classList.add('show');
+                            if (isAutoLoan) {
+                                suraMakitoSection.classList.add('show');
+                            } else {
+                                suraMakitoSection.classList.remove('show');
+                                // Clear SURA fields for non-auto loans
+                                const suraCheckbox = document.getElementById('cotizarSuraMakito');
+                                const suraCamposAdicionales = document.getElementById('suraCamposAdicionales');
+                                if (suraCheckbox) suraCheckbox.checked = false;
+                                if (suraCamposAdicionales) suraCamposAdicionales.style.display = 'none';
+                            }
                         }
 
                         // Auto-populate cliente from cotización
                         autoPopulateClienteFromCotizacion(item);
                         
-                        // Store cotización data globally for SURA auto-population
-                        window.selectedCotizacionData = {
-                            tipoDocumento: item.tipoDocumento,
-                            valorAuto: item.valorAuto,
-                            yearCarro: item.yearCarro,
-                            marca: item.marca,
-                            modelo: item.modelo
-                        };
-                        console.log('🔧 Stored cotización data for SURA:', window.selectedCotizacionData);
+                        // Store cotización type globally for all types
+                        window.selectedCotizacionType = item.tipoPrestamo;
+                        console.log('🔧 Stored cotización type:', window.selectedCotizacionType);
+                        
+                        // Store cotización data globally for SURA auto-population only for auto loans
+                        if (isAutoLoan) {
+                            window.selectedCotizacionData = {
+                                tipoDocumento: item.tipoDocumento,
+                                valorAuto: item.valorAuto,
+                                yearCarro: item.yearCarro,
+                                marca: item.marca,
+                                modelo: item.modelo
+                            };
+                            console.log('🔧 Stored cotización data for SURA (auto loan):', window.selectedCotizacionData);
+                        } else {
+                            // Clear SURA data for non-auto loans
+                            window.selectedCotizacionData = null;
+                            console.log('🔧 Cleared SURA data (non-auto loan)');
+                            
+                            // Additional safety: explicitly hide cotización fields section for personal loans
+                            if (typeof window.hideCotizacionFieldsSection === 'function') {
+                                console.log('🔧 Explicitly hiding cotización fields section for personal loan');
+                                window.hideCotizacionFieldsSection();
+                            }
+                        }
                         console.log('🔧 Full cotización item data:', item);
+                        
+                        // Validate cotización fields when cotización is selected
+                        if (typeof window.validateCotizacionFields === 'function') {
+                            console.log('🔍 About to call validateCotizacionFields with:', {
+                                tipoPrestamo: item.tipoPrestamo,
+                                id: item.id,
+                                nombreCliente: item.nombreCliente
+                            });
+                            const validation = window.validateCotizacionFields(item);
+                            console.log('🔧 Cotización fields validation result:', validation);
+                        } else {
+                            console.log('⚠️ validateCotizacionFields function not found');
+                        }
                     } else {
                         detailsElement.textContent = `${item.cedulaCliente || 'Sin cédula'} • ${item.tipoPrestamo || 'Sin tipo'} • $${(item.montoPrestamo || 0).toLocaleString()}`;
                     }
@@ -3973,9 +4651,12 @@
             if (type === 'cotizacion') {
                 validateCotizacionSelection(item);
                 
-                // Also validate consultation fields
-                if (typeof window.validateConsultationFields === 'function') {
+                // Also validate consultation fields - only for auto loans
+                const isAutoLoan = item.tipoPrestamo === 'auto';
+                if (isAutoLoan && typeof window.validateConsultationFields === 'function') {
                     handleCotizacionConsultationValidation(item.id);
+                } else if (!isAutoLoan) {
+                    console.log('🔧 Skipping consultation fields validation - not an auto loan');
                 } else {
                     console.warn('⚠️ validateConsultationFields function not available');
                 }
@@ -4286,10 +4967,12 @@
             const submitBtn = document.querySelector('.drawer-footer .btn-primary');
             const originalText = submitBtn.innerHTML;
 
-            // Validate consultation fields if cotización is selected
+            // Validate consultation fields if cotización is selected and it's an auto loan
             const cotizacionId = document.getElementById('cotizacionId')?.value;
-            if (cotizacionId) {
-                console.log('🔍 Validating consultation fields before submission');
+            const isAutoLoan = window.selectedCotizacionType === 'auto';
+            
+            if (cotizacionId && isAutoLoan) {
+                console.log('🔍 Validating consultation fields before submission (auto loan)');
                 const consultationValidation = window.validateMandatoryFieldsBeforeSubmit();
                 if (!consultationValidation.isValid) {
                     console.log('❌ Consultation fields validation failed:', consultationValidation.missingFields);
@@ -4306,6 +4989,8 @@
                     return;
                 }
                 console.log('✅ Consultation fields validation passed');
+            } else if (cotizacionId && !isAutoLoan) {
+                console.log('🔧 Skipping consultation fields validation - personal loan selected');
             }
 
             // Validate cotización for duplicates before submitting
@@ -4416,7 +5101,8 @@
 
             // Clear stored cotización data for SURA
             window.selectedCotizacionData = null;
-            console.log('🔧 Cleared stored cotización data');
+            window.selectedCotizacionType = null;
+            console.log('🔧 Cleared stored cotización data and type');
 
             // Hide consultation fields section when cotización is cleared
             if (typeof window.hideConsultationFieldsSection === 'function') {

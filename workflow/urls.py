@@ -271,4 +271,10 @@ urlpatterns = [
     # APIs para Admin Back Office - Opciones Desplegables
     path('api/admin-backoffice/opciones/', api_admin_backoffice.api_opciones_crud, name='api_opciones_crud'),
     path('api/admin-backoffice/opciones/<int:opcion_id>/', api_admin_backoffice.api_opciones_crud_detail, name='api_opciones_crud_detail'),
+    
+    # API Externa - Solicitudes para aplicaciones externas
+    path('api/externa/solicitudes/crear/', views_workflow.api_crear_solicitud_externa, name='api_crear_solicitud_externa'),
+    path('api/externa/solicitudes/', views_workflow.api_listar_solicitudes_externas, name='api_listar_solicitudes_externas'),
+    path('api/externa/solicitudes/<int:solicitud_id>/', views_workflow.api_detalle_solicitud_externa, name='api_detalle_solicitud_externa'),
+    path('api/externa/solicitudes/estadisticas/', views_workflow.api_estadisticas_solicitudes_externas, name='api_estadisticas_solicitudes_externas'),
 ]

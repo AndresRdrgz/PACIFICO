@@ -462,6 +462,11 @@ def negocios_view(request):
     estado_filter = request.GET.get('estado', '')
     page = request.GET.get('page', '1')
     
+    # Multi-select filters (can contain multiple values separated by commas)
+    producto_filters = request.GET.get('productos', '')
+    etapa_filters = request.GET.get('etapas', '')
+    propietario_filters = request.GET.get('propietarios', '')
+    
     # NUEVA FUNCIONALIDAD: Redirección automática al último pipeline seleccionado
     session_key = f'negocios_last_pipeline_{request.user.id}'
     
@@ -511,6 +516,31 @@ def negocios_view(request):
             Q(cotizacion__producto__icontains=search_query)
         )
     
+    # Apply multi-select filters
+    if producto_filters:
+        producto_list = [p.strip() for p in producto_filters.split(',') if p.strip()]
+        if producto_list:
+            solicitudes = solicitudes.filter(cotizacion__producto__in=producto_list)
+    
+    if etapa_filters:
+        etapa_list = [e.strip() for e in etapa_filters.split(',') if e.strip()]
+        if etapa_list:
+            solicitudes = solicitudes.filter(etapa_actual__nombre__in=etapa_list)
+    
+    if propietario_filters:
+        propietario_list = [p.strip() for p in propietario_filters.split(',') if p.strip()]
+        if propietario_list:
+            # Create Q objects to match different propietario formats
+            propietario_queries = Q()
+            for propietario in propietario_list:
+                propietario_queries |= (
+                    Q(asignada_a__first_name__icontains=propietario) |
+                    Q(asignada_a__last_name__icontains=propietario) |
+                    Q(asignada_a__username__icontains=propietario)
+                )
+            solicitudes = solicitudes.filter(propietario_queries)
+    
+    # Legacy single-value filters (kept for compatibility)
     if etapa_filter:
         solicitudes = solicitudes.filter(etapa_actual_id=etapa_filter)
     

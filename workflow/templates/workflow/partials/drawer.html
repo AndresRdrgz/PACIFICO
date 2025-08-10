@@ -51,13 +51,13 @@
                 <!-- Cotización Selection -->
                 <div class="form-section">
                     <h6 class="form-section-title">
-                        <i class="fas fa-car me-2"></i>
-                        Cotización de Auto
+                        <i class="fas fa-calculator me-2"></i>
+                        Cotización
                     </h6>
                     <div class="form-group">
                         <div class="search-container">
                             <input type="text" id="cotizacionSearch" class="form-control"
-                                placeholder="Buscar cotización de auto por nombre, cédula o ID...">
+                                placeholder="Buscar cotización (auto o personal) por nombre, cédula o ID...">
                             <div id="cotizacionResults" class="search-results"></div>
                         </div>
                         <input type="hidden" id="cotizacionId" name="cotizacion">
@@ -105,6 +105,23 @@
                             <i class="fas fa-user-clock"></i>
                             Selecciona una cotización para ver el cliente asociado
                         </div>
+                    </div>
+                </div>
+
+                <!-- Propietario Selection -->
+                <div class="form-section">
+                    <h6 class="form-section-title">
+                        <i class="fas fa-user-tie me-2"></i>
+                        Propietario
+                    </h6>
+                    <div class="form-group">
+                        <select id="propietarioSelect" name="propietario" class="form-control">
+                            <option value="">Cargando usuarios...</option>
+                        </select>
+                        <small class="text-muted mt-2 d-block">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Usuario responsable de esta solicitud. Por defecto se asigna al usuario actual.
+                        </small>
                     </div>
                 </div>
 
@@ -734,7 +751,7 @@
         border-top: none;
         border-radius: 0 0 6px 6px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        max-height: 200px;
+        max-height: 400px;
         overflow-y: auto;
         z-index: 1000;
         display: none;
@@ -1744,21 +1761,188 @@
     document.addEventListener('DOMContentLoaded', function () {
         console.log('🚀 Drawer initialization started');
         setupSessionMonitoring();
+        loadUsuariosForPropietario();
 
-        // Close drawer when clicking outside
+        // Drawer overlay click handler disabled - drawer won't close when clicking outside
         const drawerElement = document.getElementById('solicitudDrawer');
         if (drawerElement) {
-            drawerElement.addEventListener('click', function (e) {
-                if (e.target === this) {
-                    if (typeof window.closeSolicitudDrawer === 'function') {
-                        window.closeSolicitudDrawer();
-                    }
-                }
-            });
-            console.log('✅ Drawer overlay click handler set up');
+            // Event listener removed to prevent drawer from closing when clicking outside
+            console.log('✅ Drawer overlay click handler disabled (drawer stays open when clicking outside)');
         }
         console.log('✅ Drawer initialized successfully');
     });
+
+    // Load users for propietario dropdown
+    window.loadUsuariosForPropietario = async function() {
+        console.log('📋 Loading users for propietario dropdown');
+        
+        const propietarioSelect = document.getElementById('propietarioSelect');
+        if (!propietarioSelect) return;
+
+        // Check if current user role is 'Oficial'
+        const isOficial = window.currentUserRole === 'Oficial';
+        console.log('🔧 Is user Oficial?', isOficial, 'Role:', window.currentUserRole);
+
+        if (isOficial) {
+            // For Oficial users, disable dropdown and only show current user
+            console.log('🔒 Restricting propietario dropdown for Oficial user');
+            propietarioSelect.innerHTML = '';
+            propietarioSelect.disabled = true;
+            propietarioSelect.style.opacity = '0.6';
+            propietarioSelect.style.cursor = 'not-allowed';
+            
+            // Add only current user option
+            const option = document.createElement('option');
+            option.value = window.currentUserId;
+            option.selected = true;
+            
+            // Try to get current user's name from the API or use a default
+            try {
+                const response = await fetch('/workflow/api/usuarios', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.usuarios) {
+                        const currentUser = data.usuarios.find(u => String(u.id) === String(window.currentUserId));
+                        if (currentUser) {
+                            let displayName = '';
+                            if (currentUser.first_name && currentUser.last_name) {
+                                displayName = `${currentUser.first_name} ${currentUser.last_name}`;
+                            } else if (currentUser.first_name) {
+                                displayName = currentUser.first_name;
+                            } else if (currentUser.last_name) {
+                                displayName = currentUser.last_name;
+                            } else {
+                                displayName = currentUser.username;
+                            }
+                            option.textContent = `${displayName} (Usuario actual)`;
+                        } else {
+                            option.textContent = 'Usuario actual';
+                        }
+                    } else {
+                        option.textContent = 'Usuario actual';
+                    }
+                } else {
+                    option.textContent = 'Usuario actual';
+                }
+            } catch (error) {
+                console.error('❌ Error loading current user info:', error);
+                option.textContent = 'Usuario actual';
+            }
+            
+            propietarioSelect.appendChild(option);
+            
+            // Add explanatory text below the select
+            const parentDiv = propietarioSelect.parentElement;
+            let infoMessage = parentDiv.querySelector('.oficial-restriction-info');
+            if (!infoMessage) {
+                infoMessage = document.createElement('small');
+                infoMessage.className = 'text-warning oficial-restriction-info mt-2 d-block';
+                infoMessage.innerHTML = '<i class="fas fa-lock me-1"></i>Como usuario Oficial, solo puedes asignarte solicitudes a ti mismo.';
+                parentDiv.appendChild(infoMessage);
+            }
+            
+            console.log('✅ Propietario dropdown restricted for Oficial user');
+            return;
+        }
+
+        // For non-Oficial users, show full functionality
+        try {
+            const response = await fetch('/workflow/api/usuarios', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('✅ Users loaded for propietario dropdown:', data);
+            
+            // Ensure dropdown is enabled for non-Oficial users
+            propietarioSelect.disabled = false;
+            propietarioSelect.style.opacity = '1';
+            propietarioSelect.style.cursor = 'default';
+            
+            propietarioSelect.innerHTML = '<option value="">Seleccionar propietario...</option>';
+            
+            if (data.success && data.usuarios) {
+                data.usuarios.forEach(usuario => {
+                    const option = document.createElement('option');
+                    option.value = usuario.id;
+                    
+                    // Display first name and last name if available, otherwise use username
+                    let displayName = '';
+                    if (usuario.first_name && usuario.last_name) {
+                        displayName = `${usuario.first_name} ${usuario.last_name}`;
+                    } else if (usuario.first_name) {
+                        displayName = usuario.first_name;
+                    } else if (usuario.last_name) {
+                        displayName = usuario.last_name;
+                    } else {
+                        displayName = usuario.username;
+                    }
+                    
+                    option.textContent = displayName;
+                    
+                    // Set current user as default selected
+                    if (window.currentUserId && String(usuario.id) === String(window.currentUserId)) {
+                        option.selected = true;
+                    }
+                    
+                    propietarioSelect.appendChild(option);
+                });
+                
+                // Remove any restriction message for non-Oficial users
+                const parentDiv = propietarioSelect.parentElement;
+                const infoMessage = parentDiv.querySelector('.oficial-restriction-info');
+                if (infoMessage) {
+                    infoMessage.remove();
+                }
+                
+                console.log('✅ Users loaded for propietario dropdown');
+            } else {
+                throw new Error('Invalid response format');
+            }
+        } catch (error) {
+            console.error('❌ Error loading users for propietario:', error);
+            propietarioSelect.innerHTML = '<option value="">Error cargando usuarios</option>';
+        }
+    };
+
+    // Function to set current user as default propietario
+    window.setCurrentUserAsPropietario = function(userId) {
+        console.log('🔧 Setting current user as default propietario:', userId);
+        
+        const propietarioSelect = document.getElementById('propietarioSelect');
+        if (propietarioSelect && userId) {
+            // For Oficial users, ensure they can only select themselves
+            const isOficial = window.currentUserRole === 'Oficial';
+            if (isOficial && String(userId) !== String(window.currentUserId)) {
+                console.log('🔒 Oficial user cannot set different propietario, using current user instead');
+                userId = window.currentUserId;
+            }
+            
+            // Set the value if the option exists
+            const option = propietarioSelect.querySelector(`option[value="${userId}"]`);
+            if (option) {
+                option.selected = true;
+                console.log('✅ Current user set as default propietario');
+            }
+        }
+    };
 
     // Session monitoring for drawer
     function setupSessionMonitoring() {
@@ -2175,6 +2359,19 @@
             return { isValid: true, missingFields: [] };
         }
 
+        // Only show campos obligatorios for auto loans
+        const isAutoLoan = cotizacionData.tipoPrestamo === 'auto';
+        console.log('🔍 Loan type check:', {
+            tipoPrestamo: cotizacionData.tipoPrestamo,
+            isAutoLoan: isAutoLoan
+        });
+        
+        if (!isAutoLoan) {
+            console.log('🔧 Skipping cotización fields validation - not an auto loan (tipoPrestamo:', cotizacionData.tipoPrestamo, ')');
+            hideCotizacionFieldsSection();
+            return { isValid: true, missingFields: [] };
+        }
+
         const mandatoryFields = [
             { key: 'posicion', name: 'Posición', fieldId: 'posicionField' },
             { key: 'tiempoServicio', name: 'Tiempo de Servicio', fieldId: 'tiempoServicioField' },
@@ -2220,7 +2417,14 @@
     };
 
     function showCotizacionFieldsSection(missingFields, validFields, cotizacionData) {
-        console.log('🔧 showCotizacionFieldsSection called');
+        console.log('🔧 showCotizacionFieldsSection called with cotización data:', cotizacionData);
+        
+        // Safety check: never show for personal loans
+        if (cotizacionData && cotizacionData.tipoPrestamo !== 'auto') {
+            console.log('🔧 Blocking showCotizacionFieldsSection - not an auto loan');
+            hideCotizacionFieldsSection();
+            return;
+        }
         
         const section = document.getElementById('cotizacionFieldsSection');
         const infoAlert = document.getElementById('cotizacionFieldsInfo');
@@ -2271,16 +2475,20 @@
         console.log('✅ Cotización fields section shown with missing fields:', missingFields.map(f => f.name));
     }
 
-    function hideCotizacionFieldsSection() {
+    window.hideCotizacionFieldsSection = function() {
         console.log('🔧 hideCotizacionFieldsSection called');
         
         const section = document.getElementById('cotizacionFieldsSection');
         if (section) {
             section.style.display = 'none';
+            section.classList.remove('show');
+            console.log('🔧 Section hidden - display: none, show class removed');
+        } else {
+            console.log('⚠️ Could not find cotizacionFieldsSection element');
         }
         
         console.log('✅ Cotización fields section hidden');
-    }
+    };
 
     async function loadPoliticasOptions() {
         console.log('🔧 loadPoliticasOptions called');
