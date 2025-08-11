@@ -9184,6 +9184,8 @@ def api_solicitud_brief(request, solicitud_id):
             'es_reconsideracion': solicitud.es_reconsideracion if hasattr(solicitud, 'es_reconsideracion') else False,
             'propietario_id': solicitud.propietario.id if solicitud.propietario else (solicitud.creada_por.id if solicitud.creada_por else None),
             'subestado_actual': solicitud.subestado_actual.nombre if solicitud.subestado_actual else None,
+            'creada_via_api': solicitud.creada_via_api,
+            'api_source': solicitud.api_source,
         }
 
         # Cliente info
@@ -9533,6 +9535,12 @@ def api_solicitud_brief(request, solicitud_id):
             'cotizacion_id': solicitud.cotizacion.id if solicitud.cotizacion else None,
             # Datos de solicitud y entrevista para funcionalidades del modal
             'solicitud': solicitud_info,
+            # API-related information
+            'api_info': {
+                'creada_via_api': solicitud.creada_via_api,
+                'api_source': solicitud.api_source,
+                'observaciones': solicitud.observaciones,
+            },
         }, encoder=DjangoJSONEncoder)
         
     except Exception as e:

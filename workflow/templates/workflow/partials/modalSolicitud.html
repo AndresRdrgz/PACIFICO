@@ -114,6 +114,13 @@
                             <i class="fas fa-clock me-2"></i>Documentos Pendientes
                         </button>
                     </li>
+                    <!-- Canal Digital Tab - Only shown for API-created solicitudes -->
+                    <li class="nav-item" role="presentation" id="canal-digital-nav" style="display: none;">
+                        <button class="nav-link" id="canal-digital-tab" data-bs-toggle="tab" data-bs-target="#canal-digital"
+                            type="button" role="tab" aria-controls="canal-digital" aria-selected="false">
+                            <i class="fas fa-globe me-2"></i>Canal Digital
+                        </button>
+                    </li>
                 </ul>
 
                 <!-- Tab Content -->
@@ -454,6 +461,84 @@
                                 <div class="empty-state" style="display: none;">
                                     <i class="fas fa-folder-open mb-3"></i>
                                     <p>No hay documentos pendientes disponibles</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Canal Digital Tab -->
+                    <div class="tab-pane fade" id="canal-digital" role="tabpanel" aria-labelledby="canal-digital-tab">
+                        <div class="canal-digital-section">
+                            <div class="section-title text-info">
+                                <i class="fas fa-globe me-2"></i>
+                                Información del Canal Digital
+                                <small class="text-muted ms-2">(Solicitud creada vía API externa)</small>
+                            </div>
+                            <div class="canal-digital-container" id="modalSolicitudCanalDigital">
+                                <!-- Canal Digital content will be rendered here -->
+                                <div class="loading-placeholder" style="display: none;">
+                                    <div class="spinner-border text-info" role="status">
+                                        <span class="visually-hidden">Cargando información del canal digital...</span>
+                                    </div>
+                                </div>
+                                <div class="empty-state" style="display: none;">
+                                    <i class="fas fa-globe mb-3 text-muted" style="font-size: 3rem;"></i>
+                                    <p class="text-muted">No hay información del canal digital disponible</p>
+                                </div>
+                                <div id="canal-digital-content" style="display: none;">
+                                    <!-- API Information -->
+                                    <div class="api-info-card mb-4">
+                                        <div class="card">
+                                            <div class="card-header bg-info text-white">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-code me-2"></i>
+                                                    Información de la API
+                                                </h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold">Fuente de la API:</label>
+                                                            <div class="form-control-plaintext" id="apiSourceDisplay">-</div>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold">Fecha de Creación:</label>
+                                                            <div class="form-control-plaintext" id="apiCreationDate">-</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold">Método de Creación:</label>
+                                                            <div class="form-control-plaintext" id="apiCreationMethod">-</div>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold">Estado de la API:</label>
+                                                            <div class="form-control-plaintext" id="apiStatus">-</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Observaciones -->
+                                    <div class="observaciones-card">
+                                        <div class="card">
+                                            <div class="card-header bg-secondary text-white">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-comment me-2"></i>
+                                                    Observaciones de la Solicitud
+                                                </h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-bold">Observaciones:</label>
+                                                    <div class="form-control-plaintext" id="apiObservaciones" style="white-space: pre-wrap; min-height: 100px;">-</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -4715,6 +4800,12 @@
             </div>
         `;
         });
+
+        // Hide Canal Digital tab during loading
+        const canalDigitalNav = document.getElementById('canal-digital-nav');
+        if (canalDigitalNav) {
+            canalDigitalNav.style.display = 'none';
+        }
     }
 
     function showErrorState(errorMessage = 'Error al cargar la información') {
@@ -4936,11 +5027,111 @@
             console.log('Data for reconsideración:', solicitudData);
             configurarTabReconsideracion(solicitudData);
 
+            // Handle Canal Digital tab visibility and content
+            handleCanalDigitalTab(data);
+
             console.log('Modal populated successfully');
 
         } catch (error) {
             console.error('Error populating modal:', error);
             showErrorState('Error al procesar los datos');
+        }
+    }
+
+    // Function to handle Canal Digital tab visibility and content
+    function handleCanalDigitalTab(data) {
+        try {
+            console.log('Handling Canal Digital tab with data:', data);
+            
+            const canalDigitalNav = document.getElementById('canal-digital-nav');
+            const canalDigitalContent = document.getElementById('canal-digital-content');
+            const canalDigitalEmptyState = document.querySelector('#modalSolicitudCanalDigital .empty-state');
+            const canalDigitalLoading = document.querySelector('#modalSolicitudCanalDigital .loading-placeholder');
+            
+            if (!canalDigitalNav || !canalDigitalContent || !canalDigitalEmptyState || !canalDigitalLoading) {
+                console.warn('Canal Digital tab elements not found');
+                return;
+            }
+
+            // Check if solicitud was created via API
+            const apiInfo = data.api_info || {};
+            const isApiCreated = apiInfo.creada_via_api === true;
+            
+            console.log('Is API created:', isApiCreated, 'API info:', apiInfo);
+            
+            if (isApiCreated) {
+                // Show the tab
+                canalDigitalNav.style.display = 'block';
+                
+                // Hide loading and empty state, show content
+                canalDigitalLoading.style.display = 'none';
+                canalDigitalEmptyState.style.display = 'none';
+                canalDigitalContent.style.display = 'block';
+                
+                // Populate the content
+                populateCanalDigitalContent(apiInfo);
+                
+                console.log('Canal Digital tab shown and populated');
+            } else {
+                // Hide the tab
+                canalDigitalNav.style.display = 'none';
+                
+                // Hide content, show empty state
+                canalDigitalContent.style.display = 'none';
+                canalDigitalLoading.style.display = 'none';
+                canalDigitalEmptyState.style.display = 'block';
+                
+                console.log('Canal Digital tab hidden - not API created');
+            }
+        } catch (error) {
+            console.error('Error handling Canal Digital tab:', error);
+        }
+    }
+
+    // Function to populate Canal Digital tab content
+    function populateCanalDigitalContent(apiInfo) {
+        try {
+            console.log('Populating Canal Digital content with:', apiInfo);
+            
+            // API Source
+            const apiSourceDisplay = document.getElementById('apiSourceDisplay');
+            if (apiSourceDisplay) {
+                apiSourceDisplay.textContent = apiInfo.api_source || 'No especificado';
+            }
+            
+            // API Creation Date (from general data)
+            const apiCreationDate = document.getElementById('apiCreationDate');
+            if (apiCreationDate) {
+                const general = window.currentModalData?.general || {};
+                apiCreationDate.textContent = general.fecha_inicio || 'No especificado';
+            }
+            
+            // API Creation Method
+            const apiCreationMethod = document.getElementById('apiCreationMethod');
+            if (apiCreationMethod) {
+                apiCreationMethod.textContent = 'API Externa';
+            }
+            
+            // API Status
+            const apiStatus = document.getElementById('apiStatus');
+            if (apiStatus) {
+                apiStatus.textContent = 'Activo';
+            }
+            
+            // Observaciones
+            const apiObservaciones = document.getElementById('apiObservaciones');
+            if (apiObservaciones) {
+                const observaciones = apiInfo.observaciones;
+                if (observaciones && observaciones.trim() !== '') {
+                    apiObservaciones.textContent = observaciones;
+                } else {
+                    apiObservaciones.textContent = 'No hay observaciones registradas';
+                }
+            }
+            
+            console.log('Canal Digital content populated successfully');
+        } catch (error) {
+            console.error('Error populating Canal Digital content:', error);
         }
     }
 
