@@ -755,6 +755,11 @@ def detalle_solicitud(request, solicitud_id):
         # Procesar requisitos de transiciones de entrada
         for transicion in transiciones_entrada:
             for req_transicion in transicion.requisitos_obligatorios.all():
+                # ✅ FILTRAR POR TIPO DE PRÉSTAMO usando el método del modelo
+                if solicitud.cotizacion and hasattr(solicitud.cotizacion, 'tipoPrestamo'):
+                    if not req_transicion.aplica_para_cotizacion(solicitud.cotizacion):
+                        continue  # Saltar este requisito si no aplica para este tipo de préstamo
+                
                 req_id = req_transicion.requisito.id
                 if req_id not in requisitos_necesarios:
                     requisitos_necesarios[req_id] = {
@@ -8016,27 +8021,32 @@ def verificar_requisitos_transicion(solicitud, transicion):
         obligatorio=True
     ).select_related('requisito')
     
-    # Filtrar requisitos basado en el tipo de préstamo de la cotización
-    if solicitud.cotizacion:
-        # Obtener el tipo de préstamo de la cotización
-        tipo_prestamo = solicitud.cotizacion.tipoPrestamo
-        
-        # Filtrar requisitos considerando su tipo_prestamo_aplicable
-        requisitos_aplicables = []
-        for req_transicion in requisitos_transicion:
-            requisito_pipeline = RequisitoPipeline.objects.filter(
-                pipeline=solicitud.pipeline,
-                requisito=req_transicion.requisito
-            ).first()
+    # ✅ FILTRAR POR TIPO DE PRÉSTAMO usando RequisitoTransicion.tipo_prestamo_aplicable
+    try:
+        if solicitud.cotizacion and hasattr(solicitud.cotizacion, 'tipoPrestamo'):
+            tipo_prestamo = solicitud.cotizacion.tipoPrestamo
+            requisitos_aplicables = []
             
-            # Si no existe RequisitoPipeline o si aplica para este tipo de préstamo
-            if (not requisito_pipeline or 
-                requisito_pipeline.tipo_prestamo_aplicable == 'todos' or
-                (requisito_pipeline.tipo_prestamo_aplicable == 'personal' and tipo_prestamo == 'personal') or
-                (requisito_pipeline.tipo_prestamo_aplicable == 'auto' and tipo_prestamo == 'auto')):
-                requisitos_aplicables.append(req_transicion)
-        
-        requisitos_transicion = requisitos_aplicables
+            for req_transicion in requisitos_transicion:
+                try:
+                    # Verificar si el requisito de transición aplica para este tipo de préstamo
+                    # Usar refresh_from_db para asegurar que tenemos los campos más recientes
+                    req_transicion.refresh_from_db()
+                    tipo_prestamo_aplicable = getattr(req_transicion, 'tipo_prestamo_aplicable', 'todos')
+                    
+                    if (tipo_prestamo_aplicable == 'todos' or
+                        (tipo_prestamo_aplicable == 'personal' and tipo_prestamo == 'personal') or
+                        (tipo_prestamo_aplicable == 'auto' and tipo_prestamo == 'auto')):
+                        requisitos_aplicables.append(req_transicion)
+                except Exception as e:
+                    # Si hay algún error, incluir el requisito por seguridad
+                    print(f"Error filtrando requisito en verificar_requisitos_transicion {getattr(req_transicion, 'id', 'unknown')}: {str(e)}")
+                    requisitos_aplicables.append(req_transicion)
+            
+            requisitos_transicion = requisitos_aplicables
+    except Exception as e:
+        print(f"Error general en verificar_requisitos_transicion: {str(e)}")
+        # En caso de error, continuar con todos los requisitos sin filtrar
     
     requisitos_faltantes = []
     
@@ -10466,7 +10476,8 @@ def api_obtener_requisitos_transicion_pipeline(request, pipeline_id):
                     'requisito_id': rt.requisito.id,
                     'requisito_nombre': rt.requisito.nombre,
                     'obligatorio': rt.obligatorio,
-                    'mensaje_personalizado': rt.mensaje_personalizado or ''
+                    'mensaje_personalizado': rt.mensaje_personalizado or '',
+                    'tipo_prestamo_aplicable': rt.tipo_prestamo_aplicable
                 }
                 for rt in requisitos_transicion if rt.transicion_id == transicion.id
             ]
@@ -10519,11 +10530,13 @@ def api_crear_requisito_transicion(request):
         requisito_id = data.get('requisito_id')
         obligatorio = data.get('obligatorio', True)
         mensaje_personalizado = data.get('mensaje_personalizado', '')
+        tipo_prestamo_aplicable = data.get('tipo_prestamo_aplicable', 'todos')
         
         print(f"transicion_id: {transicion_id} (type: {type(transicion_id)})")
         print(f"requisito_id: {requisito_id} (type: {type(requisito_id)})")
         print(f"obligatorio: {obligatorio} (type: {type(obligatorio)})")
         print(f"mensaje_personalizado: {mensaje_personalizado}")
+        print(f"tipo_prestamo_aplicable: {tipo_prestamo_aplicable}")
         
         if not all([transicion_id, requisito_id]):
             return JsonResponse({'error': 'Transición y requisito son obligatorios'}, status=400)
@@ -10532,15 +10545,23 @@ def api_crear_requisito_transicion(request):
         requisito = get_object_or_404(Requisito, id=requisito_id)
         
         # Verificar que no existe ya esta combinación
-        if RequisitoTransicion.objects.filter(transicion=transicion, requisito=requisito).exists():
-            return JsonResponse({'error': 'Este requisito ya está asignado a esta transición'}, status=400)
+        if RequisitoTransicion.objects.filter(
+            transicion=transicion, 
+            requisito=requisito, 
+            tipo_prestamo_aplicable=tipo_prestamo_aplicable
+        ).exists():
+            tipo_prestamo_display = dict(RequisitoTransicion.TIPO_PRESTAMO_CHOICES).get(tipo_prestamo_aplicable, tipo_prestamo_aplicable)
+            return JsonResponse({
+                'error': f'Este requisito ya está asignado a esta transición para "{tipo_prestamo_display}"'
+            }, status=400)
         
         # Crear el requisito de transición
         requisito_transicion = RequisitoTransicion.objects.create(
             transicion=transicion,
             requisito=requisito,
             obligatorio=obligatorio,
-            mensaje_personalizado=mensaje_personalizado
+            mensaje_personalizado=mensaje_personalizado,
+            tipo_prestamo_aplicable=tipo_prestamo_aplicable
         )
         
         return JsonResponse({
@@ -10552,7 +10573,8 @@ def api_crear_requisito_transicion(request):
                 'requisito_id': requisito.id,
                 'requisito_nombre': requisito.nombre,
                 'obligatorio': requisito_transicion.obligatorio,
-                'mensaje_personalizado': requisito_transicion.mensaje_personalizado
+                'mensaje_personalizado': requisito_transicion.mensaje_personalizado,
+                'tipo_prestamo_aplicable': requisito_transicion.tipo_prestamo_aplicable
             },
             'mensaje': f'Requisito "{requisito.nombre}" asignado a la transición "{transicion.nombre}"'
         })
@@ -10578,10 +10600,12 @@ def api_actualizar_requisito_transicion(request, requisito_transicion_id):
         data = json.loads(request.body)
         obligatorio = data.get('obligatorio', requisito_transicion.obligatorio)
         mensaje_personalizado = data.get('mensaje_personalizado', requisito_transicion.mensaje_personalizado)
+        tipo_prestamo_aplicable = data.get('tipo_prestamo_aplicable', requisito_transicion.tipo_prestamo_aplicable)
         
         # Actualizar campos
         requisito_transicion.obligatorio = obligatorio
         requisito_transicion.mensaje_personalizado = mensaje_personalizado
+        requisito_transicion.tipo_prestamo_aplicable = tipo_prestamo_aplicable
         requisito_transicion.save()
         
         return JsonResponse({
@@ -10589,7 +10613,8 @@ def api_actualizar_requisito_transicion(request, requisito_transicion_id):
             'requisito_transicion': {
                 'id': requisito_transicion.id,
                 'obligatorio': requisito_transicion.obligatorio,
-                'mensaje_personalizado': requisito_transicion.mensaje_personalizado
+                'mensaje_personalizado': requisito_transicion.mensaje_personalizado,
+                'tipo_prestamo_aplicable': requisito_transicion.tipo_prestamo_aplicable
             },
             'mensaje': 'Requisito de transición actualizado exitosamente'
         })
@@ -10661,28 +10686,30 @@ def api_obtener_requisitos_faltantes_detallado(request, solicitud_id):
             transicion=transicion
         ).select_related('requisito')
         
-        # Filtrar requisitos basado en el tipo de préstamo de la cotización
-        if solicitud.cotizacion:
-            # Obtener el tipo de préstamo de la cotización
-            tipo_prestamo = solicitud.cotizacion.tipoPrestamo
-            
-            # Filtrar requisitos considerando su tipo_prestamo_aplicable
-            # Buscar el RequisitoPipeline para cada requisito para verificar su aplicabilidad
-            requisitos_aplicables = []
-            for req_transicion in requisitos_transicion:
-                requisito_pipeline = RequisitoPipeline.objects.filter(
-                    pipeline=solicitud.pipeline,
-                    requisito=req_transicion.requisito
-                ).first()
+        # ✅ FILTRAR POR TIPO DE PRÉSTAMO usando RequisitoTransicion.tipo_prestamo_aplicable
+        try:
+            if solicitud.cotizacion and hasattr(solicitud.cotizacion, 'tipoPrestamo'):
+                tipo_prestamo = solicitud.cotizacion.tipoPrestamo
+                requisitos_aplicables = []
                 
-                # Si no existe RequisitoPipeline o si aplica para este tipo de préstamo
-                if (not requisito_pipeline or 
-                    requisito_pipeline.tipo_prestamo_aplicable == 'todos' or
-                    (requisito_pipeline.tipo_prestamo_aplicable == 'personal' and tipo_prestamo == 'personal') or
-                    (requisito_pipeline.tipo_prestamo_aplicable == 'auto' and tipo_prestamo == 'auto')):
-                    requisitos_aplicables.append(req_transicion)
-            
-            requisitos_transicion = requisitos_aplicables
+                for req_transicion in requisitos_transicion:
+                    try:
+                        # Verificar si el requisito de transición aplica para este tipo de préstamo
+                        tipo_prestamo_aplicable = getattr(req_transicion, 'tipo_prestamo_aplicable', 'todos')
+                        
+                        if (tipo_prestamo_aplicable == 'todos' or
+                            (tipo_prestamo_aplicable == 'personal' and tipo_prestamo == 'personal') or
+                            (tipo_prestamo_aplicable == 'auto' and tipo_prestamo == 'auto')):
+                            requisitos_aplicables.append(req_transicion)
+                    except Exception as e:
+                        # Si hay algún error, incluir el requisito por seguridad
+                        print(f"Error filtrando requisito {getattr(req_transicion, 'id', 'unknown')}: {str(e)}")
+                        requisitos_aplicables.append(req_transicion)
+                
+                requisitos_transicion = requisitos_aplicables
+        except Exception as e:
+            print(f"Error general en filtrado de requisitos: {str(e)}")
+            # En caso de error, continuar con todos los requisitos
         
         requisitos_detallados = []
         requisitos_obligatorios = []
@@ -16079,6 +16106,11 @@ def api_validar_documentos_backoffice(request, solicitud_id):
         requisitos_definidos = {}
         for transicion in transiciones_entrada:
             for req_transicion in transicion.requisitos_obligatorios.all():
+                # ✅ FILTRAR POR TIPO DE PRÉSTAMO usando el método del modelo
+                if solicitud.cotizacion and hasattr(solicitud.cotizacion, 'tipoPrestamo'):
+                    if not req_transicion.aplica_para_cotizacion(solicitud.cotizacion):
+                        continue  # Saltar este requisito si no aplica para este tipo de préstamo
+                
                 req_id = req_transicion.requisito.id
                 if req_id not in requisitos_definidos:
                     requisitos_definidos[req_id] = {

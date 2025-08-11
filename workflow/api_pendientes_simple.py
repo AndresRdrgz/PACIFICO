@@ -75,6 +75,11 @@ def api_obtener_documentos_pendientes_backoffice_simple(request, solicitud_id):
             for transicion in transiciones_entrada:
                 try:
                     for req_transicion in transicion.requisitos_obligatorios.all():
+                        # ✅ FILTRAR POR TIPO DE PRÉSTAMO usando el método del modelo
+                        if solicitud.cotizacion and hasattr(solicitud.cotizacion, 'tipoPrestamo'):
+                            if not req_transicion.aplica_para_cotizacion(solicitud.cotizacion):
+                                continue  # Saltar este requisito si no aplica para este tipo de préstamo
+                        
                         req_id = req_transicion.requisito.id
                         if req_id not in requisitos_necesarios:
                             requisitos_necesarios[req_id] = {

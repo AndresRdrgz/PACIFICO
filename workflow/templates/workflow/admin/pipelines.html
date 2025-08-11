@@ -902,6 +902,15 @@
                             <small class="form-text text-muted">Selecciona el requisito que será necesario para la transición</small>
                         </div>
                         <div class="col-12">
+                            <label for="rtTipoPrestamoAplicable" class="form-label fw-semibold">Tipo de Préstamo *</label>
+                            <select class="form-control form-control-custom" id="rtTipoPrestamoAplicable" name="tipo_prestamo_aplicable" required>
+                                <option value="todos">Todos los préstamos</option>
+                                <option value="personal">Solo préstamo personal</option>
+                                <option value="auto">Solo préstamo de auto</option>
+                            </select>
+                            <small class="form-text text-muted">Determina para qué tipo de préstamo aplica este requisito de transición</small>
+                        </div>
+                        <div class="col-12">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="rtObligatorio" name="obligatorio" checked>
                                 <label class="form-check-label" for="rtObligatorio">
@@ -943,6 +952,15 @@
                                 <i class="fas fa-info-circle me-2"></i>
                                 <strong id="editRtInfo"></strong>
                             </div>
+                        </div>
+                        <div class="col-12">
+                            <label for="editRtTipoPrestamoAplicable" class="form-label fw-semibold">Tipo de Préstamo *</label>
+                            <select class="form-control form-control-custom" id="editRtTipoPrestamoAplicable" name="tipo_prestamo_aplicable" required>
+                                <option value="todos">Todos los préstamos</option>
+                                <option value="personal">Solo préstamo personal</option>
+                                <option value="auto">Solo préstamo de auto</option>
+                            </select>
+                            <small class="form-text text-muted">Determina para qué tipo de préstamo aplica este requisito de transición</small>
                         </div>
                         <div class="col-12">
                             <div class="form-check">
@@ -2000,6 +2018,7 @@ function mostrarRequisitosTransicion(transiciones) {
                                     <tr>
                                         <th>Requisito</th>
                                         <th>Tipo</th>
+                                        <th>Préstamo</th>
                                         <th>Mensaje</th>
                                         <th width="120">Acciones</th>
                                     </tr>
@@ -2017,13 +2036,18 @@ function mostrarRequisitosTransicion(transiciones) {
                                                 </span>
                                             </td>
                                             <td>
+                                                <span class="badge ${req.tipo_prestamo_aplicable === 'todos' ? 'bg-info' : req.tipo_prestamo_aplicable === 'personal' ? 'bg-success' : 'bg-warning'}">
+                                                    ${req.tipo_prestamo_aplicable === 'todos' ? 'Todos' : req.tipo_prestamo_aplicable === 'personal' ? 'Personal' : 'Auto'}
+                                                </span>
+                                            </td>
+                                            <td>
                                                 <small class="text-muted">
                                                     ${req.mensaje_personalizado || 'Sin mensaje personalizado'}
                                                 </small>
                                             </td>
                                             <td>
                                                 <div class="btn-group btn-group-sm">
-                                                    <button type="button" class="btn btn-outline-primary" onclick="editarRequisitoTransicion(${req.id}, '${req.requisito_nombre}', '${transicion.nombre}', ${req.obligatorio}, '${req.mensaje_personalizado}')">
+                                                    <button type="button" class="btn btn-outline-primary" onclick="editarRequisitoTransicion(${req.id}, '${req.requisito_nombre}', '${transicion.nombre}', ${req.obligatorio}, '${req.mensaje_personalizado}', '${req.tipo_prestamo_aplicable}')">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
                                                     <button type="button" class="btn btn-outline-danger" onclick="eliminarRequisitoTransicion(${req.id}, '${req.requisito_nombre}', '${transicion.nombre}')">
@@ -2130,11 +2154,12 @@ function agregarRequisitoATransicion(transicionId) {
 }
 
 // Función para editar requisito de transición
-function editarRequisitoTransicion(requisitoTransicionId, requisitoNombre, transicionNombre, obligatorio, mensajePersonalizado) {
+function editarRequisitoTransicion(requisitoTransicionId, requisitoNombre, transicionNombre, obligatorio, mensajePersonalizado, tipoPrestamoAplicable) {
     document.getElementById('editRtId').value = requisitoTransicionId;
     document.getElementById('editRtInfo').textContent = `Requisito: ${requisitoNombre} | Transición: ${transicionNombre}`;
     document.getElementById('editRtObligatorio').checked = obligatorio;
     document.getElementById('editRtMensajePersonalizado').value = mensajePersonalizado || '';
+    document.getElementById('editRtTipoPrestamoAplicable').value = tipoPrestamoAplicable || 'todos';
     
     const modal = new bootstrap.Modal(document.getElementById('editarRequisitoTransicionModal'));
     modal.show();
@@ -2422,7 +2447,8 @@ document.getElementById('nuevoRequisitoTransicionForm').addEventListener('submit
         transicion_id: parseInt(transicionId),
         requisito_id: parseInt(requisitoId),
         obligatorio: formData.get('obligatorio') === 'on',
-        mensaje_personalizado: formData.get('mensaje_personalizado') || ''
+        mensaje_personalizado: formData.get('mensaje_personalizado') || '',
+        tipo_prestamo_aplicable: formData.get('tipo_prestamo_aplicable') || 'todos'
     };
     
     console.log('Sending data:', data);
@@ -2477,7 +2503,8 @@ document.getElementById('editarRequisitoTransicionForm').addEventListener('submi
     const requisitoTransicionId = formData.get('requisito_transicion_id');
     const data = {
         obligatorio: formData.get('obligatorio') === 'on',
-        mensaje_personalizado: formData.get('mensaje_personalizado')
+        mensaje_personalizado: formData.get('mensaje_personalizado'),
+        tipo_prestamo_aplicable: formData.get('tipo_prestamo_aplicable') || 'todos'
     };
     
     fetch(`{% url "workflow:api_actualizar_requisito_transicion" 0 %}`.replace('0', requisitoTransicionId), {

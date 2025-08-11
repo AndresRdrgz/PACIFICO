@@ -6,35 +6,64 @@ import django.db.models.deletion
 
 
 def create_table_if_not_exists_postgresql(apps, schema_editor):
-    """Create ClienteEntrevista table if it doesn't exist - PostgreSQL compatible"""
+    """Create ClienteEntrevista table if it doesn't exist - Multi-database compatible"""
     from django.db import connection
     
-    with connection.cursor() as cursor:
-        # Check if table exists (PostgreSQL compatible)
-        cursor.execute("""
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_schema = 'public' 
-                AND table_name = 'workflow_clienteentrevista'
-            );
-        """)
-        
-        table_exists = cursor.fetchone()[0]
-        
-        if not table_exists:
-            # Create table using Django's schema editor
-            ClienteEntrevista = apps.get_model('workflow', 'ClienteEntrevista')
-            schema_editor.create_model(ClienteEntrevista)
-            print("Created workflow_clienteentrevista table")
-        else:
-            print("Table workflow_clienteentrevista already exists")
+    # Detectar el tipo de base de datos
+    if 'postgresql' in connection.settings_dict['ENGINE']:
+        # PostgreSQL - usar information_schema
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.tables 
+                    WHERE table_schema = 'public' 
+                    AND table_name = 'workflow_clienteentrevista'
+                );
+            """)
+            table_exists = cursor.fetchone()[0]
+    elif 'sqlite' in connection.settings_dict['ENGINE']:
+        # SQLite - usar sqlite_master
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT COUNT(*) FROM sqlite_master 
+                WHERE type='table' AND name='workflow_clienteentrevista';
+            """)
+            table_exists = cursor.fetchone()[0] > 0
+    else:
+        # Para otras bases de datos, intentar crear la tabla directamente
+        table_exists = False
+    
+    if not table_exists:
+        # Create table using Django's schema editor
+        ClienteEntrevista = apps.get_model('workflow', 'ClienteEntrevista')
+        schema_editor.create_model(ClienteEntrevista)
+        print("Created workflow_clienteentrevista table")
+    else:
+        print("Table workflow_clienteentrevista already exists")
 
 
 def reverse_create_table_postgresql(apps, schema_editor):
-    """Reverse the table creation - PostgreSQL compatible"""
+    """Reverse the table creation - Multi-database compatible"""
     from django.db import connection
-    with connection.cursor() as cursor:
-        cursor.execute("DROP TABLE IF EXISTS workflow_clienteentrevista CASCADE")
+    
+    # Detectar el tipo de base de datos para el comando DROP
+    if 'postgresql' in connection.settings_dict['ENGINE']:
+        # PostgreSQL - usar CASCADE
+        with connection.cursor() as cursor:
+            cursor.execute("DROP TABLE IF EXISTS workflow_clienteentrevista CASCADE")
+    elif 'sqlite' in connection.settings_dict['ENGINE']:
+        # SQLite - sin CASCADE
+        with connection.cursor() as cursor:
+            cursor.execute("DROP TABLE IF EXISTS workflow_clienteentrevista")
+    else:
+        # Para otras bases de datos, usar Django's schema editor
+        try:
+            ClienteEntrevista = apps.get_model('workflow', 'ClienteEntrevista')
+            schema_editor.delete_model(ClienteEntrevista)
+        except:
+            # Si falla, intentar DROP básico
+            with connection.cursor() as cursor:
+                cursor.execute("DROP TABLE IF EXISTS workflow_clienteentrevista")
 
 
 class Migration(migrations.Migration):
