@@ -1988,6 +1988,7 @@ def api_crear_transicion(request, pipeline_id):
             etapa_destino_id = request.POST.get('etapa_destino')
             nombre = request.POST.get('nombre')
             requiere_permiso = request.POST.get('requiere_permiso') == 'true'
+            tipo_prestamo_aplicable = request.POST.get('tipo_prestamo_aplicable', 'todos')
             
             if not all([etapa_origen_id, etapa_destino_id, nombre]):
                 return JsonResponse({'success': False, 'error': 'Todos los campos son obligatorios'})
@@ -1995,12 +1996,22 @@ def api_crear_transicion(request, pipeline_id):
             etapa_origen = get_object_or_404(Etapa, id=etapa_origen_id, pipeline=pipeline)
             etapa_destino = get_object_or_404(Etapa, id=etapa_destino_id, pipeline=pipeline)
             
+            # Verificar si ya existe una transición con el mismo tipo de préstamo
+            if TransicionEtapa.objects.filter(
+                pipeline=pipeline,
+                etapa_origen=etapa_origen,
+                etapa_destino=etapa_destino,
+                tipo_prestamo_aplicable=tipo_prestamo_aplicable
+            ).exists():
+                return JsonResponse({'success': False, 'error': f'Ya existe una transición de {etapa_origen.nombre} a {etapa_destino.nombre} para {dict(TransicionEtapa.TIPO_PRESTAMO_CHOICES)[tipo_prestamo_aplicable]}'})
+            
             transicion = TransicionEtapa.objects.create(
                 pipeline=pipeline,
                 etapa_origen=etapa_origen,
                 etapa_destino=etapa_destino,
                 nombre=nombre,
-                requiere_permiso=requiere_permiso
+                requiere_permiso=requiere_permiso,
+                tipo_prestamo_aplicable=tipo_prestamo_aplicable
             )
             
             return JsonResponse({
@@ -2010,7 +2021,8 @@ def api_crear_transicion(request, pipeline_id):
                     'nombre': transicion.nombre,
                     'etapa_origen': transicion.etapa_origen.nombre,
                     'etapa_destino': transicion.etapa_destino.nombre,
-                    'requiere_permiso': transicion.requiere_permiso
+                    'requiere_permiso': transicion.requiere_permiso,
+                    'tipo_prestamo_aplicable': transicion.tipo_prestamo_aplicable
                 }
             })
         except Exception as e:
@@ -2168,6 +2180,7 @@ def api_editar_transicion(request, transicion_id):
             nombre = request.POST.get('nombre')
             etapa_origen_id = request.POST.get('etapa_origen')
             etapa_destino_id = request.POST.get('etapa_destino')
+            tipo_prestamo_aplicable = request.POST.get('tipo_prestamo_aplicable', 'todos')
             
             # Validaciones
             if not nombre or not etapa_origen_id or not etapa_destino_id:
@@ -2192,23 +2205,25 @@ def api_editar_transicion(request, transicion_id):
                     'error': 'Una o ambas etapas no existen o no pertenecen al pipeline'
                 })
             
-            # Verificar que no hay otra transición con el mismo origen y destino
+            # Verificar que no hay otra transición con el mismo origen, destino y tipo de préstamo
             transicion_existente = TransicionEtapa.objects.filter(
                 pipeline=transicion.pipeline,
                 etapa_origen=etapa_origen,
-                etapa_destino=etapa_destino
+                etapa_destino=etapa_destino,
+                tipo_prestamo_aplicable=tipo_prestamo_aplicable
             ).exclude(id=transicion_id).first()
             
             if transicion_existente:
                 return JsonResponse({
                     'success': False, 
-                    'error': 'Ya existe una transición entre estas etapas'
+                    'error': f'Ya existe una transición de {etapa_origen.nombre} a {etapa_destino.nombre} para {dict(TransicionEtapa.TIPO_PRESTAMO_CHOICES)[tipo_prestamo_aplicable]}'
                 })
             
             # Actualizar la transición
             transicion.nombre = nombre
             transicion.etapa_origen = etapa_origen
             transicion.etapa_destino = etapa_destino
+            transicion.tipo_prestamo_aplicable = tipo_prestamo_aplicable
             transicion.save()
             
             return JsonResponse({'success': True})
@@ -2334,7 +2349,8 @@ def api_obtener_datos_pipeline(request, pipeline_id):
                 'etapa_destino': transicion.etapa_destino.nombre,
                 'etapa_origen_id': transicion.etapa_origen.id,
                 'etapa_destino_id': transicion.etapa_destino.id,
-                'requiere_permiso': transicion.requiere_permiso
+                'requiere_permiso': transicion.requiere_permiso,
+                'tipo_prestamo_aplicable': transicion.tipo_prestamo_aplicable
             })
         
         # Requisitos
@@ -4285,6 +4301,7 @@ def api_crear_transicion(request, pipeline_id):
             etapa_destino_id = request.POST.get('etapa_destino')
             nombre = request.POST.get('nombre')
             requiere_permiso = request.POST.get('requiere_permiso') == 'true'
+            tipo_prestamo_aplicable = request.POST.get('tipo_prestamo_aplicable', 'todos')
             
             if not all([etapa_origen_id, etapa_destino_id, nombre]):
                 return JsonResponse({'success': False, 'error': 'Todos los campos son obligatorios'})
@@ -4292,12 +4309,22 @@ def api_crear_transicion(request, pipeline_id):
             etapa_origen = get_object_or_404(Etapa, id=etapa_origen_id, pipeline=pipeline)
             etapa_destino = get_object_or_404(Etapa, id=etapa_destino_id, pipeline=pipeline)
             
+            # Verificar si ya existe una transición con el mismo tipo de préstamo
+            if TransicionEtapa.objects.filter(
+                pipeline=pipeline,
+                etapa_origen=etapa_origen,
+                etapa_destino=etapa_destino,
+                tipo_prestamo_aplicable=tipo_prestamo_aplicable
+            ).exists():
+                return JsonResponse({'success': False, 'error': f'Ya existe una transición de {etapa_origen.nombre} a {etapa_destino.nombre} para {dict(TransicionEtapa.TIPO_PRESTAMO_CHOICES)[tipo_prestamo_aplicable]}'})
+            
             transicion = TransicionEtapa.objects.create(
                 pipeline=pipeline,
                 etapa_origen=etapa_origen,
                 etapa_destino=etapa_destino,
                 nombre=nombre,
-                requiere_permiso=requiere_permiso
+                requiere_permiso=requiere_permiso,
+                tipo_prestamo_aplicable=tipo_prestamo_aplicable
             )
             
             return JsonResponse({
@@ -4307,7 +4334,8 @@ def api_crear_transicion(request, pipeline_id):
                     'nombre': transicion.nombre,
                     'etapa_origen': transicion.etapa_origen.nombre,
                     'etapa_destino': transicion.etapa_destino.nombre,
-                    'requiere_permiso': transicion.requiere_permiso
+                    'requiere_permiso': transicion.requiere_permiso,
+                    'tipo_prestamo_aplicable': transicion.tipo_prestamo_aplicable
                 }
             })
         except Exception as e:
@@ -4465,6 +4493,7 @@ def api_editar_transicion(request, transicion_id):
             nombre = request.POST.get('nombre')
             etapa_origen_id = request.POST.get('etapa_origen')
             etapa_destino_id = request.POST.get('etapa_destino')
+            tipo_prestamo_aplicable = request.POST.get('tipo_prestamo_aplicable', 'todos')
             
             # Validaciones
             if not nombre or not etapa_origen_id or not etapa_destino_id:
@@ -4489,23 +4518,25 @@ def api_editar_transicion(request, transicion_id):
                     'error': 'Una o ambas etapas no existen o no pertenecen al pipeline'
                 })
             
-            # Verificar que no hay otra transición con el mismo origen y destino
+            # Verificar que no hay otra transición con el mismo origen, destino y tipo de préstamo
             transicion_existente = TransicionEtapa.objects.filter(
                 pipeline=transicion.pipeline,
                 etapa_origen=etapa_origen,
-                etapa_destino=etapa_destino
+                etapa_destino=etapa_destino,
+                tipo_prestamo_aplicable=tipo_prestamo_aplicable
             ).exclude(id=transicion_id).first()
             
             if transicion_existente:
                 return JsonResponse({
                     'success': False, 
-                    'error': 'Ya existe una transición entre estas etapas'
+                    'error': f'Ya existe una transición de {etapa_origen.nombre} a {etapa_destino.nombre} para {dict(TransicionEtapa.TIPO_PRESTAMO_CHOICES)[tipo_prestamo_aplicable]}'
                 })
             
             # Actualizar la transición
             transicion.nombre = nombre
             transicion.etapa_origen = etapa_origen
             transicion.etapa_destino = etapa_destino
+            transicion.tipo_prestamo_aplicable = tipo_prestamo_aplicable
             transicion.save()
             
             return JsonResponse({'success': True})
@@ -4631,7 +4662,8 @@ def api_obtener_datos_pipeline(request, pipeline_id):
                 'etapa_destino': transicion.etapa_destino.nombre,
                 'etapa_origen_id': transicion.etapa_origen.id,
                 'etapa_destino_id': transicion.etapa_destino.id,
-                'requiere_permiso': transicion.requiere_permiso
+                'requiere_permiso': transicion.requiere_permiso,
+                'tipo_prestamo_aplicable': transicion.tipo_prestamo_aplicable
             })
         
         # Requisitos
@@ -10356,6 +10388,23 @@ def api_obtener_transiciones_validas(request, solicitud_id):
             etapa_origen=solicitud.etapa_actual
         ).select_related('etapa_destino')
         
+        # ✅ FILTRAR POR TIPO DE PRÉSTAMO usando TransicionEtapa.tipo_prestamo_aplicable
+        if solicitud.cotizacion and hasattr(solicitud.cotizacion, 'tipoPrestamo'):
+            tipo_prestamo = solicitud.cotizacion.tipoPrestamo
+            transiciones_aplicables = []
+            
+            for transicion in transiciones_validas:
+                try:
+                    # Usar el método aplica_para_cotizacion del modelo
+                    if transicion.aplica_para_cotizacion(solicitud.cotizacion):
+                        transiciones_aplicables.append(transicion)
+                except Exception as e:
+                    # Si hay algún error, incluir la transición por seguridad
+                    print(f"Error filtrando transición {transicion.id}: {str(e)}")
+                    transiciones_aplicables.append(transicion)
+            
+            transiciones_validas = transiciones_aplicables
+        
         transiciones_data = []
         for transicion in transiciones_validas:
             try:
@@ -10373,7 +10422,8 @@ def api_obtener_transiciones_validas(request, solicitud_id):
                     'requiere_permiso': transicion.requiere_permiso,
                     'puede_realizar': len(requisitos_faltantes) == 0,
                     'requisitos_faltantes': requisitos_faltantes,
-                    'total_requisitos_faltantes': len(requisitos_faltantes)
+                    'total_requisitos_faltantes': len(requisitos_faltantes),
+                    'tipo_prestamo_aplicable': transicion.tipo_prestamo_aplicable
                 })
             except Exception as transicion_error:
                 # Si hay error en una transición específica, continuar con las demás

@@ -684,6 +684,15 @@
                                 <option value="">Seleccionar...</option>
                             </select>
                         </div>
+                        <div class="col-12">
+                            <label for="transicionTipoPrestamoAplicable" class="form-label fw-semibold">Tipo de Préstamo *</label>
+                            <select class="form-control form-control-custom" id="transicionTipoPrestamoAplicable" name="tipo_prestamo_aplicable" required>
+                                <option value="todos">Todos los préstamos</option>
+                                <option value="personal">Solo préstamo personal</option>
+                                <option value="auto">Solo préstamo de auto</option>
+                            </select>
+                            <small class="form-text text-muted">Determina para qué tipo de préstamo estará disponible esta transición</small>
+                        </div>
 
                     </div>
                 </div>
@@ -724,6 +733,15 @@
                             <select class="form-control form-control-custom" id="editTransicionDestino" name="etapa_destino" required>
                                 <option value="">Seleccionar...</option>
                             </select>
+                        </div>
+                        <div class="col-12">
+                            <label for="editTransicionTipoPrestamoAplicable" class="form-label fw-semibold">Tipo de Préstamo *</label>
+                            <select class="form-control form-control-custom" id="editTransicionTipoPrestamoAplicable" name="tipo_prestamo_aplicable" required>
+                                <option value="todos">Todos los préstamos</option>
+                                <option value="personal">Solo préstamo personal</option>
+                                <option value="auto">Solo préstamo de auto</option>
+                            </select>
+                            <small class="form-text text-muted">Determina para qué tipo de préstamo estará disponible esta transición</small>
                         </div>
                     </div>
                 </div>
@@ -1549,6 +1567,19 @@ function cargarTransiciones(transiciones) {
     transicionesList.innerHTML = '';
     
     transiciones.forEach(transicion => {
+        // Determinar el badge de tipo de préstamo
+        const tipoPrestamoAplicable = transicion.tipo_prestamo_aplicable || 'todos';
+        let badgeClass = 'bg-info';
+        let badgeText = 'Todos';
+        
+        if (tipoPrestamoAplicable === 'personal') {
+            badgeClass = 'bg-success';
+            badgeText = 'Personal';
+        } else if (tipoPrestamoAplicable === 'auto') {
+            badgeClass = 'bg-warning';
+            badgeText = 'Auto';
+        }
+        
         const transicionHtml = `
             <div class="card mb-3">
                 <div class="card-body">
@@ -1559,9 +1590,12 @@ function cargarTransiciones(transiciones) {
                                     ${transicion.etapa_origen} → ${transicion.etapa_destino}
                                     ${transicion.requiere_permiso ? ' (Requiere permisos)' : ''}
                                 </small>
+                                <div class="mt-1">
+                                    <span class="badge ${badgeClass}">${badgeText}</span>
+                                </div>
                             </div>
                             <div class="btn-group btn-group-sm">
-                                <button type="button" class="btn btn-outline-primary" onclick="editarTransicion(${transicion.id}, '${transicion.nombre}', ${transicion.etapa_origen_id}, ${transicion.etapa_destino_id})">
+                                <button type="button" class="btn btn-outline-primary" onclick="editarTransicion(${transicion.id}, '${transicion.nombre}', ${transicion.etapa_origen_id}, ${transicion.etapa_destino_id}, '${tipoPrestamoAplicable}')">
                                     <i class="fas fa-edit"></i>
                                 </button>
                                 <button type="button" class="btn btn-outline-danger" onclick="eliminarTransicion(${transicion.id})">
@@ -1683,7 +1717,7 @@ function nuevaTransicion() {
 }
 
 // Función para editar transición
-function editarTransicion(transicionId, nombre, etapaOrigenId, etapaDestinoId) {
+function editarTransicion(transicionId, nombre, etapaOrigenId, etapaDestinoId, tipoPrestamoAplicable = 'todos') {
     // Cargar etapas en los selects
     const origenSelect = document.getElementById('editTransicionOrigen');
     const destinoSelect = document.getElementById('editTransicionDestino');
@@ -1701,6 +1735,7 @@ function editarTransicion(transicionId, nombre, etapaOrigenId, etapaDestinoId) {
     document.getElementById('editTransicionNombre').value = nombre;
     origenSelect.value = etapaOrigenId;
     destinoSelect.value = etapaDestinoId;
+    document.getElementById('editTransicionTipoPrestamoAplicable').value = tipoPrestamoAplicable;
     
     const modal = new bootstrap.Modal(document.getElementById('editarTransicionModal'));
     modal.show();
