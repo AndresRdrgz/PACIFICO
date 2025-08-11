@@ -18023,8 +18023,11 @@ def api_crear_solicitud_externa(request):
     API endpoint para crear solicitudes desde aplicaciones externas.
     
     Parámetros esperados (JSON):
-    - pipeline_id: ID del pipeline a usar
+    - pipeline_id: ID del pipeline a usar (requerido)
     - api_source: Identificador de la aplicación externa (requerido)
+    - etapa_id: ID de la etapa específica donde crear la solicitud (opcional, usa primera etapa si no se especifica)
+    - propietario_id: ID del usuario propietario (opcional)
+    - propietario_username: Username del usuario propietario (opcional, alternativo a propietario_id)
     - cliente_nombre: Nombre completo del cliente
     - cliente_cedula: Cédula del cliente
     - cliente_telefono: Teléfono del cliente
@@ -18034,7 +18037,6 @@ def api_crear_solicitud_externa(request):
     - motivo_consulta: Motivo de la consulta
     - como_se_entero: Cómo se enteró del servicio
     - observaciones: Observaciones adicionales
-    - propietario_username: Username del usuario propietario (opcional)
     """
     try:
         # Verificar que sea POST
@@ -18061,14 +18063,27 @@ def api_crear_solicitud_externa(request):
         except Pipeline.DoesNotExist:
             return JsonResponse({'error': f'Pipeline con ID {data["pipeline_id"]} no encontrado'}, status=404)
         
-        # Obtener primera etapa del pipeline
-        primera_etapa = pipeline.etapas.order_by('orden').first()
-        if not primera_etapa:
-            return JsonResponse({'error': 'El pipeline no tiene etapas configuradas'}, status=400)
+        # Obtener etapa específica o primera etapa del pipeline
+        etapa_inicial = None
+        if data.get('etapa_id'):
+            try:
+                etapa_inicial = Etapa.objects.get(id=data['etapa_id'], pipeline=pipeline)
+            except Etapa.DoesNotExist:
+                return JsonResponse({'error': f'Etapa con ID {data["etapa_id"]} no encontrada en el pipeline {pipeline.nombre}'}, status=404)
+        else:
+            # Usar primera etapa del pipeline si no se especifica
+            etapa_inicial = pipeline.etapas.order_by('orden').first()
+            if not etapa_inicial:
+                return JsonResponse({'error': 'El pipeline no tiene etapas configuradas'}, status=400)
         
-        # Obtener usuario propietario (si se especifica)
+        # Obtener usuario propietario (orden de prioridad: propietario_id, propietario_username, default)
         propietario = None
-        if data.get('propietario_username'):
+        if data.get('propietario_id'):
+            try:
+                propietario = User.objects.get(id=data['propietario_id'])
+            except User.DoesNotExist:
+                return JsonResponse({'error': f'Usuario con ID {data["propietario_id"]} no encontrado'}, status=404)
+        elif data.get('propietario_username'):
             try:
                 propietario = User.objects.get(username=data['propietario_username'])
             except User.DoesNotExist:
@@ -18078,6 +18093,9 @@ def api_crear_solicitud_externa(request):
             propietario = User.objects.filter(is_superuser=True).first()
             if not propietario:
                 propietario = User.objects.first()
+                
+        if not propietario:
+            return JsonResponse({'error': 'No se pudo determinar un usuario propietario'}, status=400)
         
         # Buscar cliente si se proporciona cédula
         cliente = None
@@ -18090,7 +18108,7 @@ def api_crear_solicitud_externa(request):
         # Crear la solicitud
         solicitud = Solicitud.objects.create(
             pipeline=pipeline,
-            etapa_actual=primera_etapa,
+            etapa_actual=etapa_inicial,
             creada_por=propietario,
             propietario=propietario,
             cliente=cliente,
@@ -18113,7 +18131,7 @@ def api_crear_solicitud_externa(request):
         # Crear historial inicial
         HistorialSolicitud.objects.create(
             solicitud=solicitud,
-            etapa=primera_etapa,
+            etapa=etapa_inicial,
             usuario_responsable=propietario,
             fecha_inicio=timezone.now()
         )
@@ -18139,15 +18157,32 @@ def api_crear_solicitud_externa(request):
             'solicitud': {
                 'id': solicitud.id,
                 'codigo': solicitud.codigo,
-                'pipeline': solicitud.pipeline.nombre,
-                'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else None,
+                'pipeline': {
+                    'id': solicitud.pipeline.id,
+                    'nombre': solicitud.pipeline.nombre
+                },
+                'etapa_actual': {
+                    'id': solicitud.etapa_actual.id,
+                    'nombre': solicitud.etapa_actual.nombre,
+                    'orden': solicitud.etapa_actual.orden
+                } if solicitud.etapa_actual else None,
+                'propietario': {
+                    'id': solicitud.propietario.id,
+                    'username': solicitud.propietario.username,
+                    'first_name': solicitud.propietario.first_name,
+                    'last_name': solicitud.propietario.last_name
+                } if solicitud.propietario else None,
                 'creada_via_api': solicitud.creada_via_api,
                 'api_source': solicitud.api_source,
                 'fecha_creacion': solicitud.fecha_creacion.isoformat(),
                 'cliente_nombre': solicitud.cliente_nombre,
                 'cliente_cedula': solicitud.cliente_cedula,
+                'cliente_telefono': solicitud.cliente_telefono,
+                'cliente_email': solicitud.cliente_email,
                 'producto_solicitado': solicitud.producto_solicitado,
-                'monto_solicitado': str(solicitud.monto_solicitado) if solicitud.monto_solicitado else None
+                'monto_solicitado': str(solicitud.monto_solicitado) if solicitud.monto_solicitado else None,
+                'motivo_consulta': solicitud.motivo_consulta,
+                'observaciones': solicitud.observaciones
             }
         }, status=201)
         
