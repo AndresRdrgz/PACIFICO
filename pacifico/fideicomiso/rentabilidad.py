@@ -308,12 +308,32 @@ def calcular_promocion(params, fecha_calculo):
             promociones_activas = promociones_activas.exclude(id=promocion.id)
 
     
-    #PROMOCION DIRIGIDO A MARCA y agencia, if marca is GEELY and agencia is BAY MOTORS, S.A. promocion monto 300
-    if params['marcaAuto'] == "GEELY" and params['quinVende'] == "BAY MOTORS, S.A.":
-        print("Promocion dirigida a marca y agencia, marca:", params['marcaAuto'], "agencia:", params['quinVende'])
-        comisionTotal8 = 300
+    # PROMOCION DIRIGIDO A AGENCIAS ESPECIFICAS, si quinVende es una de las siguientes, suma 300
+    agencias_promocion_300 = [
+        "SILABA MOTORS, S.A.",
+        "PETROAUTOS, S.A.",
+        "PETROMOTORS, S.A.",
+        "BAY MOTORS, S.A.",
+        "BAHIA MOTORS, S.A.",
+        "MOTORES JAPONESES, S.A.",
+        "DISTRIBUIDORA AUTOMOTRIZ FORTUNE, S.A.",
+        "RICARDO PEREZ, S.A.",
+        "EMPRESAS MELO, S.A. (COPAMA)",
+        "GRUPO AUTO COMERCIAL, S.A.",
+        "EMPRESAS CARBONE, S.A.",
+        "SCHUBERT GROUP CORP.",
+        "MOTION MOTORS, S.A.",
+        "GRUPO Q INVESTMENTS, S.A.",
+        "ACTIVE MOTORS, S.A.",
+        "AVANSMOTOR, S.A.",
+        "MOTORES DE CENTROAMERICA, S.A.",
+    ]
+    print("Promocion dirigida a agencia, agencia:", params['quinVende'])    
+    if params['quinVende'] in agencias_promocion_300:
+        print("Promocion dirigida a agencia, agencia:", params['quinVende'])
+        comisionTotal8 += 300
         print("Comision Total 8:", comisionTotal8)
-        promocion_aplicada = "MARCA Y AGENCIA"
+        promocion_aplicada = "AGENCIA LISTA PROMOCION"
     
     
     
@@ -385,6 +405,7 @@ def calculoRentabilidad(fechaInicioPago,tempPrimerDiaHabil,params):
     if promoActiva == True:
         
         fecha_calculo = datetime.datetime.strptime(auxFechaCalculo, "%Y-%m-%d")
+        print("Promo - Aplicada, Fecha calculo:", fecha_calculo)
         comisionTotal8 = calcular_promocion(params,fecha_calculo)
 
         

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Patrono, Promocion, TargetPromocion
+from .models import Patrono, Promocion, TargetPromocion, Agencias
 
 @admin.register(Patrono)
 class PatronoAdmin(admin.ModelAdmin):
@@ -25,3 +25,10 @@ class PromocionAdmin(admin.ModelAdmin):
     list_editable = ['activa']
     list_display_links = ['descripcion']
     inlines = [TargetPromocionInline]
+
+@admin.register(Agencias)
+class AgenciasAdmin(admin.ModelAdmin):
+    list_display = ['secuencia', 'razon_social']
+    search_fields = ['secuencia', 'razon_social']
+    ordering = ['secuencia']
+    list_per_page = 20
