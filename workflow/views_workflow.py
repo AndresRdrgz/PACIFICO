@@ -741,13 +741,36 @@ def detalle_solicitud(request, solicitud_id):
         solicitud.etapa_actual.nombre == "Back Office" and 
         solicitud.etapa_actual.es_bandeja_grupal):
         
-        # ✅ CORREGIDO: Obtener solo los requisitos definidos en RequisitoTransicion para Back Office
-        # Los documentos para Back Office están definidos en las transiciones DE ENTRADA hacia Back Office
-        # (no en las de salida, que son para la siguiente etapa)
-        transiciones_entrada = TransicionEtapa.objects.filter(
-            pipeline=solicitud.pipeline,
-            etapa_destino=solicitud.etapa_actual
-        ).prefetch_related('requisitos_obligatorios__requisito')
+        # ✅ CORREGIDO: Obtener solo los requisitos de la transición específica por la cual llegó esta solicitud
+        # Identificar la etapa anterior desde el historial
+        historial_anterior = HistorialSolicitud.objects.filter(
+            solicitud=solicitud,
+            fecha_fin__isnull=False  # Historial cerrado (etapa anterior)
+        ).exclude(
+            etapa=solicitud.etapa_actual  # Excluir la etapa actual
+        ).order_by('-fecha_fin').first()  # El más reciente
+        
+        transicion_especifica = None
+        if historial_anterior and historial_anterior.etapa:
+            # Buscar la transición específica desde la etapa anterior hacia Back Office
+            transicion_especifica = TransicionEtapa.objects.filter(
+                pipeline=solicitud.pipeline,
+                etapa_origen=historial_anterior.etapa,
+                etapa_destino=solicitud.etapa_actual
+            ).prefetch_related('requisitos_obligatorios__requisito').first()
+            
+            print(f"🔍 DEBUG: Identificada transición específica desde {historial_anterior.etapa.nombre} hacia {solicitud.etapa_actual.nombre}")
+        
+        # Si no se puede identificar la transición específica, usar todas las transiciones de entrada (comportamiento anterior)
+        if not transicion_especifica:
+            print(f"⚠️ DEBUG: No se pudo identificar transición específica, usando todas las transiciones de entrada")
+            transiciones_entrada = TransicionEtapa.objects.filter(
+                pipeline=solicitud.pipeline,
+                etapa_destino=solicitud.etapa_actual
+            ).prefetch_related('requisitos_obligatorios__requisito')
+        else:
+            # Usar solo la transición específica
+            transiciones_entrada = [transicion_especifica]
         
         # Obtener todos los requisitos necesarios (solo de entrada)
         requisitos_necesarios = {}
@@ -5791,6 +5814,207 @@ def enviar_correo_devolucion_backoffice(solicitud, etapa_anterior, nueva_etapa, 
         print(f"❌ TRACEBACK: {traceback.format_exc()}")
 
 
+def enviar_correo_avance_subestado_backoffice(solicitud, subestado_anterior, subestado_destino, resumen_documentos, pendientes_activos, usuario_que_avanza, request=None):
+    """
+    📧 NUEVO: Función para enviar correo automático cuando se avanza de subestado en Back Office.
+    Incluye resumen de documentos calificados y pendientes activos.
+    """
+    try:
+        # Verificar que la solicitud tiene propietario o creador
+        destinatario_principal = None
+        if solicitud.propietario and solicitud.propietario.email:
+            destinatario_principal = solicitud.propietario.email
+            print(f"📧 Enviando correo de avance de subestado al propietario: {destinatario_principal}")
+        elif solicitud.creada_por and solicitud.creada_por.email:
+            destinatario_principal = solicitud.creada_por.email
+            print(f"📧 Enviando correo de avance de subestado al creador: {destinatario_principal}")
+        else:
+            print(f"⚠️ No se puede enviar correo: solicitud {solicitud.codigo} sin propietario/creador o email")
+            return
+        
+        # Destinatarios con copias
+        destinatarios = [destinatario_principal]
+        copias = [
+            "arodriguez@fpacifico.com",
+            "jacastillo@fpacifico.com"
+        ]
+        
+        # Construir la URL de la solicitud
+        base_url = get_site_url(request)
+        solicitud_url = f"{base_url}/workflow/solicitudes/{solicitud.id}/detalle/"
+        
+        # Crear contexto para el template
+        context = {
+            'solicitud': solicitud,
+            'subestado_anterior': subestado_anterior,
+            'subestado_destino': subestado_destino,
+            'resumen_documentos': resumen_documentos,
+            'pendientes_activos': pendientes_activos,
+            'usuario_que_avanza': usuario_que_avanza,
+            'fecha_avance': timezone.now(),
+            'solicitud_url': solicitud_url,
+            'base_url': base_url,
+        }
+        
+        # Generar el contenido HTML del correo
+        html_content = render_to_string('workflow/emails/avance_subestado_backoffice_notification.html', context)
+        
+        # Crear el asunto del correo
+        subject = f"✅ Solicitud {solicitud.codigo} Avanzada en Back Office - {subestado_destino.nombre}"
+        
+        # Crear y enviar el correo
+        from django.core.mail import EmailMultiAlternatives
+        
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body="Tu solicitud ha avanzado de subestado en Back Office. Por favor, revisa el correo en formato HTML.",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=destinatarios,
+            cc=copias
+        )
+        
+        # Adjuntar contenido HTML
+        email.attach_alternative(html_content, "text/html")
+        
+        # Enviar el correo
+        email.send()
+        
+        print(f"✅ Correo de avance de subestado enviado correctamente para solicitud {solicitud.codigo}")
+        print(f"   - Destinatario: {destinatario_principal}")
+        print(f"   - Copias: {', '.join(copias)}")
+        print(f"   - Subestado anterior: {subestado_anterior.nombre}")
+        print(f"   - Subestado destino: {subestado_destino.nombre}")
+        print(f"   - Documentos buenos: {resumen_documentos.get('buenos', 0)}")
+        print(f"   - Documentos malos: {resumen_documentos.get('malos', 0)}")
+        print(f"   - Documentos subsanados: {resumen_documentos.get('subsanados', 0)}")
+        print(f"   - Pendientes activos: {len(pendientes_activos)}")
+        
+    except Exception as e:
+        # Registrar el error pero no romper el flujo
+        print(f"❌ Error al enviar correo de avance de subestado para solicitud {solicitud.codigo}: {str(e)}")
+        import traceback
+        print(f"❌ TRACEBACK: {traceback.format_exc()}")
+
+
+def obtener_resumen_documentos_backoffice(solicitud):
+    """
+    Obtiene un resumen de los documentos calificados en Back Office
+    """
+    try:
+        from .models import CalificacionDocumentoBackoffice
+        
+        # Obtener todas las calificaciones de documentos para esta solicitud
+        calificaciones = CalificacionDocumentoBackoffice.objects.filter(
+            requisito_solicitud__solicitud=solicitud
+        ).select_related('requisito_solicitud__requisito')
+        
+        resumen = {
+            'buenos': 0,
+            'malos': 0,
+            'subsanados': 0,
+            'pendientes': 0,
+            'total': 0,
+            'documentos_buenos': [],
+            'documentos_malos': [],
+            'documentos_subsanados': [],
+            'documentos_pendientes': []
+        }
+        
+        for calificacion in calificaciones:
+            documento_nombre = calificacion.requisito_solicitud.requisito.nombre
+            resumen['total'] += 1
+            
+            if calificacion.subsanado:
+                resumen['subsanados'] += 1
+                resumen['documentos_subsanados'].append(documento_nombre)
+            elif calificacion.estado == 'bueno':
+                resumen['buenos'] += 1
+                resumen['documentos_buenos'].append(documento_nombre)
+            elif calificacion.estado == 'malo':
+                resumen['malos'] += 1
+                resumen['documentos_malos'].append(documento_nombre)
+            elif calificacion.estado == 'pendiente':
+                resumen['pendientes'] += 1
+                resumen['documentos_pendientes'].append(documento_nombre)
+        
+        return resumen
+        
+    except Exception as e:
+        print(f"❌ Error obteniendo resumen de documentos: {e}")
+        return {
+            'buenos': 0, 'malos': 0, 'subsanados': 0, 'pendientes': 0, 'total': 0,
+            'documentos_buenos': [], 'documentos_malos': [], 'documentos_subsanados': [], 'documentos_pendientes': []
+        }
+
+
+def obtener_pendientes_activos(solicitud):
+    """
+    Obtiene la lista de pendientes activos para una solicitud,
+    filtrados por la etapa donde fueron agregados (etapa anterior)
+    """
+    try:
+        # Identificar la etapa anterior desde el historial (mismo método que para requisitos)
+        historial_anterior = HistorialSolicitud.objects.filter(
+            solicitud=solicitud,
+            fecha_fin__isnull=False  # Historial cerrado (etapa anterior)
+        ).exclude(
+            etapa=solicitud.etapa_actual  # Excluir la etapa actual
+        ).order_by('-fecha_fin').first()  # El más reciente
+        
+        # Si se puede identificar la etapa anterior, filtrar pendientes por esa etapa
+        if historial_anterior and historial_anterior.etapa:
+            etapa_anterior_nombre = historial_anterior.etapa.nombre
+            print(f"🔍 DEBUG: Filtrando pendientes agregados en etapa: {etapa_anterior_nombre}")
+            
+            # Obtener pendientes activos agregados en la etapa anterior
+            pendientes = solicitud.pendientes_antes_firma.filter(
+                estado__in=['por_hacer', 'haciendo'],
+                etapa_agregado=etapa_anterior_nombre
+            ).values(
+                'id', 'pendiente__nombre', 'estado', 'fecha_agregado', 'notas'
+            )
+            
+            # Renombrar campos para compatibilidad con el template
+            pendientes_list = []
+            for p in pendientes:
+                pendientes_list.append({
+                    'id': p['id'],
+                    'descripcion': p['pendiente__nombre'],
+                    'estado': p['estado'],
+                    'fecha_agregado': p['fecha_agregado'],
+                    'fecha_limite': None,  # Los pendientes no tienen fecha límite en este modelo
+                    'notas': p['notas']
+                })
+                
+            return pendientes_list
+        else:
+            # Si no se puede identificar la etapa anterior, obtener todos los pendientes activos
+            print(f"⚠️ DEBUG: No se pudo identificar etapa anterior, obteniendo todos los pendientes activos")
+            pendientes = solicitud.pendientes_antes_firma.filter(
+                estado__in=['por_hacer', 'haciendo']
+            ).values(
+                'id', 'pendiente__nombre', 'estado', 'fecha_agregado', 'notas'
+            )
+            
+            # Renombrar campos para compatibilidad con el template
+            pendientes_list = []
+            for p in pendientes:
+                pendientes_list.append({
+                    'id': p['id'],
+                    'descripcion': p['pendiente__nombre'],
+                    'estado': p['estado'],
+                    'fecha_agregado': p['fecha_agregado'],
+                    'fecha_limite': None,
+                    'notas': p['notas']
+                })
+                
+            return pendientes_list
+        
+    except Exception as e:
+        print(f"❌ Error obteniendo pendientes activos: {e}")
+        return []
+
+
 def enviar_correo_comite_credito(solicitud, etapa, request=None):
     """
     Función para enviar correo automático cuando una solicitud entra a la etapa del Comité de Crédito.
@@ -9255,8 +9479,6 @@ def api_solicitud_brief(request, solicitud_id):
             'es_reconsideracion': solicitud.es_reconsideracion if hasattr(solicitud, 'es_reconsideracion') else False,
             'propietario_id': solicitud.propietario.id if solicitud.propietario else (solicitud.creada_por.id if solicitud.creada_por else None),
             'subestado_actual': solicitud.subestado_actual.nombre if solicitud.subestado_actual else None,
-            'creada_via_api': solicitud.creada_via_api,
-            'api_source': solicitud.api_source,
         }
 
         # Cliente info
@@ -9606,12 +9828,6 @@ def api_solicitud_brief(request, solicitud_id):
             'cotizacion_id': solicitud.cotizacion.id if solicitud.cotizacion else None,
             # Datos de solicitud y entrevista para funcionalidades del modal
             'solicitud': solicitud_info,
-            # API-related information
-            'api_info': {
-                'creada_via_api': solicitud.creada_via_api,
-                'api_source': solicitud.api_source,
-                'observaciones': solicitud.observaciones,
-            },
         }, encoder=DjangoJSONEncoder)
         
     except Exception as e:
@@ -16183,13 +16399,36 @@ def api_validar_documentos_backoffice(request, solicitud_id):
                 'error': 'No tienes permisos para validar esta solicitud'
             }, status=403)
         
-        # ✅ CORREGIDO: Obtener solo los requisitos definidos en RequisitoTransicion para Back Office
-        # Los documentos para Back Office están definidos en las transiciones DE ENTRADA hacia Back Office
-        # (no en las de salida, que son para la siguiente etapa)
-        transiciones_entrada = TransicionEtapa.objects.filter(
-            pipeline=solicitud.pipeline,
-            etapa_destino=solicitud.etapa_actual
-        ).prefetch_related('requisitos_obligatorios__requisito')
+        # ✅ CORREGIDO: Obtener solo los requisitos de la transición específica por la cual llegó esta solicitud
+        # Identificar la etapa anterior desde el historial
+        historial_anterior = HistorialSolicitud.objects.filter(
+            solicitud=solicitud,
+            fecha_fin__isnull=False  # Historial cerrado (etapa anterior)
+        ).exclude(
+            etapa=solicitud.etapa_actual  # Excluir la etapa actual
+        ).order_by('-fecha_fin').first()  # El más reciente
+        
+        transicion_especifica = None
+        if historial_anterior and historial_anterior.etapa:
+            # Buscar la transición específica desde la etapa anterior hacia Back Office
+            transicion_especifica = TransicionEtapa.objects.filter(
+                pipeline=solicitud.pipeline,
+                etapa_origen=historial_anterior.etapa,
+                etapa_destino=solicitud.etapa_actual
+            ).prefetch_related('requisitos_obligatorios__requisito').first()
+            
+            print(f"🔍 DEBUG VALIDACIÓN: Identificada transición específica desde {historial_anterior.etapa.nombre} hacia {solicitud.etapa_actual.nombre}")
+        
+        # Si no se puede identificar la transición específica, usar todas las transiciones de entrada (comportamiento anterior)
+        if not transicion_especifica:
+            print(f"⚠️ DEBUG VALIDACIÓN: No se pudo identificar transición específica, usando todas las transiciones de entrada")
+            transiciones_entrada = TransicionEtapa.objects.filter(
+                pipeline=solicitud.pipeline,
+                etapa_destino=solicitud.etapa_actual
+            ).prefetch_related('requisitos_obligatorios__requisito')
+        else:
+            # Usar solo la transición específica
+            transiciones_entrada = [transicion_especifica]
         
         # Obtener todos los requisitos definidos en RequisitoTransicion de entrada
         requisitos_definidos = {}
@@ -16518,6 +16757,36 @@ def api_avanzar_subestado_backoffice(request, solicitud_id):
             
             # Notificar cambio
             notify_solicitud_change(solicitud, 'subestado_changed', request.user)
+            
+            # 📧 ENVIAR CORREO SI SE AVANZA DESDE CHECKLIST
+            try:
+                # Verificar si el subestado anterior era Checklist
+                subestado_anterior = None
+                # Obtener el subestado anterior desde el historial o desde la sesión
+                # Por simplicidad, vamos a asumir que venimos de Checklist si el siguiente es diferente a Checklist
+                checklist_subestado = solicitud.etapa_actual.subestados.filter(nombre__icontains='checklist').first()
+                if checklist_subestado and checklist_subestado.id != siguiente_subestado.id:
+                    print(f"📧 Detectado avance desde Checklist a {siguiente_subestado.nombre} - enviando correo...")
+                    
+                    # Obtener resumen de documentos
+                    resumen_documentos = obtener_resumen_documentos_backoffice(solicitud)
+                    
+                    # Obtener pendientes activos
+                    pendientes_activos = obtener_pendientes_activos(solicitud)
+                    
+                    # Enviar correo de avance
+                    enviar_correo_avance_subestado_backoffice(
+                        solicitud=solicitud,
+                        subestado_anterior=checklist_subestado,
+                        subestado_destino=siguiente_subestado,
+                        resumen_documentos=resumen_documentos,
+                        pendientes_activos=pendientes_activos,
+                        usuario_que_avanza=request.user,
+                        request=request
+                    )
+            except Exception as e:
+                print(f"⚠️ Error enviando correo de avance de subestado: {e}")
+                # No fallar el avance por error en correo
             
             # Generar mensaje según la opción
             if opcion == 'yo':
@@ -18214,21 +18483,18 @@ def api_crear_solicitud_externa(request):
     API endpoint para crear solicitudes desde aplicaciones externas.
     
     Parámetros esperados (JSON):
-    - pipeline_id: ID del pipeline a usar (requerido)
+    - pipeline_id: ID del pipeline a usar
     - api_source: Identificador de la aplicación externa (requerido)
-    - etapa_id: ID de la etapa específica donde crear la solicitud (opcional, usa primera etapa si no se especifica)
-    - propietario_id: ID del usuario propietario (opcional)
-    - propietario_username: Username del usuario propietario (opcional, alternativo a propietario_id)
     - cliente_nombre: Nombre completo del cliente
     - cliente_cedula: Cédula del cliente
     - cliente_telefono: Teléfono del cliente
     - cliente_email: Email del cliente
     - producto_solicitado: Producto de interés
     - monto_solicitado: Monto solicitado
-    - sector: Sector laboral del cliente
     - motivo_consulta: Motivo de la consulta
     - como_se_entero: Cómo se enteró del servicio
     - observaciones: Observaciones adicionales
+    - propietario_username: Username del usuario propietario (opcional)
     """
     try:
         # Verificar que sea POST
@@ -18255,40 +18521,23 @@ def api_crear_solicitud_externa(request):
         except Pipeline.DoesNotExist:
             return JsonResponse({'error': f'Pipeline con ID {data["pipeline_id"]} no encontrado'}, status=404)
         
-        # Obtener etapa específica o primera etapa del pipeline
-        etapa_inicial = None
-        if data.get('etapa_id'):
-            try:
-                etapa_inicial = Etapa.objects.get(id=data['etapa_id'], pipeline=pipeline)
-            except Etapa.DoesNotExist:
-                return JsonResponse({'error': f'Etapa con ID {data["etapa_id"]} no encontrada en el pipeline {pipeline.nombre}'}, status=404)
-        else:
-            # Usar primera etapa del pipeline si no se especifica
-            etapa_inicial = pipeline.etapas.order_by('orden').first()
-            if not etapa_inicial:
-                return JsonResponse({'error': 'El pipeline no tiene etapas configuradas'}, status=400)
+        # Obtener primera etapa del pipeline
+        primera_etapa = pipeline.etapas.order_by('orden').first()
+        if not primera_etapa:
+            return JsonResponse({'error': 'El pipeline no tiene etapas configuradas'}, status=400)
         
-        # Obtener usuario propietario (orden de prioridad: propietario_id, propietario_username, None)
+        # Obtener usuario propietario (si se especifica)
         propietario = None
-        if data.get('propietario_id'):
-            try:
-                propietario = User.objects.get(id=data['propietario_id'])
-            except User.DoesNotExist:
-                return JsonResponse({'error': f'Usuario con ID {data["propietario_id"]} no encontrado'}, status=404)
-        elif data.get('propietario_username'):
+        if data.get('propietario_username'):
             try:
                 propietario = User.objects.get(username=data['propietario_username'])
             except User.DoesNotExist:
                 return JsonResponse({'error': f'Usuario {data["propietario_username"]} no encontrado'}, status=404)
-        # If no propietario is specified, leave it as None to be assigned later
-        
-        # For creada_por, we need a user since it's required. Use first available user as fallback
-        creada_por = propietario
-        if not creada_por:
-            # Use first active user as fallback for creada_por (required field)
-            creada_por = User.objects.filter(is_active=True).first()
-            if not creada_por:
-                return JsonResponse({'error': 'No hay usuarios activos en el sistema'}, status=500)
+        else:
+            # Usar el primer superuser como default
+            propietario = User.objects.filter(is_superuser=True).first()
+            if not propietario:
+                propietario = User.objects.first()
         
         # Buscar cliente si se proporciona cédula
         cliente = None
@@ -18301,9 +18550,9 @@ def api_crear_solicitud_externa(request):
         # Crear la solicitud
         solicitud = Solicitud.objects.create(
             pipeline=pipeline,
-            etapa_actual=etapa_inicial,
-            creada_por=creada_por,  # Required field, uses fallback if no propietario
-            propietario=propietario,  # Can be None to be assigned later
+            etapa_actual=primera_etapa,
+            creada_por=propietario,
+            propietario=propietario,
             cliente=cliente,
             motivo_consulta=data.get('motivo_consulta', ''),
             como_se_entero=data.get('como_se_entero', ''),
@@ -18314,7 +18563,6 @@ def api_crear_solicitud_externa(request):
             cliente_email=data.get('cliente_email', ''),
             producto_solicitado=data.get('producto_solicitado', ''),
             monto_solicitado=data.get('monto_solicitado'),
-            sector=data.get('sector', ''),
             observaciones=data.get('observaciones', ''),
             # Campos de identificación API
             creada_via_api=True,
@@ -18325,8 +18573,8 @@ def api_crear_solicitud_externa(request):
         # Crear historial inicial
         HistorialSolicitud.objects.create(
             solicitud=solicitud,
-            etapa=etapa_inicial,
-            usuario_responsable=creada_por,  # Use creada_por as initial responsible user
+            etapa=primera_etapa,
+            usuario_responsable=propietario,
             fecha_inicio=timezone.now()
         )
         
@@ -18351,33 +18599,15 @@ def api_crear_solicitud_externa(request):
             'solicitud': {
                 'id': solicitud.id,
                 'codigo': solicitud.codigo,
-                'pipeline': {
-                    'id': solicitud.pipeline.id,
-                    'nombre': solicitud.pipeline.nombre
-                },
-                'etapa_actual': {
-                    'id': solicitud.etapa_actual.id,
-                    'nombre': solicitud.etapa_actual.nombre,
-                    'orden': solicitud.etapa_actual.orden
-                } if solicitud.etapa_actual else None,
-                'propietario': {
-                    'id': solicitud.propietario.id,
-                    'username': solicitud.propietario.username,
-                    'first_name': solicitud.propietario.first_name,
-                    'last_name': solicitud.propietario.last_name
-                } if solicitud.propietario else None,
+                'pipeline': solicitud.pipeline.nombre,
+                'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else None,
                 'creada_via_api': solicitud.creada_via_api,
                 'api_source': solicitud.api_source,
                 'fecha_creacion': solicitud.fecha_creacion.isoformat(),
                 'cliente_nombre': solicitud.cliente_nombre,
                 'cliente_cedula': solicitud.cliente_cedula,
-                'cliente_telefono': solicitud.cliente_telefono,
-                'cliente_email': solicitud.cliente_email,
                 'producto_solicitado': solicitud.producto_solicitado,
-                'monto_solicitado': str(solicitud.monto_solicitado) if solicitud.monto_solicitado else None,
-                'sector': solicitud.sector,
-                'motivo_consulta': solicitud.motivo_consulta,
-                'observaciones': solicitud.observaciones
+                'monto_solicitado': str(solicitud.monto_solicitado) if solicitud.monto_solicitado else None
             }
         }, status=201)
         
