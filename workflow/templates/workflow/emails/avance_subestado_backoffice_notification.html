@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tu Solicitud Ha Avanzado en Back Office</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            padding: 30px 40px;
+            text-align: center;
+            position: relative;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transform: rotate(45deg);
+        }
+        .logo {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            backdrop-filter: blur(10px);
+        }
+        .logo i {
+            font-size: 24px;
+            color: white;
+        }
+        .header h1 {
+            color: white;
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .header p {
+            color: rgba(255, 255, 255, 0.9);
+            margin: 10px 0 0 0;
+            font-size: 1rem;
+        }
+        .content {
+            padding: 40px;
+        }
+        .alert-avance {
+            background: linear-gradient(135deg, #d1f2eb 0%, #e8f8f5 100%);
+            border: 2px solid #7dcea0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .alert-avance i {
+            font-size: 2rem;
+            color: #27ae60;
+            margin-bottom: 10px;
+        }
+        .alert-avance h3 {
+            color: #27ae60;
+            margin: 0 0 10px 0;
+            font-size: 1.3rem;
+        }
+        .alert-avance p {
+            color: #0e5233;
+            margin: 0;
+            font-size: 1rem;
+        }
+        .solicitud-info {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        .solicitud-info h4 {
+            color: #495057;
+            margin: 0 0 20px 0;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+        }
+        .solicitud-info h4 i {
+            margin-right: 10px;
+            color: #007bff;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        .info-item i {
+            color: #007bff;
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+        .info-item span {
+            color: #495057;
+            font-size: 0.9rem;
+        }
+        .resumen-documentos {
+            background: #f0f8ff;
+            border: 2px solid #b3d9ff;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        .resumen-documentos h4 {
+            color: #0066cc;
+            margin: 0 0 20px 0;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+        }
+        .resumen-documentos h4 i {
+            margin-right: 10px;
+            color: #0066cc;
+        }
+        .resumen-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-item {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            border-left: 4px solid #007bff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .stat-item.buenos {
+            border-left-color: #28a745;
+        }
+        .stat-item.malos {
+            border-left-color: #dc3545;
+        }
+        .stat-item.subsanados {
+            border-left-color: #ffc107;
+        }
+        .stat-item.pendientes {
+            border-left-color: #6c757d;
+        }
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .stat-number.buenos {
+            color: #28a745;
+        }
+        .stat-number.malos {
+            color: #dc3545;
+        }
+        .stat-number.subsanados {
+            color: #ffc107;
+        }
+        .stat-number.pendientes {
+            color: #6c757d;
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            color: #495057;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .documento-list {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .documento-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+        }
+        .documento-item:last-child {
+            margin-bottom: 0;
+        }
+        .documento-item i {
+            font-size: 1rem;
+            width: 16px;
+            text-align: center;
+        }
+        .documento-item.bueno i {
+            color: #28a745;
+        }
+        .documento-item.malo i {
+            color: #dc3545;
+        }
+        .documento-item.subsanado i {
+            color: #ffc107;
+        }
+        .documento-item.pendiente i {
+            color: #6c757d;
+        }
+        .documento-item span {
+            flex: 1;
+            color: #374151;
+            font-size: 0.9rem;
+        }
+        .pendientes-section {
+            background: #fff8f0;
+            border: 2px solid #fed7aa;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        .pendientes-section h4 {
+            color: #ea580c;
+            margin: 0 0 20px 0;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+        }
+        .pendientes-section h4 i {
+            margin-right: 10px;
+            color: #ea580c;
+        }
+        .pendiente-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #f59e0b;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .pendiente-item:last-child {
+            margin-bottom: 0;
+        }
+        .pendiente-item i {
+            color: #f59e0b;
+            font-size: 1.1rem;
+            margin-top: 2px;
+        }
+        .pendiente-content {
+            flex: 1;
+        }
+        .pendiente-descripcion {
+            color: #374151;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        .pendiente-meta {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        .pendiente-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-top: 5px;
+            display: inline-block;
+        }
+        .pendiente-badge.por_hacer {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .pendiente-badge.haciendo {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        .btn-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+            color: white;
+            text-decoration: none;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 30px 40px;
+            text-align: center;
+            border-top: 1px solid #e9ecef;
+        }
+        .footer p {
+            color: #6c757d;
+            margin: 0;
+            font-size: 0.9rem;
+        }
+        .footer .signature {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e9ecef;
+            font-weight: 600;
+            color: #495057;
+        }
+        @media (max-width: 600px) {
+            .container {
+                margin: 10px;
+                border-radius: 8px;
+            }
+            .content, .header, .footer {
+                padding: 20px;
+            }
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            .resumen-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header con estilo verde para avance -->
+        <div class="header">
+            <div class="logo">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h1>Solicitud Avanzada</h1>
+            <p>Tu solicitud ha avanzado en Back Office</p>
+        </div>
+
+        <!-- Contenido principal -->
+        <div class="content">
+            <!-- Alerta de avance -->
+            <div class="alert-avance">
+                <i class="fas fa-arrow-right"></i>
+                <h3>¡Solicitud Avanzada!</h3>
+                <p>Tu solicitud <strong>{{ solicitud.codigo }}</strong> ha avanzado desde <strong>{{ subestado_anterior.nombre }}</strong> hacia <strong>{{ subestado_destino.nombre }}</strong></p>
+            </div>
+
+            <!-- Información de la solicitud -->
+            <div class="solicitud-info">
+                <h4><i class="fas fa-file-alt"></i>Información de la Solicitud</h4>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <i class="fas fa-hashtag"></i>
+                        <span><strong>Código:</strong> {{ solicitud.codigo }}</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-user"></i>
+                        <span><strong>Cliente:</strong> {{ solicitud.cliente_nombre_completo|default:"Sin cliente" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-id-card"></i>
+                        <span><strong>Cédula:</strong> {{ solicitud.cliente_cedula_completa|default:"Sin cédula" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-calendar"></i>
+                        <span><strong>Fecha:</strong> {{ fecha_avance|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-arrow-right"></i>
+                        <span><strong>Desde:</strong> {{ subestado_anterior.nombre }}</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-arrow-right"></i>
+                        <span><strong>Hacia:</strong> {{ subestado_destino.nombre }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resumen de documentos -->
+            <div class="resumen-documentos">
+                <h4><i class="fas fa-file-check"></i>Resumen de Documentos</h4>
+                
+                <!-- Estadísticas generales -->
+                <div class="resumen-stats">
+                    <div class="stat-item buenos">
+                        <div class="stat-number buenos">{{ resumen_documentos.buenos }}</div>
+                        <div class="stat-label">Buenos</div>
+                    </div>
+                    <div class="stat-item malos">
+                        <div class="stat-number malos">{{ resumen_documentos.malos }}</div>
+                        <div class="stat-label">Rechazados</div>
+                    </div>
+                    <div class="stat-item subsanados">
+                        <div class="stat-number subsanados">{{ resumen_documentos.subsanados }}</div>
+                        <div class="stat-label">Subsanados</div>
+                    </div>
+                    <div class="stat-item pendientes">
+                        <div class="stat-number pendientes">{{ resumen_documentos.pendientes }}</div>
+                        <div class="stat-label">Pendientes</div>
+                    </div>
+                </div>
+
+                <!-- Lista detallada de documentos por estado -->
+                {% if resumen_documentos.documentos_buenos %}
+                <div class="documento-list">
+                    <h5 style="color: #28a745; margin-bottom: 10px;"><i class="fas fa-check-circle"></i> Documentos Buenos</h5>
+                    {% for doc in resumen_documentos.documentos_buenos %}
+                    <div class="documento-item bueno">
+                        <i class="fas fa-check-circle"></i>
+                        <span>{{ doc }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if resumen_documentos.documentos_subsanados %}
+                <div class="documento-list" style="margin-top: 15px;">
+                    <h5 style="color: #ffc107; margin-bottom: 10px;"><i class="fas fa-tools"></i> Documentos Subsanados</h5>
+                    {% for doc in resumen_documentos.documentos_subsanados %}
+                    <div class="documento-item subsanado">
+                        <i class="fas fa-tools"></i>
+                        <span>{{ doc }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if resumen_documentos.documentos_malos %}
+                <div class="documento-list" style="margin-top: 15px;">
+                    <h5 style="color: #dc3545; margin-bottom: 10px;"><i class="fas fa-times-circle"></i> Documentos Rechazados</h5>
+                    {% for doc in resumen_documentos.documentos_malos %}
+                    <div class="documento-item malo">
+                        <i class="fas fa-times-circle"></i>
+                        <span>{{ doc }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if resumen_documentos.documentos_pendientes %}
+                <div class="documento-list" style="margin-top: 15px;">
+                    <h5 style="color: #6c757d; margin-bottom: 10px;"><i class="fas fa-clock"></i> Documentos Pendientes</h5>
+                    {% for doc in resumen_documentos.documentos_pendientes %}
+                    <div class="documento-item pendiente">
+                        <i class="fas fa-clock"></i>
+                        <span>{{ doc }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Pendientes activos -->
+            {% if pendientes_activos %}
+            <div class="pendientes-section">
+                <h4><i class="fas fa-tasks"></i>Pendientes Activos ({{ pendientes_activos|length }})</h4>
+                {% for pendiente in pendientes_activos %}
+                <div class="pendiente-item">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <div class="pendiente-content">
+                        <div class="pendiente-descripcion">{{ pendiente.descripcion }}</div>
+                        <div class="pendiente-meta">
+                            Agregado: {{ pendiente.fecha_agregado|date:"d/m/Y" }}
+                            {% if pendiente.fecha_limite %}
+                            | Límite: {{ pendiente.fecha_limite|date:"d/m/Y" }}
+                            {% endif %}
+                        </div>
+                        <div class="pendiente-badge {{ pendiente.estado }}">
+                            {% if pendiente.estado == 'por_hacer' %}Por Hacer{% else %}En Progreso{% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert-avance" style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border-color: #28a745;">
+                <i class="fas fa-check-double" style="color: #155724;"></i>
+                <h3 style="color: #155724;">¡Sin Pendientes!</h3>
+                <p style="color: #155724;">No hay pendientes activos para esta solicitud.</p>
+            </div>
+            {% endif %}
+
+            <!-- Información del usuario que avanzó -->
+            <div class="solicitud-info">
+                <h4><i class="fas fa-user-tie"></i>Información del Avance</h4>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <i class="fas fa-user"></i>
+                        <span><strong>Avanzado por:</strong> {{ usuario_que_avanza.get_full_name|default:usuario_que_avanza.username }}</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-envelope"></i>
+                        <span><strong>Email:</strong> {{ usuario_que_avanza.email }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botón para ver la solicitud -->
+            <div class="btn-container">
+                <a href="{{ solicitud_url }}" class="btn-primary">
+                    <i class="fas fa-eye"></i>
+                    Ver Solicitud
+                </a>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Este correo ha sido enviado automáticamente por el Sistema de Workflow - Financiera Pacífico.</p>
+            <p>Tu solicitud ha avanzado exitosamente al siguiente subestado en Back Office.</p>
+            <div class="signature">
+                <strong>Equipo de Back Office</strong><br>
+                Financiera Pacífico
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -56,13 +56,39 @@ def api_obtener_documentos_pendientes_backoffice_simple(request, solicitud_id):
         # ✅ COPIAR EXACTAMENTE LA LÓGICA DE detalle_solicitud (líneas 702-722)
         print(f"🔍 DEBUG MODAL CHECKLIST: Copiando lógica de detalle_solicitud...")
         
-        # Obtener transiciones con manejo de errores
+        # ✅ CORREGIDO: Obtener solo la transición específica por la cual llegó esta solicitud
         try:
-            transiciones_entrada = TransicionEtapa.objects.filter(
-                pipeline=solicitud.pipeline,
-                etapa_destino=solicitud.etapa_actual
-            ).prefetch_related('requisitos_obligatorios__requisito')
-            print(f"🔍 DEBUG MODAL CHECKLIST: {transiciones_entrada.count()} transiciones de entrada encontradas")
+            # Identificar la etapa anterior desde el historial
+            historial_anterior = HistorialSolicitud.objects.filter(
+                solicitud=solicitud,
+                fecha_fin__isnull=False  # Historial cerrado (etapa anterior)
+            ).exclude(
+                etapa=solicitud.etapa_actual  # Excluir la etapa actual
+            ).order_by('-fecha_fin').first()  # El más reciente
+            
+            transicion_especifica = None
+            if historial_anterior and historial_anterior.etapa:
+                # Buscar la transición específica desde la etapa anterior hacia Back Office
+                transicion_especifica = TransicionEtapa.objects.filter(
+                    pipeline=solicitud.pipeline,
+                    etapa_origen=historial_anterior.etapa,
+                    etapa_destino=solicitud.etapa_actual
+                ).prefetch_related('requisitos_obligatorios__requisito').first()
+                
+                print(f"🔍 DEBUG MODAL CHECKLIST: Identificada transición específica desde {historial_anterior.etapa.nombre} hacia {solicitud.etapa_actual.nombre}")
+            
+            # Si no se puede identificar la transición específica, usar todas las transiciones de entrada (comportamiento anterior)
+            if not transicion_especifica:
+                print(f"⚠️ DEBUG MODAL CHECKLIST: No se pudo identificar transición específica, usando todas las transiciones de entrada")
+                transiciones_entrada = TransicionEtapa.objects.filter(
+                    pipeline=solicitud.pipeline,
+                    etapa_destino=solicitud.etapa_actual
+                ).prefetch_related('requisitos_obligatorios__requisito')
+            else:
+                # Usar solo la transición específica
+                transiciones_entrada = [transicion_especifica]
+                
+            print(f"🔍 DEBUG MODAL CHECKLIST: {len(transiciones_entrada)} transición(es) de entrada a procesar")
         except Exception as e:
             print(f"❌ DEBUG MODAL CHECKLIST: Error obteniendo transiciones: {str(e)}")
             return JsonResponse({'error': f'Error obteniendo transiciones: {str(e)}'}, status=500)
@@ -159,9 +185,39 @@ def api_obtener_documentos_pendientes_backoffice_simple(request, solicitud_id):
                         calificacion_actual = None
                         estado_calificacion = 'sin_calificar'
                     
-                    # MOSTRAR TODOS LOS DOCUMENTOS como en checklist (no filtrar por estado)
-                    # El modal debe permitir calificar todos los documentos
+                    # ✅ CORREGIDO: FILTRAR documentos según su estado para el modal de pendientes
+                    # Solo mostrar documentos que realmente están pendientes o requieren atención
                     try:
+                        # Filtrar documentos según criterios de "pendiente"
+                        deberia_mostrarse = False
+                        
+                        # CRITERIO 1: Documentos explícitamente marcados como 'pendiente' 
+                        if estado_calificacion == 'pendiente':
+                            deberia_mostrarse = True
+                            print(f"✅ {req_sol.requisito.nombre}: incluido por estado 'pendiente'")
+                        
+                        # CRITERIO 2: Documentos sin calificar (sin_calificar) que no tienen archivo
+                        elif estado_calificacion == 'sin_calificar' and not tiene_archivo:
+                            deberia_mostrarse = True
+                            print(f"✅ {req_sol.requisito.nombre}: incluido por 'sin_calificar' sin archivo")
+                        
+                        # CRITERIO 3: Documentos marcados como 'malo' que no están subsanados
+                        elif estado_calificacion == 'malo' and not (calificacion_actual and calificacion_actual.subsanado):
+                            deberia_mostrarse = True
+                            print(f"✅ {req_sol.requisito.nombre}: incluido por 'malo' no subsanado")
+                        
+                        # EXCLUSIÓN: No mostrar documentos ya resueltos
+                        else:
+                            if estado_calificacion in ['bueno', 'subsanado']:
+                                print(f"❌ {req_sol.requisito.nombre}: excluido por estado '{estado_calificacion}'")
+                            elif req_sol.cumplido:
+                                print(f"❌ {req_sol.requisito.nombre}: excluido por cumplido=True")
+                            else:
+                                print(f"❌ {req_sol.requisito.nombre}: excluido por otros criterios")
+                            continue  # Saltar este documento
+                        
+                        if not deberia_mostrarse:
+                            continue  # Saltar este documento
                         # Determinar si tiene archivo
                         tiene_archivo = bool(req_sol.archivo)
                         archivos_count = 1 if tiene_archivo else 0
