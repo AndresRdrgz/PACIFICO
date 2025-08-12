@@ -2000,19 +2000,31 @@ def api_crear_subestado(request, etapa_id):
     """API para crear un subestado"""
     if request.method == 'POST':
         try:
+            from datetime import timedelta
+            
             etapa = get_object_or_404(Etapa, id=etapa_id)
             
             nombre = request.POST.get('nombre')
             orden = request.POST.get('orden', 0)
+            sla_horas = request.POST.get('sla_horas')
             
             if not nombre:
                 return JsonResponse({'success': False, 'error': 'El nombre es obligatorio'})
+            
+            # Convertir SLA de horas a DurationField si se proporciona
+            sla = None
+            if sla_horas and sla_horas.strip():
+                try:
+                    sla = timedelta(hours=int(sla_horas))
+                except ValueError:
+                    return JsonResponse({'success': False, 'error': 'SLA debe ser un número entero de horas'})
             
             subestado = SubEstado.objects.create(
                 etapa=etapa,
                 pipeline=etapa.pipeline,
                 nombre=nombre,
-                orden=int(orden)
+                orden=int(orden),
+                sla=sla
             )
             
             return JsonResponse({
@@ -2020,7 +2032,8 @@ def api_crear_subestado(request, etapa_id):
                 'subestado': {
                     'id': subestado.id,
                     'nombre': subestado.nombre,
-                    'orden': subestado.orden
+                    'orden': subestado.orden,
+                    'sla_horas': subestado.sla_horas
                 }
             })
         except Exception as e:
@@ -4313,19 +4326,31 @@ def api_crear_subestado(request, etapa_id):
     """API para crear un subestado"""
     if request.method == 'POST':
         try:
+            from datetime import timedelta
+            
             etapa = get_object_or_404(Etapa, id=etapa_id)
             
             nombre = request.POST.get('nombre')
             orden = request.POST.get('orden', 0)
+            sla_horas = request.POST.get('sla_horas')
             
             if not nombre:
                 return JsonResponse({'success': False, 'error': 'El nombre es obligatorio'})
+            
+            # Convertir SLA de horas a DurationField si se proporciona
+            sla = None
+            if sla_horas and sla_horas.strip():
+                try:
+                    sla = timedelta(hours=int(sla_horas))
+                except ValueError:
+                    return JsonResponse({'success': False, 'error': 'SLA debe ser un número entero de horas'})
             
             subestado = SubEstado.objects.create(
                 etapa=etapa,
                 pipeline=etapa.pipeline,
                 nombre=nombre,
-                orden=int(orden)
+                orden=int(orden),
+                sla=sla
             )
             
             return JsonResponse({
@@ -4333,7 +4358,8 @@ def api_crear_subestado(request, etapa_id):
                 'subestado': {
                     'id': subestado.id,
                     'nombre': subestado.nombre,
-                    'orden': subestado.orden
+                    'orden': subestado.orden,
+                    'sla_horas': subestado.sla_horas
                 }
             })
         except Exception as e:
@@ -11892,7 +11918,7 @@ def detalle_solicitud_analisis(request, solicitud_id):
 
 
 def calcular_sla_detallado(solicitud):
-    """Calcula información detallada del SLA para una solicitud"""
+    """Calcula información detallada del SLA para una solicitud - Prioriza SLA de subestado"""
     
     if not solicitud.etapa_actual:
         return {
@@ -11900,24 +11926,51 @@ def calcular_sla_detallado(solicitud):
             'tiempo_restante': None,
             'tiempo_transcurrido': None,
             'color_clase': 'text-muted',
-            'porcentaje_usado': 0
+            'porcentaje_usado': 0,
+            'tipo_sla': None
         }
     
-    # Buscar historial actual (sin fecha_fin)
-    historial_actual = solicitud.historial.filter(fecha_fin__isnull=True).first()
+    # Determinar SLA aplicable y fecha de inicio
+    sla_aplicable = None
+    fecha_inicio_sla = None
+    tipo_sla = None
     
-    if not historial_actual:
+    # 1. Priorizar SLA de subestado si existe
+    if solicitud.subestado_actual and solicitud.subestado_actual.sla:
+        sla_aplicable = solicitud.subestado_actual.sla
+        tipo_sla = 'subestado'
+        # Buscar fecha de entrada al subestado actual
+        historial_subestado = solicitud.historial.filter(
+            subestado=solicitud.subestado_actual
+        ).order_by('-fecha_inicio').first()
+        if historial_subestado:
+            fecha_inicio_sla = historial_subestado.fecha_inicio
+    
+    # 2. Si no hay SLA de subestado, usar SLA de etapa
+    elif solicitud.etapa_actual.sla:
+        sla_aplicable = solicitud.etapa_actual.sla
+        tipo_sla = 'etapa'
+        # Buscar fecha de entrada a la etapa actual
+        historial_etapa = solicitud.historial.filter(
+            etapa=solicitud.etapa_actual
+        ).order_by('-fecha_inicio').first()
+        if historial_etapa:
+            fecha_inicio_sla = historial_etapa.fecha_inicio
+    
+    # Si no hay SLA o fecha de inicio, devolver estado neutral
+    if not sla_aplicable or not fecha_inicio_sla:
         return {
-            'estado': 'sin_historial',
+            'estado': 'sin_sla',
             'tiempo_restante': None,
             'tiempo_transcurrido': None,
             'color_clase': 'text-muted',
-            'porcentaje_usado': 0
+            'porcentaje_usado': 0,
+            'tipo_sla': tipo_sla
         }
     
     # Calcular tiempo transcurrido
-    tiempo_transcurrido = timezone.now() - historial_actual.fecha_inicio
-    sla_total = solicitud.etapa_actual.sla
+    tiempo_transcurrido = timezone.now() - fecha_inicio_sla
+    sla_total = sla_aplicable
     
     # Formatear tiempo transcurrido de manera legible
     def formatear_timedelta(td):
@@ -11966,7 +12019,8 @@ def calcular_sla_detallado(solicitud):
             'tiempo_transcurrido_formateado': tiempo_transcurrido_formateado,
             'color_clase': color_clase,
             'porcentaje_usado': min(porcentaje_usado, 100),
-            'sla_total': sla_total
+            'sla_total': sla_total,
+            'tipo_sla': tipo_sla
         }
     
     return {
@@ -11975,7 +12029,8 @@ def calcular_sla_detallado(solicitud):
         'tiempo_transcurrido': tiempo_transcurrido,
         'tiempo_transcurrido_formateado': tiempo_transcurrido_formateado,
         'color_clase': 'text-muted',
-        'porcentaje_usado': 0
+        'porcentaje_usado': 0,
+        'tipo_sla': tipo_sla
     }
 
 

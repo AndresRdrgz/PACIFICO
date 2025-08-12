@@ -77,6 +77,7 @@ class SubEstado(models.Model):
     pipeline = models.ForeignKey(Pipeline, on_delete=models.CASCADE, related_name='subestados', null=True, blank=True)
     nombre = models.CharField(max_length=100)
     orden = models.PositiveIntegerField(default=0)
+    sla = models.DurationField(null=True, blank=True, help_text="SLA: Tiempo máximo en este subestado")
 
     class Meta:
         unique_together = ('etapa', 'nombre')
@@ -84,6 +85,15 @@ class SubEstado(models.Model):
 
     def __str__(self):
         return f"{self.etapa.nombre} - {self.nombre}"
+    
+    @property
+    def sla_horas(self):
+        """Retorna el SLA formateado en horas"""
+        if not self.sla:
+            return "Sin SLA"
+        
+        total_hours = self.sla.days * 24 + self.sla.seconds // 3600
+        return f"{total_hours}h"
 
 
 class TransicionEtapa(models.Model):

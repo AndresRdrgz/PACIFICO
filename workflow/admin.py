@@ -24,14 +24,14 @@ class SubEstadoInline(admin.TabularInline):
     model = SubEstado
     extra = 1
     fk_name = 'pipeline'  # For Pipeline admin
-    fields = ('etapa', 'nombre', 'orden')
+    fields = ('etapa', 'nombre', 'orden', 'sla')
     ordering = ('orden',)
 
 class SubEstadoEtapaInline(admin.TabularInline):
     model = SubEstado
     extra = 1
     fk_name = 'etapa'  # For Etapa admin
-    fields = ('nombre', 'orden')
+    fields = ('nombre', 'orden', 'sla')
     ordering = ('orden',)
 
 class TransicionEtapaInline(admin.TabularInline):
@@ -134,11 +134,16 @@ class EtapaAdmin(admin.ModelAdmin):
 
 @admin.register(SubEstado)
 class SubEstadoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'etapa', 'nombre', 'orden', 'pipeline')
+    list_display = ('id', 'etapa', 'nombre', 'orden', 'sla_horas', 'pipeline')
     search_fields = ('nombre', 'etapa__nombre', 'pipeline__nombre')
     list_filter = ('etapa', 'pipeline')
     list_editable = ('orden',)
     ordering = ('etapa', 'orden')
+    fields = ('etapa', 'pipeline', 'nombre', 'orden', 'sla')
+    
+    def sla_horas(self, obj):
+        return obj.sla_horas
+    sla_horas.short_description = 'SLA'
 
 
 @admin.register(TransicionEtapa)

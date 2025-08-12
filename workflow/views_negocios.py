@@ -384,40 +384,63 @@ def enrich_solicitud_data(solicitud):
     else:
         solicitud.fecha_subestado = solicitud.fecha_ultima_actualizacion
     
-    # SLA information
-    if solicitud.etapa_actual and solicitud.etapa_actual.sla:
-        # Get the historial entry for the current etapa to calculate SLA from the correct start date
-        historial_actual = solicitud.historial.filter(etapa=solicitud.etapa_actual).order_by('-fecha_inicio').first()
-        if historial_actual:
-            tiempo_transcurrido = timezone.now() - historial_actual.fecha_inicio
-            tiempo_restante = solicitud.etapa_actual.sla - tiempo_transcurrido
-            
-            if tiempo_transcurrido > solicitud.etapa_actual.sla:
-                solicitud.sla_color = 'text-danger'
-                solicitud.sla_restante = 'Vencido'
-                # Calculate overdue time
-                tiempo_vencido = tiempo_transcurrido - solicitud.etapa_actual.sla
-                horas_vencidas = int(tiempo_vencido.total_seconds() // 3600)
-                minutos_vencidos = int((tiempo_vencido.total_seconds() % 3600) // 60)
-                solicitud.sla_tiempo_restante = f"+{horas_vencidas}h {minutos_vencidos}m"
-            elif tiempo_transcurrido > (solicitud.etapa_actual.sla * 0.8):
-                solicitud.sla_color = 'text-warning'
-                solicitud.sla_restante = 'Por vencer'
-                # Calculate remaining time
-                horas_restantes = int(tiempo_restante.total_seconds() // 3600)
-                minutos_restantes = int((tiempo_restante.total_seconds() % 3600) // 60)
-                solicitud.sla_tiempo_restante = f"{horas_restantes}h {minutos_restantes}m"
-            else:
-                solicitud.sla_color = 'text-success'
-                solicitud.sla_restante = 'En tiempo'
-                # Calculate remaining time
-                horas_restantes = int(tiempo_restante.total_seconds() // 3600)
-                minutos_restantes = int((tiempo_restante.total_seconds() % 3600) // 60)
-                solicitud.sla_tiempo_restante = f"{horas_restantes}h {minutos_restantes}m"
+    # SLA information - Priorizar SLA de subestado si existe
+    sla_aplicable = None
+    fecha_inicio_sla = None
+    tipo_sla = None
+    
+    # 1. Verificar si hay SLA de subestado
+    if solicitud.subestado_actual and solicitud.subestado_actual.sla:
+        sla_aplicable = solicitud.subestado_actual.sla
+        tipo_sla = 'subestado'
+        # Buscar fecha de entrada al subestado actual
+        historial_subestado = solicitud.historial.filter(
+            subestado=solicitud.subestado_actual
+        ).order_by('-fecha_inicio').first()
+        if historial_subestado:
+            fecha_inicio_sla = historial_subestado.fecha_inicio
+    
+    # 2. Si no hay SLA de subestado, usar SLA de etapa
+    elif solicitud.etapa_actual and solicitud.etapa_actual.sla:
+        sla_aplicable = solicitud.etapa_actual.sla
+        tipo_sla = 'etapa'
+        # Buscar fecha de entrada a la etapa actual
+        historial_etapa = solicitud.historial.filter(
+            etapa=solicitud.etapa_actual
+        ).order_by('-fecha_inicio').first()
+        if historial_etapa:
+            fecha_inicio_sla = historial_etapa.fecha_inicio
+    
+    # 3. Calcular SLA si tenemos datos
+    if sla_aplicable and fecha_inicio_sla:
+        tiempo_transcurrido = timezone.now() - fecha_inicio_sla
+        tiempo_restante = sla_aplicable - tiempo_transcurrido
+        
+        if tiempo_transcurrido > sla_aplicable:
+            solicitud.sla_color = 'text-danger'
+            solicitud.sla_restante = 'Vencido'
+            # Calculate overdue time
+            tiempo_vencido = tiempo_transcurrido - sla_aplicable
+            horas_vencidas = int(tiempo_vencido.total_seconds() // 3600)
+            minutos_vencidos = int((tiempo_vencido.total_seconds() % 3600) // 60)
+            solicitud.sla_tiempo_restante = f"+{horas_vencidas}h {minutos_vencidos}m"
+        elif tiempo_transcurrido > (sla_aplicable * 0.8):
+            solicitud.sla_color = 'text-warning'
+            solicitud.sla_restante = 'Por vencer'
+            # Calculate remaining time
+            horas_restantes = int(tiempo_restante.total_seconds() // 3600)
+            minutos_restantes = int((tiempo_restante.total_seconds() % 3600) // 60)
+            solicitud.sla_tiempo_restante = f"{horas_restantes}h {minutos_restantes}m"
         else:
-            solicitud.sla_color = 'text-muted'
-            solicitud.sla_restante = 'N/A'
-            solicitud.sla_tiempo_restante = 'N/A'
+            solicitud.sla_color = 'text-success'
+            solicitud.sla_restante = 'En tiempo'
+            # Calculate remaining time
+            horas_restantes = int(tiempo_restante.total_seconds() // 3600)
+            minutos_restantes = int((tiempo_restante.total_seconds() % 3600) // 60)
+            solicitud.sla_tiempo_restante = f"{horas_restantes}h {minutos_restantes}m"
+        
+        # Agregar información del tipo de SLA
+        solicitud.sla_tipo = tipo_sla
     else:
         solicitud.sla_color = 'text-muted'
         solicitud.sla_restante = 'N/A'
