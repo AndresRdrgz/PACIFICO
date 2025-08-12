@@ -1,0 +1,511 @@
+<!-- Makito RPA Modal for Personal Loans (PP) -->
+<div id="makitoRPAModalPP" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden" style="z-index: 50;">
+    <div class="relative top-6 mx-auto p-4 border w-full max-w-2xl shadow-lg rounded-lg bg-white">
+        <div class="flex justify-between items-center mb-3">
+            <h2 class="text-lg font-bold text-gray-800">Makito RPA - Solicitudes Automatizadas (Préstamo Personal)</h2>
+            <button type="button" class="text-gray-400 hover:text-gray-600" onclick="closeMakitoRPAModalPP()">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Instructions -->
+        <div class="mb-4 p-3 bg-blue-50 border-l-4 border-blue-400 rounded">
+            <div class="flex items-start justify-between">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-4 w-4 text-blue-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-2 flex-1">
+                        <p class="text-xs text-blue-700">
+                            <strong>Instrucciones:</strong> Seleccione el servicio, los campos se auto-completan. Makito RPA enviará resultados por correo.
+                        </p>
+                    </div>
+                </div>
+                <div class="flex gap-1 ml-2">
+                    <button type="button" onclick="autoPopulateMakitoFieldsPP()" class="text-blue-600 hover:text-blue-800 text-xs font-medium flex items-center gap-1" title="Actualizar campos con datos del formulario">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        Auto
+                    </button>
+                    <button type="button" onclick="clearMakitoFieldsPP()" class="text-gray-600 hover:text-gray-800 text-xs font-medium flex items-center gap-1" title="Limpiar todos los campos">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                        Limpiar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <form id="makitoRPAFormPP">
+            <!-- Service Selection -->
+            <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Seleccione el servicio:</label>
+                <select id="makitoServiceTypePP" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" onchange="toggleServiceFieldsPP()">
+                    <option value="">-- Seleccione una opción --</option>
+                    <option value="apc">Solicitar APC</option>
+                    <option value="debida_diligencia">Realizar Debida Diligencia</option>
+                </select>
+            </div>
+
+            <!-- Common Fields -->
+            <div id="commonFieldsPP" class="hidden">
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Documento:</label>
+                        <select id="makitoTipoDocumentoPP" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            <option value="cedula">Cédula</option>
+                            <option value="pasaporte">Pasaporte</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">No. Documento:</label>
+                        <input type="text" id="makitoNoDocumentoPP" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="Ej: 8-963-707">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Debida Diligencia Specific Fields -->
+            <div id="debidaFieldsPP" class="hidden">
+                <div class="mb-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nombre Completo:</label>
+                    <input type="text" id="makitoNombreCompletoPP" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="Ej: Walter Santamaria">
+                </div>
+            </div>
+
+            <!-- Disclaimer -->
+            <div class="mb-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-4 w-4 text-yellow-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-2">
+                        <p class="text-xs text-yellow-700">
+                            <strong>Importante:</strong> Makito RPA procesará su solicitud y enviará los resultados por correo electrónico.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2">
+                <button type="button" class="bg-gray-500 text-white px-3 py-2 rounded text-sm hover:bg-gray-600" onclick="closeMakitoRPAModalPP()">
+                    Cancelar
+                </button>
+                <button type="button" class="bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700" onclick="submitMakitoRPARequestPP()">
+                    <span id="submitButtonTextPP">Enviar Solicitud</span>
+                    <span id="submitButtonLoadingPP" class="hidden">
+                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Enviando...
+                    </span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.auto-populated-pp {
+    background-color: #f0f9ff !important;
+    border-color: #0ea5e9 !important;
+    box-shadow: 0 0 0 1px #0ea5e9 !important;
+}
+.auto-populated-pp::placeholder {
+    color: #0ea5e9 !important;
+}
+
+/* Smooth transitions for field sections */
+#commonFieldsPP, #debidaFieldsPP {
+    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+#commonFieldsPP.hidden, #debidaFieldsPP.hidden {
+    opacity: 0;
+    transform: translateY(-10px);
+}
+
+/* Enhanced form field styling */
+.form-field-group-pp {
+    transition: all 0.15s ease-in-out;
+}
+
+.form-field-group-pp:hover {
+    transform: translateY(-1px);
+}
+
+/* Compact input styling */
+#makitoRPAModalPP input[type="text"], #makitoRPAModalPP input[type="number"], #makitoRPAModalPP select {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+}
+
+/* Button enhancements */
+#makitoRPAModalPP button {
+    transition: all 0.15s ease-in-out;
+}
+
+#makitoRPAModalPP button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Modal animation */
+#makitoRPAModalPP:not(.hidden) {
+    animation: fadeInPP 0.2s ease-out;
+}
+
+@keyframes fadeInPP {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    #makitoRPAModalPP .relative {
+        max-width: 95vw;
+        margin: 1rem;
+        top: 2;
+    }
+    
+    #makitoRPAModalPP .grid-cols-2 {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+function openMakitoRPAModalPP() {
+    console.log('Opening Makito RPA Modal PP...');
+    
+    const modal = document.getElementById('makitoRPAModalPP');
+    
+    if (!modal) {
+        console.error('Makito RPA Modal PP not found');
+        alert('Error: No se pudo encontrar el modal de Makito RPA. Por favor recargue la página.');
+        return;
+    }
+    
+    console.log('Modal found, showing modal...');
+    modal.classList.remove('hidden');
+    
+    // Reset form and toggle fields
+    const form = document.getElementById('makitoRPAFormPP');
+    if (form) {
+        console.log('Form found, resetting...');
+        form.reset();
+    } else {
+        console.log('Form not found, but continuing...');
+    }
+    
+    toggleServiceFieldsPP();
+    
+    // Auto-populate fields from existing form data
+    setTimeout(() => {
+        autoPopulateMakitoFieldsPP();
+    }, 100);
+}
+
+function autoPopulateMakitoFieldsPP() {
+    try {
+        // Remove previous auto-populated classes
+        document.querySelectorAll('.auto-populated-pp').forEach(el => {
+            el.classList.remove('auto-populated-pp');
+        });
+        
+        let fieldsPopulated = 0;
+        
+        // Get common fields from the personal loan form
+        const cedulaField = document.getElementById('id_cedulaCliente');
+        const nombreField = document.getElementById('id_nombreCliente');
+        const tipoDocumentoField = document.getElementById('id_tipoDocumento');
+        
+        // Populate document number
+        if (cedulaField && cedulaField.value) {
+            const makitoNoDoc = document.getElementById('makitoNoDocumentoPP');
+            makitoNoDoc.value = cedulaField.value;
+            makitoNoDoc.classList.add('auto-populated-pp');
+            fieldsPopulated++;
+        }
+        
+        // Populate document type
+        if (tipoDocumentoField && tipoDocumentoField.value) {
+            const tipoDoc = tipoDocumentoField.value.toLowerCase();
+            if (tipoDoc === 'cedula' || tipoDoc === 'pasaporte') {
+                const makitoTipoDoc = document.getElementById('makitoTipoDocumentoPP');
+                makitoTipoDoc.value = tipoDoc;
+                makitoTipoDoc.classList.add('auto-populated-pp');
+                fieldsPopulated++;
+            }
+        }
+        
+        // Parse client name for debida diligencia fields if available
+        if (nombreField && nombreField.value) {
+            const nombreCompleto = nombreField.value.trim();
+            const makitoNombreCompleto = document.getElementById('makitoNombreCompletoPP');
+            makitoNombreCompleto.value = nombreCompleto;
+            makitoNombreCompleto.classList.add('auto-populated-pp');
+            fieldsPopulated++;
+        }
+        
+        // Show feedback to user
+        if (fieldsPopulated > 0) {
+            console.log(`Makito RPA PP: ${fieldsPopulated} campos auto-completados desde el formulario de préstamo personal`);
+            
+            // Show a brief success message
+            const instructions = document.querySelector('#makitoRPAModalPP .bg-blue-50');
+            if (instructions) {
+                const originalBg = instructions.className;
+                instructions.className = instructions.className.replace('bg-blue-50', 'bg-green-50');
+                const pathElement = instructions.querySelector('path');
+                if (pathElement) {
+                    pathElement.setAttribute('fill', '#10b981');
+                }
+                
+                setTimeout(() => {
+                    instructions.className = originalBg;
+                    if (pathElement) {
+                        pathElement.setAttribute('fill', 'currentColor');
+                    }
+                }, 2000);
+            }
+        } else {
+            console.log('Makito RPA PP: No se encontraron campos para auto-completar');
+        }
+    } catch (error) {
+        console.log('Error auto-populating Makito PP fields:', error);
+        // Don't show error to user, just log it
+    }
+}
+
+function closeMakitoRPAModalPP() {
+    const modal = document.getElementById('makitoRPAModalPP');
+    
+    if (!modal) {
+        console.error('Makito RPA Modal PP not found');
+        return;
+    }
+    
+    modal.classList.add('hidden');
+    
+    // Reset form if it exists
+    const form = document.getElementById('makitoRPAFormPP');
+    if (form) {
+        try {
+            form.reset();
+        } catch (error) {
+            console.error('Error resetting form:', error);
+        }
+    }
+    
+    toggleServiceFieldsPP();
+    
+    // Remove auto-populated classes
+    document.querySelectorAll('.auto-populated-pp').forEach(el => {
+        el.classList.remove('auto-populated-pp');
+    });
+}
+
+function clearMakitoFieldsPP() {
+    // Clear all fields
+    const form = document.getElementById('makitoRPAFormPP');
+    if (form) {
+        try {
+            form.reset();
+        } catch (error) {
+            console.error('Error clearing form:', error);
+        }
+    }
+    
+    // Remove auto-populated classes
+    document.querySelectorAll('.auto-populated-pp').forEach(el => {
+        el.classList.remove('auto-populated-pp');
+    });
+    
+    // Reset service fields visibility
+    toggleServiceFieldsPP();
+}
+
+function toggleServiceFieldsPP() {
+    const serviceTypeElement = document.getElementById('makitoServiceTypePP');
+    const commonFields = document.getElementById('commonFieldsPP');
+    const debidaFields = document.getElementById('debidaFieldsPP');
+
+    if (!serviceTypeElement) {
+        console.log('Service type element not found, skipping toggle');
+        return;
+    }
+
+    if (!commonFields || !debidaFields) {
+        console.log('Some field elements not found, skipping toggle');
+        return;
+    }
+
+    const serviceType = serviceTypeElement.value;
+
+    // Hide all fields first
+    commonFields.classList.add('hidden');
+    debidaFields.classList.add('hidden');
+
+    if (serviceType) {
+        commonFields.classList.remove('hidden');
+        
+        if (serviceType === 'debida_diligencia') {
+            debidaFields.classList.remove('hidden');
+        }
+        // For APC, only common fields are needed
+    }
+}
+
+function validateMakitoFormPP() {
+    const serviceTypeElement = document.getElementById('makitoServiceTypePP');
+    const tipoDocumentoElement = document.getElementById('makitoTipoDocumentoPP');
+    const noDocumentoElement = document.getElementById('makitoNoDocumentoPP');
+    
+    if (!serviceTypeElement || !tipoDocumentoElement || !noDocumentoElement) {
+        alert('Error: No se pudieron encontrar los elementos del formulario.');
+        return false;
+    }
+    
+    const serviceType = serviceTypeElement.value;
+    const tipoDocumento = tipoDocumentoElement.value;
+    const noDocumento = noDocumentoElement.value.trim();
+
+    if (!serviceType) {
+        alert('Por favor seleccione un tipo de servicio.');
+        return false;
+    }
+
+    if (!noDocumento) {
+        alert('Por favor ingrese el número de documento.');
+        return false;
+    }
+
+    if (serviceType === 'debida_diligencia') {
+        const nombreCompletoElement = document.getElementById('makitoNombreCompletoPP');
+        
+        if (!nombreCompletoElement) {
+            alert('Error: No se pudo encontrar el campo de nombre completo.');
+            return false;
+        }
+        
+        const nombreCompleto = nombreCompletoElement.value.trim();
+        if (!nombreCompleto) {
+            alert('Por favor ingrese el nombre completo para la debida diligencia.');
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function submitMakitoRPARequestPP() {
+    if (!validateMakitoFormPP()) {
+        return;
+    }
+
+    // Show loading state
+    const submitButton = document.querySelector('#makitoRPAModalPP button[onclick="submitMakitoRPARequestPP()"]');
+    const submitButtonText = document.getElementById('submitButtonTextPP');
+    const submitButtonLoading = document.getElementById('submitButtonLoadingPP');
+    
+    if (!submitButton || !submitButtonText || !submitButtonLoading) {
+        alert('Error: No se pudieron encontrar los elementos del botón de envío.');
+        return;
+    }
+    
+    submitButton.disabled = true;
+    submitButtonText.classList.add('hidden');
+    submitButtonLoading.classList.remove('hidden');
+
+    try {
+        // Collect form data
+        const serviceTypeElement = document.getElementById('makitoServiceTypePP');
+        const tipoDocumentoElement = document.getElementById('makitoTipoDocumentoPP');
+        const noDocumentoElement = document.getElementById('makitoNoDocumentoPP');
+        const csrfTokenElement = document.querySelector('[name=csrfmiddlewaretoken]');
+        
+        if (!serviceTypeElement || !tipoDocumentoElement || !noDocumentoElement || !csrfTokenElement) {
+            throw new Error('No se pudieron encontrar todos los elementos del formulario.');
+        }
+        
+        const formData = {
+            serviceType: serviceTypeElement.value,
+            tipoDocumento: tipoDocumentoElement.value,
+            noDocumento: noDocumentoElement.value,
+            csrfmiddlewaretoken: csrfTokenElement.value
+        };
+
+        // Add service-specific data
+        if (formData.serviceType === 'debida_diligencia') {
+            const nombreCompletoElement = document.getElementById('makitoNombreCompletoPP');
+            if (nombreCompletoElement) {
+                formData.nombreCompleto = nombreCompletoElement.value;
+            }
+        }
+
+        // Send request to backend
+        fetch('/makito-rpa-request/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': formData.csrfmiddlewaretoken
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Solicitud enviada exitosamente a Makito RPA. Revise su correo electrónico para recibir los resultados.');
+                closeMakitoRPAModalPP();
+            } else {
+                alert('Error al enviar la solicitud: ' + (data.error || 'Error desconocido'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al enviar la solicitud. Por favor intente nuevamente.');
+        })
+        .finally(() => {
+            // Reset loading state
+            submitButton.disabled = false;
+            submitButtonText.classList.remove('hidden');
+            submitButtonLoading.classList.add('hidden');
+        });
+    } catch (error) {
+        console.error('Error preparing request:', error);
+        alert('Error al preparar la solicitud: ' + error.message);
+        
+        // Reset loading state
+        submitButton.disabled = false;
+        submitButtonText.classList.remove('hidden');
+        submitButtonLoading.classList.add('hidden');
+    }
+}
+
+// Ensure DOM is ready before initializing modal functions
+document.addEventListener('DOMContentLoaded', function() {
+    // Verify modal elements exist
+    const modal = document.getElementById('makitoRPAModalPP');
+    
+    if (!modal) {
+        console.warn('Makito RPA Modal PP not found in DOM');
+    } else {
+        console.log('Makito RPA Modal PP initialized successfully');
+    }
+});
+</script>
