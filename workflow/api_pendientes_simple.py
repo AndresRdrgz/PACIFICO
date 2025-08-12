@@ -56,13 +56,39 @@ def api_obtener_documentos_pendientes_backoffice_simple(request, solicitud_id):
         # ✅ COPIAR EXACTAMENTE LA LÓGICA DE detalle_solicitud (líneas 702-722)
         print(f"🔍 DEBUG MODAL CHECKLIST: Copiando lógica de detalle_solicitud...")
         
-        # Obtener transiciones con manejo de errores
+        # ✅ CORREGIDO: Obtener solo la transición específica por la cual llegó esta solicitud
         try:
-            transiciones_entrada = TransicionEtapa.objects.filter(
-                pipeline=solicitud.pipeline,
-                etapa_destino=solicitud.etapa_actual
-            ).prefetch_related('requisitos_obligatorios__requisito')
-            print(f"🔍 DEBUG MODAL CHECKLIST: {transiciones_entrada.count()} transiciones de entrada encontradas")
+            # Identificar la etapa anterior desde el historial
+            historial_anterior = HistorialSolicitud.objects.filter(
+                solicitud=solicitud,
+                fecha_fin__isnull=False  # Historial cerrado (etapa anterior)
+            ).exclude(
+                etapa=solicitud.etapa_actual  # Excluir la etapa actual
+            ).order_by('-fecha_fin').first()  # El más reciente
+            
+            transicion_especifica = None
+            if historial_anterior and historial_anterior.etapa:
+                # Buscar la transición específica desde la etapa anterior hacia Back Office
+                transicion_especifica = TransicionEtapa.objects.filter(
+                    pipeline=solicitud.pipeline,
+                    etapa_origen=historial_anterior.etapa,
+                    etapa_destino=solicitud.etapa_actual
+                ).prefetch_related('requisitos_obligatorios__requisito').first()
+                
+                print(f"🔍 DEBUG MODAL CHECKLIST: Identificada transición específica desde {historial_anterior.etapa.nombre} hacia {solicitud.etapa_actual.nombre}")
+            
+            # Si no se puede identificar la transición específica, usar todas las transiciones de entrada (comportamiento anterior)
+            if not transicion_especifica:
+                print(f"⚠️ DEBUG MODAL CHECKLIST: No se pudo identificar transición específica, usando todas las transiciones de entrada")
+                transiciones_entrada = TransicionEtapa.objects.filter(
+                    pipeline=solicitud.pipeline,
+                    etapa_destino=solicitud.etapa_actual
+                ).prefetch_related('requisitos_obligatorios__requisito')
+            else:
+                # Usar solo la transición específica
+                transiciones_entrada = [transicion_especifica]
+                
+            print(f"🔍 DEBUG MODAL CHECKLIST: {len(transiciones_entrada)} transición(es) de entrada a procesar")
         except Exception as e:
             print(f"❌ DEBUG MODAL CHECKLIST: Error obteniendo transiciones: {str(e)}")
             return JsonResponse({'error': f'Error obteniendo transiciones: {str(e)}'}, status=500)

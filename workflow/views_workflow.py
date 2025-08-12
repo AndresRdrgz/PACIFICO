@@ -5898,14 +5898,56 @@ def enviar_correo_avance_subestado_backoffice(solicitud, subestado_anterior, sub
 
 def obtener_resumen_documentos_backoffice(solicitud):
     """
-    Obtiene un resumen de los documentos calificados en Back Office
+    Obtiene un resumen de los documentos calificados en Back Office,
+    filtrado por la transición específica por la cual llegó la solicitud
     """
     try:
         from .models import CalificacionDocumentoBackoffice
         
-        # Obtener todas las calificaciones de documentos para esta solicitud
+        # ✅ CORREGIDO: Obtener solo las calificaciones de la transición específica
+        # Identificar la etapa anterior desde el historial
+        historial_anterior = HistorialSolicitud.objects.filter(
+            solicitud=solicitud,
+            fecha_fin__isnull=False  # Historial cerrado (etapa anterior)
+        ).exclude(
+            etapa=solicitud.etapa_actual  # Excluir la etapa actual
+        ).order_by('-fecha_fin').first()  # El más reciente
+        
+        transicion_especifica = None
+        if historial_anterior and historial_anterior.etapa:
+            # Buscar la transición específica desde la etapa anterior hacia Back Office
+            transicion_especifica = TransicionEtapa.objects.filter(
+                pipeline=solicitud.pipeline,
+                etapa_origen=historial_anterior.etapa,
+                etapa_destino=solicitud.etapa_actual
+            ).prefetch_related('requisitos_obligatorios__requisito').first()
+        
+        # Obtener IDs de requisitos que pertenecen a la transición específica
+        requisitos_transicion_ids = []
+        if transicion_especifica:
+            # Usar solo la transición específica
+            transiciones_entrada = [transicion_especifica]
+        else:
+            # Si no se puede identificar la transición específica, usar todas las transiciones de entrada
+            transiciones_entrada = TransicionEtapa.objects.filter(
+                pipeline=solicitud.pipeline,
+                etapa_destino=solicitud.etapa_actual
+            ).prefetch_related('requisitos_obligatorios__requisito')
+        
+        # Recopilar IDs de requisitos de las transiciones
+        for transicion in transiciones_entrada:
+            for req_transicion in transicion.requisitos_obligatorios.all():
+                # ✅ FILTRAR POR TIPO DE PRÉSTAMO usando el método del modelo
+                if solicitud.cotizacion and hasattr(solicitud.cotizacion, 'tipoPrestamo'):
+                    if not req_transicion.aplica_para_cotizacion(solicitud.cotizacion):
+                        continue  # Saltar este requisito si no aplica para este tipo de préstamo
+                
+                requisitos_transicion_ids.append(req_transicion.requisito.id)
+        
+        # Obtener solo las calificaciones de documentos que pertenecen a la transición específica
         calificaciones = CalificacionDocumentoBackoffice.objects.filter(
-            requisito_solicitud__solicitud=solicitud
+            requisito_solicitud__solicitud=solicitud,
+            requisito_solicitud__requisito_id__in=requisitos_transicion_ids
         ).select_related('requisito_solicitud__requisito')
         
         resumen = {
@@ -15071,13 +15113,53 @@ def api_obtener_calificaciones_por_estado(request, solicitud_id, estado):
         
         print(f"✅ Permisos verificados para usuario: {request.user.username}")
         
-        # Obtener calificaciones por estado - CONSULTA DIRECTA SIMPLE
+        # ✅ CORREGIDO: Obtener calificaciones por estado filtradas por transición específica
         from workflow.models import CalificacionDocumentoBackoffice
         print(f"📊 Buscando calificaciones con estado: {estado} para solicitud {solicitud.codigo}")
         
-        # Consulta simple y directa
+        # Identificar la etapa anterior desde el historial
+        historial_anterior = HistorialSolicitud.objects.filter(
+            solicitud=solicitud,
+            fecha_fin__isnull=False  # Historial cerrado (etapa anterior)
+        ).exclude(
+            etapa=solicitud.etapa_actual  # Excluir la etapa actual
+        ).order_by('-fecha_fin').first()  # El más reciente
+        
+        transicion_especifica = None
+        if historial_anterior and historial_anterior.etapa:
+            # Buscar la transición específica desde la etapa anterior hacia Back Office
+            transicion_especifica = TransicionEtapa.objects.filter(
+                pipeline=solicitud.pipeline,
+                etapa_origen=historial_anterior.etapa,
+                etapa_destino=solicitud.etapa_actual
+            ).prefetch_related('requisitos_obligatorios__requisito').first()
+        
+        # Obtener IDs de requisitos que pertenecen a la transición específica
+        requisitos_transicion_ids = []
+        if transicion_especifica:
+            # Usar solo la transición específica
+            transiciones_entrada = [transicion_especifica]
+        else:
+            # Si no se puede identificar la transición específica, usar todas las transiciones de entrada
+            transiciones_entrada = TransicionEtapa.objects.filter(
+                pipeline=solicitud.pipeline,
+                etapa_destino=solicitud.etapa_actual
+            ).prefetch_related('requisitos_obligatorios__requisito')
+        
+        # Recopilar IDs de requisitos de las transiciones
+        for transicion in transiciones_entrada:
+            for req_transicion in transicion.requisitos_obligatorios.all():
+                # ✅ FILTRAR POR TIPO DE PRÉSTAMO usando el método del modelo
+                if solicitud.cotizacion and hasattr(solicitud.cotizacion, 'tipoPrestamo'):
+                    if not req_transicion.aplica_para_cotizacion(solicitud.cotizacion):
+                        continue  # Saltar este requisito si no aplica para este tipo de préstamo
+                
+                requisitos_transicion_ids.append(req_transicion.requisito.id)
+        
+        # Consulta filtrada por transición específica
         calificaciones = CalificacionDocumentoBackoffice.objects.filter(
             requisito_solicitud__solicitud_id=solicitud.id,
+            requisito_solicitud__requisito_id__in=requisitos_transicion_ids,
             estado=estado
         ).select_related('requisito_solicitud__requisito')
         
@@ -16233,9 +16315,55 @@ def crear_calificaciones_pendientes_backoffice(solicitud, usuario_asignado):
         with transaction.atomic():  # FORZAR transacción
             calificaciones_creadas = 0
             
-            # ✅ MÉTODO DIRECTO: Obtener TODOS los RequisitoSolicitud de la solicitud
-            todos_requisitos = RequisitoSolicitud.objects.filter(solicitud=solicitud)
-            print(f"🚨 ENCONTRADOS {todos_requisitos.count()} RequisitoSolicitud para procesar")
+            # ✅ CORREGIDO: Obtener solo los RequisitoSolicitud de la transición específica
+            # Identificar la etapa anterior desde el historial
+            historial_anterior = HistorialSolicitud.objects.filter(
+                solicitud=solicitud,
+                fecha_fin__isnull=False  # Historial cerrado (etapa anterior)
+            ).exclude(
+                etapa=solicitud.etapa_actual  # Excluir la etapa actual
+            ).order_by('-fecha_fin').first()  # El más reciente
+            
+            transicion_especifica = None
+            if historial_anterior and historial_anterior.etapa:
+                # Buscar la transición específica desde la etapa anterior hacia Back Office
+                transicion_especifica = TransicionEtapa.objects.filter(
+                    pipeline=solicitud.pipeline,
+                    etapa_origen=historial_anterior.etapa,
+                    etapa_destino=solicitud.etapa_actual
+                ).prefetch_related('requisitos_obligatorios__requisito').first()
+                
+                print(f"🔍 DEBUG CALIFICACIONES: Identificada transición específica desde {historial_anterior.etapa.nombre} hacia {solicitud.etapa_actual.nombre}")
+            
+            # Obtener IDs de requisitos que pertenecen a la transición específica
+            requisitos_transicion_ids = []
+            if transicion_especifica:
+                # Usar solo la transición específica
+                transiciones_entrada = [transicion_especifica]
+            else:
+                # Si no se puede identificar la transición específica, usar todas las transiciones de entrada (comportamiento anterior)
+                print(f"⚠️ DEBUG CALIFICACIONES: No se pudo identificar transición específica, usando todas las transiciones de entrada")
+                transiciones_entrada = TransicionEtapa.objects.filter(
+                    pipeline=solicitud.pipeline,
+                    etapa_destino=solicitud.etapa_actual
+                ).prefetch_related('requisitos_obligatorios__requisito')
+            
+            # Recopilar IDs de requisitos de las transiciones
+            for transicion in transiciones_entrada:
+                for req_transicion in transicion.requisitos_obligatorios.all():
+                    # ✅ FILTRAR POR TIPO DE PRÉSTAMO usando el método del modelo
+                    if solicitud.cotizacion and hasattr(solicitud.cotizacion, 'tipoPrestamo'):
+                        if not req_transicion.aplica_para_cotizacion(solicitud.cotizacion):
+                            continue  # Saltar este requisito si no aplica para este tipo de préstamo
+                    
+                    requisitos_transicion_ids.append(req_transicion.requisito.id)
+            
+            # Obtener solo los RequisitoSolicitud que pertenecen a la transición específica
+            todos_requisitos = RequisitoSolicitud.objects.filter(
+                solicitud=solicitud,
+                requisito_id__in=requisitos_transicion_ids
+            )
+            print(f"🚨 ENCONTRADOS {todos_requisitos.count()} RequisitoSolicitud de transición específica para procesar")
             
             for req_sol in todos_requisitos:
                 try:
