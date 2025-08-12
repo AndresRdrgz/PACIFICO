@@ -465,6 +465,27 @@ def api_historial_reconsideraciones(request, solicitud_id):
         
         reconsideraciones = []
         for recon in solicitud.reconsideraciones.all():
+            # Get cotización details
+            cotizacion_original_details = None
+            if recon.cotizacion_original:
+                cotizacion_original_details = {
+                    'id': recon.cotizacion_original.id,
+                    'monto': float(recon.cotizacion_original.auxMonto2) if recon.cotizacion_original.auxMonto2 else 0,
+                    'plazo': recon.cotizacion_original.plazo if hasattr(recon.cotizacion_original, 'plazo') else 0,
+                    'tipo': recon.cotizacion_original.tipoPrestamo if recon.cotizacion_original.tipoPrestamo else 'personal',
+                    'fecha_creacion': recon.cotizacion_original.created_at.isoformat() if hasattr(recon.cotizacion_original, 'created_at') and recon.cotizacion_original.created_at else None,
+                }
+            
+            cotizacion_nueva_details = None
+            if recon.cotizacion_nueva:
+                cotizacion_nueva_details = {
+                    'id': recon.cotizacion_nueva.id,
+                    'monto': float(recon.cotizacion_nueva.auxMonto2) if recon.cotizacion_nueva.auxMonto2 else 0,
+                    'plazo': recon.cotizacion_nueva.plazo if hasattr(recon.cotizacion_nueva, 'plazo') else 0,
+                    'tipo': recon.cotizacion_nueva.tipoPrestamo if recon.cotizacion_nueva.tipoPrestamo else 'personal',
+                    'fecha_creacion': recon.cotizacion_nueva.created_at.isoformat() if hasattr(recon.cotizacion_nueva, 'created_at') and recon.cotizacion_nueva.created_at else None,
+                }
+            
             reconsideraciones.append({
                 'id': recon.id,
                 'numero': recon.numero_reconsideracion,
@@ -477,8 +498,8 @@ def api_historial_reconsideraciones(request, solicitud_id):
                 'estado': recon.estado,
                 'estado_display': recon.get_estado_display(),
                 'usar_nueva_cotizacion': recon.usar_nueva_cotizacion,
-                'cotizacion_original_id': recon.cotizacion_original.id if recon.cotizacion_original else None,
-                'cotizacion_nueva_id': recon.cotizacion_nueva.id if recon.cotizacion_nueva else None,
+                'cotizacion_original': cotizacion_original_details,
+                'cotizacion_nueva': cotizacion_nueva_details,
                 'analizada_por': {
                     'id': recon.analizada_por.id,
                     'nombre': recon.analizada_por.get_full_name() or recon.analizada_por.username,
@@ -487,6 +508,8 @@ def api_historial_reconsideraciones(request, solicitud_id):
                 'comentario_analisis': recon.comentario_analisis,
                 'resultado_anterior': recon.resultado_consulta_anterior,
                 'comentario_anterior': recon.comentario_consulta_anterior,
+                'creado_en': recon.creado_en.isoformat() if hasattr(recon, 'creado_en') and recon.creado_en else recon.fecha_solicitud.isoformat(),
+                'actualizado_en': recon.actualizado_en.isoformat() if hasattr(recon, 'actualizado_en') and recon.actualizado_en else None,
             })
         
         return JsonResponse({
@@ -500,6 +523,178 @@ def api_historial_reconsideraciones(request, solicitud_id):
         return JsonResponse({
             'success': False,
             'error': str(e)
+        })
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def api_solicitar_reconsideracion(request, solicitud_id):
+    """
+    API para solicitar una reconsideración via AJAX
+    """
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar elegibilidad
+        can_request, reason = puede_solicitar_reconsideracion(solicitud, request.user)
+        if not can_request:
+            return JsonResponse({
+                'success': False,
+                'message': reason
+            })
+        
+        data = json.loads(request.body)
+        motivo = data.get('motivo', '').strip()
+        cotizacion_id = data.get('cotizacion_id')
+        
+        if not motivo:
+            return JsonResponse({
+                'success': False,
+                'message': 'Debe proporcionar un motivo para la reconsideración.'
+            })
+        
+        if len(motivo) < 50:
+            return JsonResponse({
+                'success': False,
+                'message': 'El motivo debe tener al menos 50 caracteres.'
+            })
+        
+        with transaction.atomic():
+            # Validar cotización seleccionada
+            nueva_cotizacion = None
+            usar_nueva_cotizacion = False
+            if cotizacion_id:
+                try:
+                    nueva_cotizacion = get_object_or_404(Cotizacion, id=cotizacion_id)
+                    # Verificar que la cotización pertenece al mismo cliente
+                    if nueva_cotizacion.cedulaCliente != solicitud.cliente.cedulaCliente:
+                        return JsonResponse({
+                            'success': False,
+                            'message': 'La cotización seleccionada no pertenece al cliente de esta solicitud.'
+                        })
+                    usar_nueva_cotizacion = True
+                except:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Cotización seleccionada no válida.'
+                    })
+            
+            # Obtener información de la consulta anterior
+            resultado_anterior = getattr(solicitud, 'resultado_consulta', '')
+            comentario_anterior = ''
+            
+            # Buscar el último comentario del analista
+            ultimo_comentario = solicitud.comentarios.filter(
+                tipo='analista'
+            ).order_by('-fecha_creacion').first()
+            
+            if ultimo_comentario:
+                comentario_anterior = ultimo_comentario.comentario
+            
+            # Calcular número de reconsideración
+            numero_reconsideracion = solicitud.reconsideraciones.count() + 1
+            
+            # Crear la reconsideración
+            reconsideracion = ReconsideracionSolicitud.objects.create(
+                solicitud=solicitud,
+                numero_reconsideracion=numero_reconsideracion,
+                solicitada_por=request.user,
+                motivo=motivo,
+                cotizacion_original=solicitud.cotizacion,
+                cotizacion_nueva=nueva_cotizacion,
+                usar_nueva_cotizacion=usar_nueva_cotizacion,
+                resultado_consulta_anterior=resultado_anterior,
+                comentario_consulta_anterior=comentario_anterior,
+            )
+            
+            # Actualizar la cotización de la solicitud si se seleccionó una nueva
+            if usar_nueva_cotizacion and nueva_cotizacion:
+                solicitud.cotizacion = nueva_cotizacion
+            
+            # Buscar etapa de consulta
+            etapa_consulta = Etapa.objects.filter(
+                pipeline=solicitud.pipeline,
+                nombre__iexact='consulta'
+            ).first()
+            
+            if not etapa_consulta:
+                etapa_consulta = Etapa.objects.filter(
+                    pipeline=solicitud.pipeline,
+                    nombre__istartswith='consulta'
+                ).exclude(
+                    nombre__icontains='resultado'
+                ).first()
+            
+            if not etapa_consulta:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No se encontró la etapa de consulta en el pipeline.'
+                })
+            
+            # Actualizar solicitud
+            etapa_anterior = solicitud.etapa_actual
+            solicitud.etapa_actual = etapa_consulta
+            solicitud.subestado_actual = etapa_consulta.subestados.first()
+            solicitud.fecha_ultima_actualizacion = timezone.now()
+            solicitud.es_reconsideracion = True
+            
+            # Agregar etiqueta visual
+            etiquetas_actuales = solicitud.etiquetas_oficial or ''
+            if 'Reconsideración' not in etiquetas_actuales:
+                solicitud.etiquetas_oficial = f"{etiquetas_actuales}, Reconsideración".strip(', ')
+            
+            solicitud.save()
+            
+            # Crear entrada en historial
+            if etapa_anterior:
+                historial_anterior = HistorialSolicitud.objects.filter(
+                    solicitud=solicitud,
+                    fecha_fin__isnull=True
+                ).first()
+                
+                if historial_anterior:
+                    historial_anterior.fecha_fin = timezone.now()
+                    historial_anterior.save()
+            
+            # Crear nuevo historial
+            HistorialSolicitud.objects.create(
+                solicitud=solicitud,
+                etapa=etapa_consulta,
+                subestado=solicitud.subestado_actual,
+                usuario_responsable=request.user,
+                fecha_inicio=timezone.now(),
+                observaciones=f"Reconsideración #{numero_reconsideracion} solicitada: {motivo[:100]}..."
+            )
+            
+            # Crear comentario de sistema
+            SolicitudComentario.objects.create(
+                solicitud=solicitud,
+                usuario=request.user,
+                comentario=f"Solicitud enviada para reconsideración #{numero_reconsideracion}. Motivo: {motivo}",
+                tipo='general',
+                fecha_creacion=timezone.now()
+            )
+            
+            # Notificar cambio
+            notify_solicitud_change(solicitud, 'reconsideracion_solicitada', request.user)
+            
+            # Enviar email al equipo de consulta
+            enviar_notificacion_reconsideracion(reconsideracion)
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Reconsideración #{numero_reconsideracion} enviada exitosamente.',
+                'numero_reconsideracion': numero_reconsideracion,
+                'nueva_etapa': etapa_consulta.nombre,
+                'solicitud_codigo': solicitud.codigo
+            })
+            
+    except Exception as e:
+        logger.error(f"Error al solicitar reconsideración via API: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al procesar la reconsideración: {str(e)}'
         })
 
 
@@ -615,9 +810,27 @@ def puede_solicitar_reconsideracion(solicitud, usuario):
     if solicitud.propietario != usuario:
         return False, "Solo el propietario puede solicitar reconsideración"
     
-    # Verificar estado de la solicitud
-    if solicitud.resultado_consulta not in ['Rechazado', 'Alternativa']:
-        return False, "Solo se pueden reconsiderar solicitudes rechazadas o con alternativa"
+    # Verificar estado de la solicitud - debe estar en Rechazado o tener resultado Alternativa
+    etapa_actual = solicitud.etapa_actual.nombre.lower() if solicitud.etapa_actual else ''
+    subestado_actual = solicitud.subestado_actual.nombre.lower() if solicitud.subestado_actual else ''
+    resultado_consulta = getattr(solicitud, 'resultado_consulta', '').lower()
+    
+    # Condiciones para poder solicitar reconsideración:
+    # 1. Etapa "Rechazado" o etapa "Resultado Consulta" con subestado "Alternativa" o "Rechazado"
+    # 2. O resultado_consulta sea "Rechazado" o "Alternativa"
+    
+    es_elegible = (
+        # Etapa rechazado
+        ('rechazado' in etapa_actual) or 
+        # Etapa resultado consulta con subestados específicos
+        ('resultado' in etapa_actual and 'consulta' in etapa_actual and 
+         ('alternativa' in subestado_actual or 'rechazado' in subestado_actual)) or
+        # Por resultado de consulta
+        (resultado_consulta in ['rechazado', 'alternativa'])
+    )
+    
+    if not es_elegible:
+        return False, f"Solo se pueden reconsiderar solicitudes rechazadas o con alternativa. Estado actual: {solicitud.etapa_actual.nombre if solicitud.etapa_actual else 'Sin etapa'} - {solicitud.subestado_actual.nombre if solicitud.subestado_actual else 'Sin subestado'}"
     
     # Verificar si ya hay una reconsideración en proceso
     reconsideracion_activa = solicitud.reconsideraciones.filter(

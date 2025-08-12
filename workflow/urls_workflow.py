@@ -118,6 +118,7 @@ urlpatterns += [
     path('solicitud/<int:solicitud_id>/reconsideracion/comite/', views_reconsideraciones.detalle_reconsideracion_comite, name='detalle_reconsideracion_comite'),
     
     # APIs para Reconsideraciones
+    path('api/solicitud/<int:solicitud_id>/reconsideracion/solicitar/', views_reconsideraciones.api_solicitar_reconsideracion, name='api_solicitar_reconsideracion'),
     path('api/solicitud/<int:solicitud_id>/reconsideracion/procesar/', views_reconsideraciones.api_procesar_reconsideracion_analista, name='api_procesar_reconsideracion_analista'),
     path('api/solicitud/<int:solicitud_id>/reconsideracion/historial/', views_reconsideraciones.api_historial_reconsideraciones, name='api_historial_reconsideraciones'),
     path('api/solicitud/<int:solicitud_id>/cotizaciones/', views_reconsideraciones.api_cotizaciones_cliente, name='api_cotizaciones_cliente'),

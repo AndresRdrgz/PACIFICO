@@ -1968,6 +1968,36 @@
         gap: 5px;
     }
 
+    .reconsideracion-detail-item.cotizacion-detail {
+        flex-direction: column;
+        align-items: flex-start;
+        background: #f8f9fa;
+        padding: 8px 12px;
+        border-radius: 6px;
+        border-left: 3px solid #007bff;
+        margin: 5px 0;
+    }
+
+    .cotizacion-info {
+        width: 100%;
+    }
+
+    .cotizacion-specs {
+        display: flex;
+        gap: 12px;
+        margin-top: 4px;
+        flex-wrap: wrap;
+    }
+
+    .cotizacion-specs .spec-item {
+        font-size: 0.85em;
+        background: rgba(0, 123, 255, 0.1);
+        padding: 2px 6px;
+        border-radius: 4px;
+        color: #0056b3;
+        font-weight: 500;
+    }
+
     .diligencia-container {
         min-height: 200px;
     }
@@ -9982,42 +10012,53 @@
         
         console.log('🔍 Checking if solicitud can be reconsidered:', solicitud);
         
-        // Check if solicitud is "Rechazado" or "Alternativa"
-        const estadosReconsiderables = ['Rechazado', 'Alternativa'];
-        
-        // Use multiple fallback sources for estado
-        const resultadoConsulta = solicitud.resultado_consulta || '';
-        const subestadoActual = solicitud.subestado_actual || '';
-        const estado = solicitud.estado || '';
-        
-        // Try to extract estado from subestado text (e.g., "Resultado Consulta - Rechazado" -> "Rechazado")
-        let estadoExtraido = resultadoConsulta;
-        if (!estadoExtraido && subestadoActual && subestadoActual.includes(' - ')) {
-            estadoExtraido = subestadoActual.split(' - ').pop() || '';
-        }
-        if (!estadoExtraido) {
-            estadoExtraido = estado;
-        }
+        // Get current stage and substage information
+        const etapaActual = (solicitud.etapa_actual || '').toLowerCase();
+        const subestadoActual = (solicitud.subestado_actual || '').toLowerCase();
+        const resultadoConsulta = (solicitud.resultado_consulta || '').toLowerCase();
         
         console.log('📊 Estado Analysis:');
-        console.log('   resultado_consulta:', resultadoConsulta);
+        console.log('   etapa_actual:', etapaActual);
         console.log('   subestado_actual:', subestadoActual);
-        console.log('   estado:', estado);
-        console.log('   estado_extraido:', estadoExtraido);
-        console.log('   estados_reconsiderables:', estadosReconsiderables);
+        console.log('   resultado_consulta:', resultadoConsulta);
         
-        const estadoEsReconsiderable = estadosReconsiderables.includes(estadoExtraido);
-        console.log('   ¿Estado es reconsiderable?:', estadoEsReconsiderable ? '✅' : '❌');
+        // Apply the same logic as the backend:
+        // 1. Etapa "Rechazado" or etapa "Resultado Consulta" with subestado "Alternativa" or "Rechazado"
+        // 2. Or resultado_consulta is "Rechazado" or "Alternativa"
+        
+        const esElegible = (
+            // Etapa rechazado
+            etapaActual.includes('rechazado') || 
+            // Etapa resultado consulta with specific subestados
+            (etapaActual.includes('resultado') && etapaActual.includes('consulta') && 
+             (subestadoActual.includes('alternativa') || subestadoActual.includes('rechazado'))) ||
+            // By resultado_consulta
+            (resultadoConsulta === 'rechazado' || resultadoConsulta === 'alternativa')
+        );
+        
+        console.log('   ¿Estado es elegible?:', esElegible ? '✅' : '❌');
+        
+        // Extract estado for display purposes
+        let estadoExtraido = '';
+        if (resultadoConsulta) {
+            estadoExtraido = resultadoConsulta.charAt(0).toUpperCase() + resultadoConsulta.slice(1);
+        } else if (subestadoActual) {
+            estadoExtraido = subestadoActual.charAt(0).toUpperCase() + subestadoActual.slice(1);
+        } else if (etapaActual) {
+            estadoExtraido = etapaActual.charAt(0).toUpperCase() + etapaActual.slice(1);
+        } else {
+            estadoExtraido = 'No definido';
+        }
         
         // Check if user is the owner
         const propietarioId = solicitud.propietario_id || solicitud.propietario?.id;
         const currentUserId = parseInt(window.currentUserId || '0');
-        const esProps = propietarioId === currentUserId;
+        const esPropietario = propietarioId === currentUserId;
         
         console.log('👤 Ownership Analysis:');
         console.log('   propietario_id:', propietarioId);
         console.log('   current_user_id:', currentUserId);
-        console.log('   es_propietario:', esProps ? '✅' : '❌');
+        console.log('   es_propietario:', esPropietario ? '✅' : '❌');
         
         // Check for active reconsideración
         const tieneReconsideracionActiva = solicitud.es_reconsideracion || false;
@@ -10028,12 +10069,12 @@
         let reason = '';
         let message = '';
         
-        if (!estadoEsReconsiderable) {
-            reason = 'estado_no_reconsiderable';
-            message = `La solicitud debe estar en estado "Rechazado" o "Alternativa". Estado actual: "${estadoExtraido || 'No definido'}"`;
-        } else if (!esProps) {
+        if (!esPropietario) {
             reason = 'no_propietario';
             message = 'Solo el propietario de la solicitud puede solicitar una reconsideración';
+        } else if (!esElegible) {
+            reason = 'estado_no_reconsiderable';
+            message = `Solo se pueden reconsiderar solicitudes rechazadas o con alternativa. Estado actual: ${solicitud.etapa_actual || 'Sin etapa'} - ${solicitud.subestado_actual || 'Sin subestado'}`;
         } else if (tieneReconsideracionActiva) {
             reason = 'reconsideracion_activa';
             message = 'Esta solicitud ya tiene una reconsideración en proceso';
@@ -10138,12 +10179,35 @@
                             <i class="fas fa-user"></i>
                             <span>Solicitado por: ${recon.solicitada_por?.nombre || 'N/A'}</span>
                         </div>
-                        ${recon.cotizacion_nueva_id ? `
-                        <div class="reconsideracion-detail-item">
-                            <i class="fas fa-file-invoice-dollar"></i>
-                            <span>Nueva cotización: ${recon.cotizacion_nueva_id}</span>
+                        
+                        <!-- Cotización Information -->
+                        ${recon.usar_nueva_cotizacion && recon.cotizacion_nueva ? `
+                        <div class="reconsideracion-detail-item cotizacion-detail">
+                            <i class="fas fa-file-invoice-dollar text-primary"></i>
+                            <div class="cotizacion-info">
+                                <strong>Nueva Cotización ID: ${recon.cotizacion_nueva.id}</strong>
+                                <div class="cotizacion-specs">
+                                    <span class="spec-item">💰 $${recon.cotizacion_nueva.monto?.toLocaleString() || '0'}</span>
+                                    <span class="spec-item">📅 ${recon.cotizacion_nueva.plazo || 0} meses</span>
+                                    <span class="spec-item">🏷️ ${recon.cotizacion_nueva.tipo === 'auto' ? 'Auto' : 'Personal'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        ` : recon.cotizacion_original ? `
+                        <div class="reconsideracion-detail-item cotizacion-detail">
+                            <i class="fas fa-file-invoice text-secondary"></i>
+                            <div class="cotizacion-info">
+                                <strong>Cotización Original ID: ${recon.cotizacion_original.id}</strong>
+                                <div class="cotizacion-specs">
+                                    <span class="spec-item">💰 $${recon.cotizacion_original.monto?.toLocaleString() || '0'}</span>
+                                    <span class="spec-item">📅 ${recon.cotizacion_original.plazo || 0} meses</span>
+                                    <span class="spec-item">🏷️ ${recon.cotizacion_original.tipo === 'auto' ? 'Auto' : 'Personal'}</span>
+                                </div>
+                            </div>
                         </div>
                         ` : ''}
+                        
+                        <!-- Analysis Information -->
                         ${recon.fecha_analisis ? `
                         <div class="reconsideracion-detail-item">
                             <i class="fas fa-clock"></i>
@@ -10154,6 +10218,14 @@
                         <div class="reconsideracion-detail-item">
                             <i class="fas fa-user-tie"></i>
                             <span>Analizado por: ${recon.analizada_por.nombre}</span>
+                        </div>
+                        ` : ''}
+                        
+                        <!-- Previous Result -->
+                        ${recon.resultado_anterior ? `
+                        <div class="reconsideracion-detail-item">
+                            <i class="fas fa-history"></i>
+                            <span>Resultado anterior: <strong>${recon.resultado_anterior}</strong></span>
                         </div>
                         ` : ''}
                     </div>
@@ -11130,17 +11202,22 @@
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enviando...';
         
-        const formData = new FormData();
-        formData.append('cotizacion_id', cotizacionId);
-        formData.append('motivo', motivoTextarea.value.trim());
-        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        // Prepare JSON data
+        const requestData = {
+            motivo: motivoTextarea.value.trim(),
+            cotizacion_id: cotizacionId !== 'actual' ? cotizacionId : null, // null means use current cotización
+        };
+        
+        console.log('📤 Sending reconsideración request:', requestData);
         
         try {
-            const response = await fetch(`/workflow/solicitud/${solicitudId}/reconsideracion/solicitar/`, {
+            const response = await fetch(`/workflow/api/solicitud/${solicitudId}/reconsideracion/solicitar/`, {
                 method: 'POST',
-                body: formData,
+                body: JSON.stringify(requestData),
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
                 }
             });
             
