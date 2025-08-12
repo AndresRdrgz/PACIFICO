@@ -185,9 +185,39 @@ def api_obtener_documentos_pendientes_backoffice_simple(request, solicitud_id):
                         calificacion_actual = None
                         estado_calificacion = 'sin_calificar'
                     
-                    # MOSTRAR TODOS LOS DOCUMENTOS como en checklist (no filtrar por estado)
-                    # El modal debe permitir calificar todos los documentos
+                    # ✅ CORREGIDO: FILTRAR documentos según su estado para el modal de pendientes
+                    # Solo mostrar documentos que realmente están pendientes o requieren atención
                     try:
+                        # Filtrar documentos según criterios de "pendiente"
+                        deberia_mostrarse = False
+                        
+                        # CRITERIO 1: Documentos explícitamente marcados como 'pendiente' 
+                        if estado_calificacion == 'pendiente':
+                            deberia_mostrarse = True
+                            print(f"✅ {req_sol.requisito.nombre}: incluido por estado 'pendiente'")
+                        
+                        # CRITERIO 2: Documentos sin calificar (sin_calificar) que no tienen archivo
+                        elif estado_calificacion == 'sin_calificar' and not tiene_archivo:
+                            deberia_mostrarse = True
+                            print(f"✅ {req_sol.requisito.nombre}: incluido por 'sin_calificar' sin archivo")
+                        
+                        # CRITERIO 3: Documentos marcados como 'malo' que no están subsanados
+                        elif estado_calificacion == 'malo' and not (calificacion_actual and calificacion_actual.subsanado):
+                            deberia_mostrarse = True
+                            print(f"✅ {req_sol.requisito.nombre}: incluido por 'malo' no subsanado")
+                        
+                        # EXCLUSIÓN: No mostrar documentos ya resueltos
+                        else:
+                            if estado_calificacion in ['bueno', 'subsanado']:
+                                print(f"❌ {req_sol.requisito.nombre}: excluido por estado '{estado_calificacion}'")
+                            elif req_sol.cumplido:
+                                print(f"❌ {req_sol.requisito.nombre}: excluido por cumplido=True")
+                            else:
+                                print(f"❌ {req_sol.requisito.nombre}: excluido por otros criterios")
+                            continue  # Saltar este documento
+                        
+                        if not deberia_mostrarse:
+                            continue  # Saltar este documento
                         # Determinar si tiene archivo
                         tiene_archivo = bool(req_sol.archivo)
                         archivos_count = 1 if tiene_archivo else 0

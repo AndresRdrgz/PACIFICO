@@ -9713,6 +9713,18 @@ def api_solicitud_brief(request, solicitud_id):
             # 3. Para efectos del tab "Documentos Pendientes", si no está definido
             # en ningún lado, se considera NO obligatorio (opcional)
             
+            # Obtener el comentario más reciente para este documento
+            comentario_reciente = None
+            try:
+                from .models import ComentarioDocumentoBackoffice
+                comentario_reciente = ComentarioDocumentoBackoffice.objects.filter(
+                    requisito_solicitud=req,
+                    activo=True
+                ).select_related('comentario_por').order_by('-fecha_comentario').first()
+            except Exception as e:
+                print(f"❌ Error obteniendo comentario para req {req.id}: {str(e)}")
+                comentario_reciente = None
+            
             documento_info = {
                 'id': req.id,  # Add the RequisitoSolicitud ID
                 'nombre': req.requisito.nombre,
@@ -9723,6 +9735,9 @@ def api_solicitud_brief(request, solicitud_id):
                 'obligatorio': es_obligatorio,
                 'calificacion_estado': calificacion.estado if calificacion else None,
                 'motivo_calificacion': calificacion.opcion_desplegable.nombre if calificacion and calificacion.opcion_desplegable else None,
+                'comentario_reciente': comentario_reciente.comentario if comentario_reciente else None,
+                'comentario_por': comentario_reciente.comentario_por.get_full_name() or comentario_reciente.comentario_por.username if comentario_reciente else None,
+                'comentario_fecha': comentario_reciente.fecha_comentario.strftime('%d/%m/%Y %H:%M') if comentario_reciente else None,
                 'calificado_por': calificacion.calificado_por.get_full_name() or calificacion.calificado_por.username if calificacion else None,
                 'fecha_calificacion': calificacion.fecha_calificacion.strftime('%d/%m/%Y %H:%M') if calificacion else None,
                 'subsanado': calificacion.subsanado if calificacion else False,
