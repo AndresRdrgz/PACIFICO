@@ -18042,6 +18042,7 @@ def api_crear_solicitud_externa(request):
     - cliente_email: Email del cliente
     - producto_solicitado: Producto de interés
     - monto_solicitado: Monto solicitado
+    - sector: Sector laboral del cliente
     - motivo_consulta: Motivo de la consulta
     - como_se_entero: Cómo se enteró del servicio
     - observaciones: Observaciones adicionales
@@ -18084,7 +18085,7 @@ def api_crear_solicitud_externa(request):
             if not etapa_inicial:
                 return JsonResponse({'error': 'El pipeline no tiene etapas configuradas'}, status=400)
         
-        # Obtener usuario propietario (orden de prioridad: propietario_id, propietario_username, default)
+        # Obtener usuario propietario (orden de prioridad: propietario_id, propietario_username, None)
         propietario = None
         if data.get('propietario_id'):
             try:
@@ -18096,14 +18097,15 @@ def api_crear_solicitud_externa(request):
                 propietario = User.objects.get(username=data['propietario_username'])
             except User.DoesNotExist:
                 return JsonResponse({'error': f'Usuario {data["propietario_username"]} no encontrado'}, status=404)
-        else:
-            # Usar el primer superuser como default
-            propietario = User.objects.filter(is_superuser=True).first()
-            if not propietario:
-                propietario = User.objects.first()
-                
-        if not propietario:
-            return JsonResponse({'error': 'No se pudo determinar un usuario propietario'}, status=400)
+        # If no propietario is specified, leave it as None to be assigned later
+        
+        # For creada_por, we need a user since it's required. Use first available user as fallback
+        creada_por = propietario
+        if not creada_por:
+            # Use first active user as fallback for creada_por (required field)
+            creada_por = User.objects.filter(is_active=True).first()
+            if not creada_por:
+                return JsonResponse({'error': 'No hay usuarios activos en el sistema'}, status=500)
         
         # Buscar cliente si se proporciona cédula
         cliente = None
@@ -18117,8 +18119,8 @@ def api_crear_solicitud_externa(request):
         solicitud = Solicitud.objects.create(
             pipeline=pipeline,
             etapa_actual=etapa_inicial,
-            creada_por=propietario,
-            propietario=propietario,
+            creada_por=creada_por,  # Required field, uses fallback if no propietario
+            propietario=propietario,  # Can be None to be assigned later
             cliente=cliente,
             motivo_consulta=data.get('motivo_consulta', ''),
             como_se_entero=data.get('como_se_entero', ''),
@@ -18129,6 +18131,7 @@ def api_crear_solicitud_externa(request):
             cliente_email=data.get('cliente_email', ''),
             producto_solicitado=data.get('producto_solicitado', ''),
             monto_solicitado=data.get('monto_solicitado'),
+            sector=data.get('sector', ''),
             observaciones=data.get('observaciones', ''),
             # Campos de identificación API
             creada_via_api=True,
@@ -18140,7 +18143,7 @@ def api_crear_solicitud_externa(request):
         HistorialSolicitud.objects.create(
             solicitud=solicitud,
             etapa=etapa_inicial,
-            usuario_responsable=propietario,
+            usuario_responsable=creada_por,  # Use creada_por as initial responsible user
             fecha_inicio=timezone.now()
         )
         
@@ -18189,6 +18192,7 @@ def api_crear_solicitud_externa(request):
                 'cliente_email': solicitud.cliente_email,
                 'producto_solicitado': solicitud.producto_solicitado,
                 'monto_solicitado': str(solicitud.monto_solicitado) if solicitud.monto_solicitado else None,
+                'sector': solicitud.sector,
                 'motivo_consulta': solicitud.motivo_consulta,
                 'observaciones': solicitud.observaciones
             }

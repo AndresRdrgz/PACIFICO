@@ -20,6 +20,7 @@ Crea una nueva solicitud desde una aplicación externa.
 - `cliente_email` (string): Email del cliente
 - `producto_solicitado` (string): Producto de interés
 - `monto_solicitado` (decimal): Monto solicitado
+- `sector` (string): Sector laboral del cliente
 - `motivo_consulta` (string): Motivo de la consulta
 - `como_se_entero` (string): Cómo se enteró del servicio
 - `observaciones` (string): Observaciones adicionales
@@ -36,6 +37,7 @@ Crea una nueva solicitud desde una aplicación externa.
     "cliente_email": "juan.perez@email.com",
     "producto_solicitado": "Préstamo Personal",
     "monto_solicitado": 5000.00,
+    "sector": "Sector Público",
     "motivo_consulta": "Consolidación de deudas",
     "como_se_entero": "Promoción",
     "observaciones": "Cliente con buen historial crediticio"

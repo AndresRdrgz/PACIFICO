@@ -181,7 +181,7 @@ class SolicitudAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('Canal Digital', {
-            'fields': ('cliente_nombre', 'cliente_cedula', 'cliente_telefono', 'cliente_email', 'producto_solicitado', 'monto_solicitado'),
+            'fields': ('cliente_nombre', 'cliente_cedula', 'cliente_telefono', 'cliente_email', 'producto_solicitado', 'monto_solicitado', 'sector'),
             'classes': ('collapse',)
         }),
         ('APC Makito', {

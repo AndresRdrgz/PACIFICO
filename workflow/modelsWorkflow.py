@@ -217,6 +217,7 @@ class Solicitud(models.Model):
     cliente_email = models.EmailField(blank=True, null=True, help_text="Email del cliente")
     producto_solicitado = models.CharField(max_length=100, blank=True, null=True, help_text="Producto de interés")
     monto_solicitado = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True, help_text="Monto solicitado")
+    sector = models.CharField(max_length=100, blank=True, null=True, help_text="Sector laboral del cliente")
     propietario = models.ForeignKey(User, related_name='solicitudes_propias', on_delete=models.SET_NULL, null=True, blank=True, help_text="Usuario propietario de la solicitud")
     observaciones = models.TextField(blank=True, null=True, help_text="Observaciones adicionales")
     
@@ -661,6 +662,7 @@ class ValorCampoSolicitud(models.Model):
 # --------------------------------------
 # COMENTARIOS SOLICITUD
 # --------------------------------------
+
 
 class SolicitudComentario(models.Model):
     TIPO_CHOICES = [
