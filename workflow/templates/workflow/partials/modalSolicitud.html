@@ -28,7 +28,7 @@
                             <div class="icon-alert asociar-entrevista" id="iconAsociarEntrevista" style="display: flex;" 
                                  title="Asociar entrevista de cliente" 
                                  onclick="manejarClickEntrevista()">
-                                <i class="fas fa-link" id="iconAsociarEntrevistaIcon"></i>
+                                <i class="fas fa-user-edit" id="iconAsociarEntrevistaIcon"></i>
                                 <span class="status-badge" id="estadoEntrevistaBadge">!</span>
                             </div>
                             
@@ -9727,10 +9727,38 @@
             const modal = bootstrap.Modal.getInstance(document.getElementById('modalNotaRecordatorio'));
             modal.hide();
             cargarNotasRecordatorios();
+            
+            // Actualizar la tabla principal de negocios
+            actualizarIconosTablaNegocios();
         })
-        .catch(error => {
+        .catch(async (error) => {
             console.error('Error guardando nota:', error);
-            showNotification('Error al guardar nota: ' + error.message, 'error');
+            console.error('URL usada:', url);
+            console.error('Método usado:', method);
+            console.error('Datos enviados:', data);
+            
+            // Intentar obtener el mensaje específico del backend
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('Error del backend:', errorData);
+                    showNotification('Error: ' + (errorData.error || 'Error desconocido del servidor'), 'error');
+                } else {
+                    showNotification('Error: ' + error.message, 'error');
+                }
+            } catch (secondError) {
+                console.error('Error secundario:', secondError);
+                showNotification('Error al guardar nota: ' + error.message, 'error');
+            }
         });
     }
 
@@ -9755,6 +9783,11 @@
         .then(data => {
             showNotification(data.message || 'Recordatorio marcado como completado', 'success');
             cargarNotasRecordatorios();
+            
+            // Actualizar la tabla principal de negocios
+            if (typeof window.actualizarIconosTablaNegocios === 'function') {
+                window.actualizarIconosTablaNegocios();
+            }
         })
         .catch(error => {
             console.error('Error completando recordatorio:', error);
@@ -9783,6 +9816,11 @@
         .then(data => {
             showNotification(data.message || 'Nota eliminada exitosamente', 'success');
             cargarNotasRecordatorios();
+            
+            // Actualizar la tabla principal de negocios
+            if (typeof window.actualizarIconosTablaNegocios === 'function') {
+                window.actualizarIconosTablaNegocios();
+            }
         })
         .catch(error => {
             console.error('Error eliminando nota:', error);

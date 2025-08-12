@@ -574,7 +574,7 @@
                     </div>
                     <div class="ms-auto">
                       <button type="button" class="btn btn-outline-info btn-sm" onclick="mostrarModalEntrevista()">
-                        <i class="fas fa-link me-1"></i> Asociar
+                        <i class="fas fa-user-edit me-1"></i> Asociar
                       </button>
                     </div>
                   </div>
@@ -3703,11 +3703,13 @@ function confirmarAvanceCaptura() {
 
 {% block extra_js %}
 <script>
-// Variables globales para citas de firma
-let solicitudId = {{ solicitud.id }};
+// Encapsular funciones de citas de firma para evitar conflictos de scope
+(function() {
+  // Variables locales para citas de firma
+  const solicitudId = {{ solicitud.id }};
 
-// Función para mostrar modal de nueva cita
-function mostrarModalNuevaCita() {
+  // Función para mostrar modal de nueva cita
+  window.mostrarModalNuevaCita = function() {
   console.log('📅 Abriendo modal para nueva cita de firma');
   
   const modalHtml = `
@@ -3797,10 +3799,10 @@ function mostrarModalNuevaCita() {
   document.getElementById('btnGuardarCitaFirma').addEventListener('click', function() {
     guardarCitaFirma(solicitudId, modal);
   });
-}
+  }
 
-// Función para guardar cita de firma
-function guardarCitaFirma(solicitudId, modal) {
+  // Función para guardar cita de firma
+  function guardarCitaFirma(solicitudIdParam, modal) {
   const btnGuardar = document.getElementById('btnGuardarCitaFirma');
   const textoOriginal = btnGuardar.innerHTML;
   
@@ -3810,7 +3812,7 @@ function guardarCitaFirma(solicitudId, modal) {
 
   // Recopilar datos del formulario
   const datos = {
-    solicitud_id: solicitudId,
+    solicitud_id: solicitudIdParam,
     fecha_firma: document.getElementById('fechaFirma').value,
     hora_firma: document.getElementById('horaFirma').value,
     lugar_firma: document.getElementById('lugarFirma').value,
@@ -3839,7 +3841,7 @@ function guardarCitaFirma(solicitudId, modal) {
       }
       
       // Recargar las citas sin recargar toda la página
-      cargarCitasFirma();
+      window.cargarCitasFirma();
       
     } else {
       if (typeof showToast !== 'undefined') {
@@ -3861,10 +3863,10 @@ function guardarCitaFirma(solicitudId, modal) {
     btnGuardar.innerHTML = textoOriginal;
     btnGuardar.disabled = false;
   });
-}
+  }
 
-// Función para cargar las citas de firma
-function cargarCitasFirma() {
+  // Función para cargar las citas de firma
+  window.cargarCitasFirma = function() {
   console.log('📅 Cargando citas de firma para solicitud:', solicitudId);
   
   fetch(`/workflow/api/agenda-firma/solicitud/${solicitudId}/`)
@@ -3882,10 +3884,10 @@ function cargarCitasFirma() {
       console.error('Error de conexión al cargar citas:', error);
       mostrarMensajeSinCitas();
     });
-}
+  }
 
-// Función para mostrar las citas en el DOM
-function mostrarCitas(citas) {
+  // Función para mostrar las citas en el DOM
+  function mostrarCitas(citas) {
   const contenedor = document.getElementById('contenedor-citas');
   const mensajeSinCitas = document.getElementById('mensaje-sin-citas');
   
@@ -3948,56 +3950,58 @@ function mostrarCitas(citas) {
   citasHtml += '</div>';
   
   contenedor.innerHTML = citasHtml;
-}
+  }
 
-// Función para mostrar mensaje cuando no hay citas
-function mostrarMensajeSinCitas() {
+  // Función para mostrar mensaje cuando no hay citas
+  function mostrarMensajeSinCitas() {
   const contenedor = document.getElementById('contenedor-citas');
   const mensajeSinCitas = document.getElementById('mensaje-sin-citas');
   
   contenedor.innerHTML = '';
   mensajeSinCitas.style.display = 'block';
-}
+  }
 
-// Función para actualizar contador de citas
-function actualizarContadorCitas(total) {
+  // Función para actualizar contador de citas
+  function actualizarContadorCitas(total) {
   const contadorElement = document.getElementById('total-citas');
   if (contadorElement) {
     contadorElement.textContent = total;
   }
-}
+  }
 
-// Función auxiliar para obtener CSRF token
-function getCsrfToken() {
+  // Función auxiliar para obtener CSRF token
+  function getCsrfToken() {
   return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
          document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-}
+  }
 
-// Función auxiliar para formatear hora desde ISO string
-function formatearHora(isoString) {
+  // Función auxiliar para formatear hora desde ISO string
+  function formatearHora(isoString) {
   const fecha = new Date(isoString);
   return fecha.toLocaleTimeString('es-ES', { 
     hour: '2-digit', 
     minute: '2-digit',
     hour12: true 
   });
-}
+  }
 
-// Función auxiliar para formatear fecha desde ISO string
-function formatearFecha(isoString) {
+  // Función auxiliar para formatear fecha desde ISO string
+  function formatearFecha(isoString) {
   const fecha = new Date(isoString);
   return fecha.toLocaleDateString('es-ES', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'
   });
-}
+  }
 
-// Cargar citas al cargar la página
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('📅 Página cargada, cargando citas de firma...');
-  cargarCitasFirma();
-});
+  // Cargar citas al cargar la página
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('📅 Página cargada, cargando citas de firma...');
+    window.cargarCitasFirma();
+  });
+
+})(); // Cerrar función anónima
 
 </script>
 {% endblock %}

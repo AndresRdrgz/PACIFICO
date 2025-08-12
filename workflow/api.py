@@ -854,6 +854,7 @@ def api_notas_recordatorios_create(request, solicitud_id):
         for field in required_fields:
             if not data.get(field):
                 logger.error(f"Missing required field: {field}")
+                logger.error(f"Available fields in data: {list(data.keys())}")
                 return JsonResponse({'error': f'El campo {field} es requerido'}, status=400)
         
         # Validar tipo
@@ -898,9 +899,10 @@ def api_notas_recordatorios_create(request, solicitud_id):
                 
                 logger.info(f"Parsed fecha_vencimiento: {fecha_vencimiento}")
                 
-                # Validate that the date is in the future
-                if fecha_vencimiento <= timezone.now():
-                    return JsonResponse({'error': 'La fecha de vencimiento debe ser futura'}, status=400)
+                # Validate that the date is in the future (allow current time + 1 minute buffer)
+                tiempo_minimo = timezone.now() + timezone.timedelta(minutes=1)
+                if fecha_vencimiento <= tiempo_minimo:
+                    return JsonResponse({'error': 'La fecha de vencimiento debe ser al menos 1 minuto en el futuro'}, status=400)
                     
             except ValueError as e:
                 logger.error(f"Date parsing error: {e}")
@@ -1006,9 +1008,10 @@ def api_notas_recordatorios_update(request, solicitud_id, nota_id):
                 
                 logger.info(f"Parsed fecha_vencimiento for update: {fecha_vencimiento}")
                 
-                # Validate that the date is in the future
-                if fecha_vencimiento <= timezone.now():
-                    return JsonResponse({'error': 'La fecha de vencimiento debe ser futura'}, status=400)
+                # Validate that the date is in the future (allow current time + 1 minute buffer)
+                tiempo_minimo = timezone.now() + timezone.timedelta(minutes=1)
+                if fecha_vencimiento <= tiempo_minimo:
+                    return JsonResponse({'error': 'La fecha de vencimiento debe ser al menos 1 minuto en el futuro'}, status=400)
                     
             except ValueError as e:
                 logger.error(f"Date parsing error in update: {e}")

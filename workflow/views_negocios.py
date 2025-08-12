@@ -20,6 +20,67 @@ from pacifico.models import Cliente, Cotizacion
 from django.contrib.auth.models import User, Group
 from django.views.decorators.http import require_http_methods
 
+def calcular_alertas_solicitud(solicitud):
+    """
+    Calcula las alertas de documentos urgentes, pendientes y estado de entrevista
+    para una solicitud específica.
+    
+    Retorna un diccionario con:
+    - documentos_urgentes: cantidad de documentos calificados como 'malo' no subsanados
+    - documentos_pendientes: cantidad de documentos pendientes por completar
+    - necesita_entrevista: booleano indicando si falta asociar entrevista
+    - tiene_alertas: booleano indicando si hay alguna alerta
+    """
+    from .modelsWorkflow import RequisitoSolicitud
+    from .models import CalificacionDocumentoBackoffice
+    
+    alertas = {
+        'documentos_urgentes': 0,
+        'documentos_pendientes': 0,
+        'necesita_entrevista': False,
+        'tiene_alertas': False
+    }
+    
+    try:
+        # Obtener todos los requisitos de la solicitud
+        requisitos_solicitud = RequisitoSolicitud.objects.filter(solicitud=solicitud)
+        
+        for req_sol in requisitos_solicitud:
+            # Obtener calificación si existe
+            try:
+                calificacion = CalificacionDocumentoBackoffice.objects.get(requisito_solicitud=req_sol)
+                
+                # Documentos urgentes: calificados como 'malo' y no subsanados
+                if calificacion.estado == 'malo' and not calificacion.subsanado:
+                    alertas['documentos_urgentes'] += 1
+                
+                # Documentos pendientes: calificados como 'pendiente' y no subsanados
+                elif calificacion.estado == 'pendiente' and not calificacion.subsanado:
+                    alertas['documentos_pendientes'] += 1
+                    
+            except CalificacionDocumentoBackoffice.DoesNotExist:
+                # Sin calificación = pendiente (si no tiene archivo)
+                if not req_sol.archivo:
+                    alertas['documentos_pendientes'] += 1
+        
+        # Verificar si necesita asociar entrevista
+        # Una solicitud necesita entrevista si no tiene una asociada
+        alertas['necesita_entrevista'] = solicitud.entrevista_cliente is None
+        
+        # Determinar si hay alertas
+        alertas['tiene_alertas'] = (
+            alertas['documentos_urgentes'] > 0 or
+            alertas['documentos_pendientes'] > 0 or
+            alertas['necesita_entrevista']
+        )
+        
+    except Exception as e:
+        print(f"❌ Error calculando alertas para solicitud {solicitud.id}: {e}")
+        # En caso de error, retornar valores por defecto
+        pass
+    
+    return alertas
+
 def get_user_pipeline_access(user):
     """
     Utility function to determine user's pipeline access and permissions
@@ -306,23 +367,36 @@ def enrich_solicitud_data(solicitud):
         'tiene_proximos_vencer': recordatorios_proximos_vencer > 0
     }
     
+
+    
     # Determinar el estado visual del indicador de recordatorios
     if recordatorios_vencidos > 0:
         solicitud.recordatorios_status = 'danger'  # Rojo para vencidos
-        solicitud.recordatorios_icon = 'fas fa-exclamation-triangle'
+        solicitud.recordatorios_icon = 'fas fa-bell'  # Campanita para vencidos
         solicitud.recordatorios_title = f"{recordatorios_vencidos} recordatorio(s) vencido(s)"
     elif recordatorios_proximos_vencer > 0:
-        solicitud.recordatorios_status = 'warning'  # Amarillo para próximos a vencer
-        solicitud.recordatorios_icon = 'fas fa-clock'
+        solicitud.recordatorios_status = 'info'  # Celeste para próximos a vencer
+        solicitud.recordatorios_icon = 'fas fa-bell'  # Campanita celeste
         solicitud.recordatorios_title = f"{recordatorios_proximos_vencer} recordatorio(s) próximo(s) a vencer"
     elif recordatorios_pendientes > 0:
-        solicitud.recordatorios_status = 'info'  # Azul para pendientes
-        solicitud.recordatorios_icon = 'fas fa-bell'
+        solicitud.recordatorios_status = 'info'  # Celeste para pendientes
+        solicitud.recordatorios_icon = 'fas fa-bell'  # Campanita celeste
         solicitud.recordatorios_title = f"{recordatorios_pendientes} recordatorio(s) pendiente(s)"
     else:
+        # Sin recordatorios: no mostrar ningún ícono
         solicitud.recordatorios_status = None
         solicitud.recordatorios_icon = None
         solicitud.recordatorios_title = None
+    
+    # ========================================
+    # NUEVA FUNCIONALIDAD: ALERTAS DE DOCUMENTOS Y ENTREVISTA
+    # ========================================
+    
+    # Calcular alertas de documentos y entrevista
+    alertas_info = calcular_alertas_solicitud(solicitud)
+    
+    # Agregar información de alertas al objeto solicitud
+    solicitud.alertas_info = alertas_info
     
     # Agregar propiedades adicionales para el template
     # Cliente information
