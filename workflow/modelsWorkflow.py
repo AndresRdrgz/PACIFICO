@@ -237,6 +237,7 @@ class Solicitud(models.Model):
     # Campo para identificar solicitudes creadas via API externa
     creada_via_api = models.BooleanField(default=False, help_text="Indica si la solicitud fue creada mediante API externa")
     api_source = models.CharField(max_length=100, blank=True, null=True, help_text="Identificador de la aplicación externa que creó la solicitud")
+    enlace_conversacion = models.URLField(blank=True, null=True, help_text="Enlace a la conversación o chat relacionado con la solicitud")
     
     # Campos adicionales para solicitudes del canal digital
     cliente_nombre = models.CharField(max_length=200, blank=True, null=True, help_text="Nombre completo del cliente")

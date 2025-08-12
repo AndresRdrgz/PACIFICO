@@ -18229,6 +18229,7 @@ def api_crear_solicitud_externa(request):
     - motivo_consulta: Motivo de la consulta
     - como_se_entero: Cómo se enteró del servicio
     - observaciones: Observaciones adicionales
+    - enlace_conversacion: Enlace a la conversación o chat relacionado
     """
     try:
         # Verificar que sea POST
@@ -18316,6 +18317,7 @@ def api_crear_solicitud_externa(request):
             monto_solicitado=data.get('monto_solicitado'),
             sector=data.get('sector', ''),
             observaciones=data.get('observaciones', ''),
+            enlace_conversacion=data.get('enlace_conversacion', ''),
             # Campos de identificación API
             creada_via_api=True,
             api_source=data['api_source'],
@@ -18377,7 +18379,8 @@ def api_crear_solicitud_externa(request):
                 'monto_solicitado': str(solicitud.monto_solicitado) if solicitud.monto_solicitado else None,
                 'sector': solicitud.sector,
                 'motivo_consulta': solicitud.motivo_consulta,
-                'observaciones': solicitud.observaciones
+                'observaciones': solicitud.observaciones,
+                'enlace_conversacion': solicitud.enlace_conversacion
             }
         }, status=201)
         
