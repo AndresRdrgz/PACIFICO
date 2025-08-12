@@ -177,7 +177,7 @@ class SolicitudAdmin(admin.ModelAdmin):
             'fields': ('motivo_consulta', 'como_se_entero', 'prioridad', 'etiquetas_oficial', 'origen')
         }),
         ('API Externa', {
-            'fields': ('creada_via_api', 'api_source'),
+            'fields': ('creada_via_api', 'api_source', 'enlace_conversacion'),
             'classes': ('collapse',)
         }),
         ('Canal Digital', {

@@ -486,6 +486,96 @@
                                     <p class="text-muted">No hay información del canal digital disponible</p>
                                 </div>
                                 <div id="canal-digital-content" style="display: none;">
+                                    <!-- Enlace de Conversación -->
+                                    <div class="enlace-conversacion-card mb-4" id="enlaceConversacionCard" style="display: none;">
+                                        <div class="card border-primary">
+                                            <div class="card-header bg-primary text-white">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-external-link-alt me-2"></i>
+                                                    Enlace de Conversación
+                                                </h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="d-flex align-items-center justify-content-between">
+                                                    <div class="flex-grow-1">
+                                                        <label class="form-label fw-bold">Enlace al Chat o Conversación:</label>
+                                                        <div class="form-control-plaintext" id="enlaceConversacionDisplay">-</div>
+                                                    </div>
+                                                    <div class="ms-3">
+                                                        <a href="#" id="enlaceConversacionLink" class="btn btn-primary btn-sm" target="_blank" style="display: none;">
+                                                            <i class="fas fa-external-link-alt me-1"></i>
+                                                            Abrir Chat
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Información del Cliente -->
+                                    <div class="cliente-info-card mb-4">
+                                        <div class="card">
+                                            <div class="card-header bg-success text-white">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-user me-2"></i>
+                                                    Información del Cliente
+                                                </h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold">Nombre del Cliente:</label>
+                                                            <div class="form-control-plaintext" id="clienteNombreDisplay">-</div>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold">Cédula:</label>
+                                                            <div class="form-control-plaintext" id="clienteCedulaDisplay">-</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold">Teléfono:</label>
+                                                            <div class="form-control-plaintext" id="clienteTelefonoDisplay">-</div>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold">Sector Laboral:</label>
+                                                            <div class="form-control-plaintext" id="clienteSectorDisplay">-</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Información del Producto -->
+                                    <div class="producto-info-card mb-4">
+                                        <div class="card">
+                                            <div class="card-header bg-warning text-dark">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-shopping-cart me-2"></i>
+                                                    Información del Producto
+                                                </h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold">Producto Solicitado:</label>
+                                                            <div class="form-control-plaintext" id="productoSolicitadoDisplay">-</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold">Monto Solicitado:</label>
+                                                            <div class="form-control-plaintext" id="montoSolicitadoDisplay">-</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <!-- API Information -->
                                     <div class="api-info-card mb-4">
                                         <div class="card">
@@ -5092,6 +5182,64 @@
     function populateCanalDigitalContent(apiInfo) {
         try {
             console.log('Populating Canal Digital content with:', apiInfo);
+            
+            // Enlace de Conversación
+            const enlaceConversacionCard = document.getElementById('enlaceConversacionCard');
+            const enlaceConversacionDisplay = document.getElementById('enlaceConversacionDisplay');
+            const enlaceConversacionLink = document.getElementById('enlaceConversacionLink');
+            
+            if (apiInfo.enlace_conversacion && apiInfo.enlace_conversacion.trim() !== '') {
+                if (enlaceConversacionCard) enlaceConversacionCard.style.display = 'block';
+                if (enlaceConversacionDisplay) enlaceConversacionDisplay.textContent = apiInfo.enlace_conversacion;
+                if (enlaceConversacionLink) {
+                    enlaceConversacionLink.href = apiInfo.enlace_conversacion;
+                    enlaceConversacionLink.style.display = 'block';
+                }
+            } else {
+                if (enlaceConversacionCard) enlaceConversacionCard.style.display = 'none';
+            }
+            
+            // Información del Cliente
+            const clienteNombreDisplay = document.getElementById('clienteNombreDisplay');
+            if (clienteNombreDisplay) {
+                clienteNombreDisplay.textContent = apiInfo.cliente_nombre || 'No especificado';
+            }
+            
+            const clienteCedulaDisplay = document.getElementById('clienteCedulaDisplay');
+            if (clienteCedulaDisplay) {
+                clienteCedulaDisplay.textContent = apiInfo.cliente_cedula || 'No especificado';
+            }
+            
+            const clienteTelefonoDisplay = document.getElementById('clienteTelefonoDisplay');
+            if (clienteTelefonoDisplay) {
+                clienteTelefonoDisplay.textContent = apiInfo.cliente_telefono || 'No especificado';
+            }
+            
+            const clienteSectorDisplay = document.getElementById('clienteSectorDisplay');
+            if (clienteSectorDisplay) {
+                clienteSectorDisplay.textContent = apiInfo.sector || 'No especificado';
+            }
+            
+            // Información del Producto
+            const productoSolicitadoDisplay = document.getElementById('productoSolicitadoDisplay');
+            if (productoSolicitadoDisplay) {
+                productoSolicitadoDisplay.textContent = apiInfo.producto_solicitado || 'No especificado';
+            }
+            
+            const montoSolicitadoDisplay = document.getElementById('montoSolicitadoDisplay');
+            if (montoSolicitadoDisplay) {
+                if (apiInfo.monto_solicitado && apiInfo.monto_solicitado > 0) {
+                    // Format the amount as currency
+                    const formatter = new Intl.NumberFormat('es-PA', {
+                        style: 'currency',
+                        currency: 'USD',
+                        minimumFractionDigits: 2
+                    });
+                    montoSolicitadoDisplay.textContent = formatter.format(apiInfo.monto_solicitado);
+                } else {
+                    montoSolicitadoDisplay.textContent = 'No especificado';
+                }
+            }
             
             // API Source
             const apiSourceDisplay = document.getElementById('apiSourceDisplay');

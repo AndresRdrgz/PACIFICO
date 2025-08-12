@@ -9611,6 +9611,13 @@ def api_solicitud_brief(request, solicitud_id):
                 'creada_via_api': solicitud.creada_via_api,
                 'api_source': solicitud.api_source,
                 'observaciones': solicitud.observaciones,
+                'enlace_conversacion': solicitud.enlace_conversacion,
+                'cliente_nombre': solicitud.cliente_nombre,
+                'cliente_telefono': solicitud.cliente_telefono,
+                'cliente_cedula': solicitud.cliente_cedula,
+                'producto_solicitado': solicitud.producto_solicitado,
+                'monto_solicitado': float(solicitud.monto_solicitado) if solicitud.monto_solicitado else None,
+                'sector': solicitud.sector,
             },
         }, encoder=DjangoJSONEncoder)
         
