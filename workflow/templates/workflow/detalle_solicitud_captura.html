@@ -455,7 +455,46 @@
               </div>
             </div>
 
-
+            <!-- Contenedor de Citas de Firma -->
+            <div class="row mb-4">
+              <div class="col-12">
+                <div class="card signature-appointments-card">
+                  <div class="card-header bg-gradient-success text-white">
+                    <div class="d-flex align-items-center justify-content-between">
+                      <div class="d-flex align-items-center">
+                        <i class="fas fa-calendar-alt me-2" style="font-size: 1.2rem;"></i>
+                        <div>
+                          <h6 class="mb-0 fw-bold">Citas de Firma Programadas</h6>
+                          <small class="opacity-75">Agenda de firmas asociadas a esta solicitud</small>
+                        </div>
+                      </div>
+                      <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-light text-dark" id="contador-citas">
+                          <i class="fas fa-calendar-check me-1"></i>
+                          <span id="total-citas">0</span> cita(s)
+                        </span>
+                        <button type="button" class="btn btn-light btn-sm" onclick="mostrarModalNuevaCita()">
+                          <i class="fas fa-plus me-1"></i>
+                          Nueva Cita
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card-body p-0">
+                    <div id="contenedor-citas">
+                      <!-- Contenido dinámico de citas -->
+                    </div>
+                    
+                    <!-- Mensaje cuando no hay citas -->
+                    <div id="mensaje-sin-citas" class="text-center p-4 text-muted">
+                      <i class="fas fa-calendar-times fa-2x mb-2 opacity-50"></i>
+                      <p class="mb-0">No hay citas de firma programadas para esta solicitud</p>
+                      <small>Las citas se pueden crear desde la "Agenda de Firma"</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <!-- Sección de Asociar Entrevista de Cliente -->
             <div class="mt-4 mb-4">
@@ -3661,5 +3700,306 @@ function confirmarAvanceCaptura() {
     </div>
   </div>
 </div>
+
+{% block extra_js %}
+<script>
+// Variables globales para citas de firma
+let solicitudId = {{ solicitud.id }};
+
+// Función para mostrar modal de nueva cita
+function mostrarModalNuevaCita() {
+  console.log('📅 Abriendo modal para nueva cita de firma');
+  
+  const modalHtml = `
+    <div class="modal fade" id="modalAgendarFirma" tabindex="-1" aria-labelledby="modalAgendarFirmaLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header" style="background: linear-gradient(135deg, #28a745, #20c997); color: white; border-radius: 15px 15px 0 0;">
+            <h5 class="modal-title fw-bold" id="modalAgendarFirmaLabel">
+              <i class="fas fa-calendar-plus me-2"></i>Agendar Nueva Cita de Firma
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body" style="padding: 32px;">
+            <form id="formAgendarFirma">
+              <div class="row g-4">
+                <div class="col-md-6">
+                  <label for="fechaFirma" class="form-label fw-semibold">
+                    <i class="fas fa-calendar me-2 text-primary"></i>
+                    Fecha de la Cita *
+                  </label>
+                  <input type="date" class="form-control" id="fechaFirma" name="fecha_firma" required>
+                </div>
+                <div class="col-md-6">
+                  <label for="horaFirma" class="form-label fw-semibold">
+                    <i class="fas fa-clock me-2 text-primary"></i>
+                    Hora de la Cita *
+                  </label>
+                  <input type="time" class="form-control" id="horaFirma" name="hora_firma" required>
+                </div>
+                <div class="col-12">
+                  <label for="lugarFirma" class="form-label fw-semibold">
+                    <i class="fas fa-map-marker-alt me-2 text-success"></i>
+                    Lugar de la Firma *
+                  </label>
+                  <select class="form-select" id="lugarFirma" name="lugar_firma" required>
+                    <option value="">Seleccione un lugar...</option>
+                    <option value="casa_matriz">Casa Matriz</option>
+                    <option value="sucursal_chorrera">Sucursal La Chorrera</option>
+                    <option value="sucursal_arraijan">Sucursal Arraiján</option>
+                    <option value="sucursal_penonome">Sucursal Penonomé</option>
+                    <option value="oficina_cliente">En oficina del cliente</option>
+                    <option value="otro">Otro lugar</option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <label for="comentariosFirma" class="form-label fw-semibold">
+                    <i class="fas fa-comment me-2 text-secondary"></i>
+                    Comentarios
+                  </label>
+                  <textarea class="form-control" id="comentariosFirma" name="comentarios" rows="3" placeholder="Comentarios adicionales sobre la cita..."></textarea>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer" style="padding: 24px 32px; border: none; background: #f8f9fa;">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+              <i class="fas fa-times me-2"></i>Cancelar
+            </button>
+            <button type="button" class="btn btn-success" id="btnGuardarCitaFirma">
+              <i class="fas fa-save me-2"></i>Agendar Cita
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Remover modal existente si existe
+  const existingModal = document.getElementById('modalAgendarFirma');
+  if (existingModal) {
+    existingModal.remove();
+  }
+
+  // Agregar modal al DOM
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+  // Configurar fecha mínima (hoy)
+  const fechaInput = document.getElementById('fechaFirma');
+  const today = new Date().toISOString().split('T')[0];
+  fechaInput.min = today;
+
+  // Mostrar modal
+  const modal = new bootstrap.Modal(document.getElementById('modalAgendarFirma'));
+  modal.show();
+
+  // Event listener para guardar cita
+  document.getElementById('btnGuardarCitaFirma').addEventListener('click', function() {
+    guardarCitaFirma(solicitudId, modal);
+  });
+}
+
+// Función para guardar cita de firma
+function guardarCitaFirma(solicitudId, modal) {
+  const btnGuardar = document.getElementById('btnGuardarCitaFirma');
+  const textoOriginal = btnGuardar.innerHTML;
+  
+  // Mostrar estado de carga
+  btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Guardando...';
+  btnGuardar.disabled = true;
+
+  // Recopilar datos del formulario
+  const datos = {
+    solicitud_id: solicitudId,
+    fecha_firma: document.getElementById('fechaFirma').value,
+    hora_firma: document.getElementById('horaFirma').value,
+    lugar_firma: document.getElementById('lugarFirma').value,
+    comentarios: document.getElementById('comentariosFirma').value
+  };
+
+  console.log('📅 Guardando cita:', datos);
+
+  // Enviar datos al servidor
+  fetch('/workflow/api/agenda-firma/crear-cita/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCsrfToken()
+    },
+    body: JSON.stringify(datos)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      modal.hide();
+      if (typeof showToast !== 'undefined') {
+        showToast('Cita de firma agendada correctamente', 'success');
+      } else {
+        alert('Cita de firma agendada correctamente');
+      }
+      
+      // Recargar las citas sin recargar toda la página
+      cargarCitasFirma();
+      
+    } else {
+      if (typeof showToast !== 'undefined') {
+        showToast('Error al agendar cita: ' + data.error, 'error');
+      } else {
+        alert('Error al agendar cita: ' + data.error);
+      }
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    if (typeof showToast !== 'undefined') {
+      showToast('Error de conexión al agendar cita', 'error');
+    } else {
+      alert('Error de conexión al agendar cita');
+    }
+  })
+  .finally(() => {
+    btnGuardar.innerHTML = textoOriginal;
+    btnGuardar.disabled = false;
+  });
+}
+
+// Función para cargar las citas de firma
+function cargarCitasFirma() {
+  console.log('📅 Cargando citas de firma para solicitud:', solicitudId);
+  
+  fetch(`/workflow/api/agenda-firma/solicitud/${solicitudId}/`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        mostrarCitas(data.citas);
+        actualizarContadorCitas(data.citas.length);
+      } else {
+        console.error('Error al cargar citas:', data.error);
+        mostrarMensajeSinCitas();
+      }
+    })
+    .catch(error => {
+      console.error('Error de conexión al cargar citas:', error);
+      mostrarMensajeSinCitas();
+    });
+}
+
+// Función para mostrar las citas en el DOM
+function mostrarCitas(citas) {
+  const contenedor = document.getElementById('contenedor-citas');
+  const mensajeSinCitas = document.getElementById('mensaje-sin-citas');
+  
+  if (citas.length === 0) {
+    mostrarMensajeSinCitas();
+    return;
+  }
+
+  mensajeSinCitas.style.display = 'none';
+  
+  let citasHtml = '<div class="p-3">';
+  citas.forEach(cita => {
+    citasHtml += `
+      <div class="cita-item">
+        <div class="cita-header">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <i class="fas fa-calendar-alt text-success me-2"></i>
+              <div>
+                <div class="cita-fecha">${cita.fecha_formateada}</div>
+                <div class="cita-meta">
+                  <i class="fas fa-clock me-1"></i>
+                  ${formatearHora(cita.fecha_hora)}
+                </div>
+              </div>
+            </div>
+            <div class="text-end">
+              <span class="lugar-badge">
+                <i class="fas fa-map-marker-alt me-1"></i>
+                ${cita.lugar_firma_display}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="cita-body">
+          <div class="row">
+            <div class="col-md-8">
+              <div class="cita-comentarios mb-3">
+                <i class="fas fa-comment-alt me-2 text-muted"></i>
+                ${cita.comentarios || 'Sin comentarios adicionales'}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="cita-meta">
+                <div class="mb-2">
+                  <i class="fas fa-user me-1"></i>
+                  <strong>Creado por:</strong> ${cita.creado_por.nombre_completo}
+                </div>
+                <div>
+                  <i class="fas fa-calendar-plus me-1"></i>
+                  <strong>Fecha creación:</strong> ${formatearFecha(cita.fecha_creacion)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  citasHtml += '</div>';
+  
+  contenedor.innerHTML = citasHtml;
+}
+
+// Función para mostrar mensaje cuando no hay citas
+function mostrarMensajeSinCitas() {
+  const contenedor = document.getElementById('contenedor-citas');
+  const mensajeSinCitas = document.getElementById('mensaje-sin-citas');
+  
+  contenedor.innerHTML = '';
+  mensajeSinCitas.style.display = 'block';
+}
+
+// Función para actualizar contador de citas
+function actualizarContadorCitas(total) {
+  const contadorElement = document.getElementById('total-citas');
+  if (contadorElement) {
+    contadorElement.textContent = total;
+  }
+}
+
+// Función auxiliar para obtener CSRF token
+function getCsrfToken() {
+  return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+         document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
+
+// Función auxiliar para formatear hora desde ISO string
+function formatearHora(isoString) {
+  const fecha = new Date(isoString);
+  return fecha.toLocaleTimeString('es-ES', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    hour12: true 
+  });
+}
+
+// Función auxiliar para formatear fecha desde ISO string
+function formatearFecha(isoString) {
+  const fecha = new Date(isoString);
+  return fecha.toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+}
+
+// Cargar citas al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('📅 Página cargada, cargando citas de firma...');
+  cargarCitasFirma();
+});
+
+</script>
+{% endblock %}
 
 {% endblock %}
