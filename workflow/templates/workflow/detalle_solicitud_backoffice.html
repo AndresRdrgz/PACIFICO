@@ -755,6 +755,154 @@
 
                 <div class="process-details">
                   {% for archivo_info in archivos %}
+                  
+                  {% if archivo_info.es_agenda_firma %}
+                  <!-- ✅ VISTA ESPECIAL PARA AGENDA DE FIRMA -->
+                  <div class="detail-card archivo-card-mejorada-backoffice agenda-firma-card-backoffice"
+                    data-requisito-id="{{ archivo_info.archivo_actual.id|default:'agenda-firma' }}">
+                    <!-- Header de agenda de firma -->
+                    <div class="archivo-header-backoffice">
+                      <!-- IZQUIERDA: Información de la agenda -->
+                      <div class="archivo-info-basica-backoffice">
+                        <div class="detail-icon archivo-icon-backoffice">
+                          {% if archivo_info.tiene_cita_real|default:archivo_info.agenda_firma %}
+                          <i class="fas fa-calendar-check text-success"></i>
+                          {% else %}
+                          <i class="fas fa-calendar-plus text-warning"></i>
+                          {% endif %}
+                        </div>
+                        <div class="detail-content-backoffice">
+                          <h6>{{ archivo_info.requisito.nombre }}</h6>
+                          <p class="mb-1">{{ archivo_info.requisito.descripcion|default:"Requisito para agendar una cita de firma de documentos" }}
+                          </p>
+
+                          {% if archivo_info.tiene_cita_real|default:archivo_info.agenda_firma %}
+                          <!-- Información de la cita agendada -->
+                          <div class="agenda-info-backoffice mt-2">
+                            <span class="badge bg-success me-2">
+                              <i class="fas fa-calendar-check me-1"></i>Cita Agendada
+                            </span>
+                            
+                            {% if archivo_info.obligatorio %}
+                            <span class="badge bg-danger me-2">
+                              <i class="fas fa-exclamation-circle me-1"></i>Obligatorio
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary me-2">
+                              <i class="fas fa-info-circle me-1"></i>Opcional
+                            </span>
+                            {% endif %}
+                            
+                            <div class="mt-2">
+                              <small class="text-muted d-block">
+                                <i class="fas fa-calendar me-1"></i>
+                                <strong>Fecha:</strong> {{ archivo_info.agenda_firma.fecha_formateada }}
+                              </small>
+                              <small class="text-muted d-block">
+                                <i class="fas fa-map-marker-alt me-1"></i>
+                                <strong>Lugar:</strong> {{ archivo_info.agenda_firma.lugar_firma_display }}
+                              </small>
+                              {% if archivo_info.agenda_firma.comentarios %}
+                              <small class="text-muted d-block">
+                                <i class="fas fa-comment me-1"></i>
+                                <strong>Comentarios:</strong> {{ archivo_info.agenda_firma.comentarios }}
+                              </small>
+                              {% endif %}
+                            </div>
+                          </div>
+                          {% else %}
+                          <!-- Sin cita agendada -->
+                          <div class="agenda-info-backoffice mt-2">
+                            <span class="badge bg-warning me-2">
+                              <i class="fas fa-exclamation-triangle me-1"></i>Sin Agendar
+                            </span>
+                            
+                            {% if archivo_info.obligatorio %}
+                            <small class="text-danger">Obligatorio</small>
+                            {% else %}
+                            <small class="text-muted">Opcional</small>
+                            {% endif %}
+                          </div>
+                          {% endif %}
+
+                          {% if archivo_info.mensaje_personalizado %}
+                          <div class="mensaje-personalizado mt-2">
+                            <small class="text-info">
+                              <i class="fas fa-info-circle me-1"></i>
+                              {{ archivo_info.mensaje_personalizado }}
+                            </small>
+                          </div>
+                          {% endif %}
+                        </div>
+                      </div>
+
+                      <!-- CENTRO: Botón de Agendar/Ver Agenda -->
+                      <div class="seccion-ver-descargar-backoffice">
+                        <div class="btn-group">
+                          {% if archivo_info.tiene_cita_real|default:archivo_info.agenda_firma %}
+                          <!-- Ver detalles de la agenda -->
+                          <button type="button" class="btn btn-outline-info" 
+                            onclick="verDetallesAgenda({{ archivo_info.agenda_firma.id }})"
+                            title="Ver detalles de la cita">
+                            <i class="fas fa-calendar-alt"></i> Ver Agenda
+                          </button>
+                          <button type="button" class="btn btn-outline-primary" 
+                            onclick="editarAgenda({{ archivo_info.agenda_firma.id }})"
+                            title="Modificar cita">
+                            <i class="fas fa-edit"></i> Modificar
+                          </button>
+                          {% else %}
+                          <!-- Agendar nueva cita -->
+                          <button type="button" class="btn btn-outline-success" 
+                            onclick="abrirModalAgendarFirma({{ solicitud.id }})"
+                            title="Agendar nueva cita de firma">
+                            <i class="fas fa-calendar-plus"></i> Agendar Firma
+                          </button>
+                          {% endif %}
+                        </div>
+                      </div>
+
+                      <!-- DERECHA: Botones de calificación para agenda -->
+                      <div class="seccion-acciones-derecha-backoffice">
+                        <div class="botones-calificacion-backoffice botones-checklist-optimizado">
+                          {% if archivo_info.tiene_cita_real|default:archivo_info.agenda_firma %}
+                          <!-- Cita agendada: botones de calificación -->
+                          <button type="button" class="btn calificar-btn-backoffice activo" data-estado="completo"
+                            title="Cita agendada correctamente">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Completo</span>
+                          </button>
+                          {% else %}
+                          <!-- Sin cita: botón para agendar -->
+                          <button type="button" class="btn calificar-btn-backoffice" data-estado="pendiente"
+                            onclick="abrirModalAgendarFirma({{ solicitud.id }})"
+                            title="Agendar cita de firma">
+                            <i class="fas fa-calendar-plus"></i>
+                            <span>Agendar</span>
+                          </button>
+                          {% endif %}
+                          
+                          <!-- Información adicional para agenda -->
+                          <div class="mt-2">
+                            {% if not archivo_info.tiene_cita_real|default:archivo_info.agenda_firma %}
+                              {% if archivo_info.obligatorio %}
+                                <small class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Cita requerida - Debe agendar</small>
+                                <br>
+                                <small class="text-danger">Agenda obligatoria</small>
+                              {% else %}
+                                <small class="text-warning"><i class="fas fa-info-circle me-1"></i>Sin agendar - Opcional</small>
+                                <br>
+                                <small class="text-muted">Agenda opcional</small>
+                              {% endif %}
+                            {% endif %}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {% else %}
+                  <!-- ✅ VISTA NORMAL PARA ARCHIVOS -->
                   <div class="detail-card archivo-card-mejorada-backoffice"
                     data-requisito-id="{{ archivo_info.archivo_actual.id }}">
                     <!-- Header del archivo -->
@@ -954,6 +1102,7 @@
 
 
                   </div>
+                  {% endif %}
                   {% endfor %}
                 </div>
 
@@ -4519,6 +4668,373 @@ window.VERIFICAR_ESTADO_BOTON_BACKEND = function() {
   
   return true;
 };
+
+// ========================================
+// FUNCIONES PARA AGENDA DE FIRMA
+// ========================================
+
+/**
+ * Función para ver detalles de una agenda de firma
+ */
+window.verDetallesAgenda = function(agendaId) {
+  console.log('📅 Ver detalles de agenda:', agendaId);
+  
+  try {
+    // Crear modal dinámico para mostrar detalles
+    const modalHtml = `
+      <div class="modal fade" id="modalDetallesAgenda" tabindex="-1" aria-labelledby="modalDetallesAgendaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); border: none; padding: 24px 32px 20px 32px;">
+              <h5 class="modal-title text-white fw-bold" id="modalDetallesAgendaLabel">
+                <i class="fas fa-calendar-check me-2"></i>
+                Detalles de la Cita de Firma
+              </h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="padding: 32px;">
+              <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Cargando...</span>
+                </div>
+                <p class="mt-3">Cargando detalles de la cita...</p>
+              </div>
+            </div>
+            <div class="modal-footer" style="padding: 24px 32px; border: none; background: #f8f9fa;">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <i class="fas fa-times me-2"></i>Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Remover modal existente si existe
+    const existingModal = document.getElementById('modalDetallesAgenda');
+    if (existingModal) {
+      existingModal.remove();
+    }
+
+    // Agregar modal al DOM
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalDetallesAgenda'));
+    modal.show();
+
+    // Cargar detalles de la agenda
+    fetch(`/workflow/api/agenda-firma/${agendaId}/detalles/`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          const agenda = data.agenda;
+          const modalBody = document.querySelector('#modalDetallesAgenda .modal-body');
+          modalBody.innerHTML = `
+            <div class="agenda-detalles">
+              <div class="row g-4">
+                <div class="col-md-6">
+                  <div class="info-card">
+                    <h6 class="text-primary mb-2">
+                      <i class="fas fa-calendar me-2"></i>Fecha y Hora
+                    </h6>
+                    <p class="mb-0 fw-semibold">${agenda.fecha_formateada}</p>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="info-card">
+                    <h6 class="text-primary mb-2">
+                      <i class="fas fa-map-marker-alt me-2"></i>Lugar
+                    </h6>
+                    <p class="mb-0 fw-semibold">${agenda.lugar_firma_display}</p>
+                  </div>
+                </div>
+                <div class="col-12">
+                  <div class="info-card">
+                    <h6 class="text-primary mb-2">
+                      <i class="fas fa-user me-2"></i>Cliente
+                    </h6>
+                    <p class="mb-0">${agenda.cliente_nombre} - ${agenda.cliente_cedula}</p>
+                  </div>
+                </div>
+                ${agenda.comentarios ? `
+                <div class="col-12">
+                  <div class="info-card">
+                    <h6 class="text-primary mb-2">
+                      <i class="fas fa-comment me-2"></i>Comentarios
+                    </h6>
+                    <p class="mb-0">${agenda.comentarios}</p>
+                  </div>
+                </div>
+                ` : ''}
+                <div class="col-12">
+                  <div class="info-card">
+                    <h6 class="text-secondary mb-2">
+                      <i class="fas fa-info-circle me-2"></i>Información Adicional
+                    </h6>
+                    <small class="text-muted">
+                      Creado por: ${agenda.creado_por}<br>
+                      Fecha de creación: ${new Date(agenda.fecha_creacion).toLocaleString()}
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          document.querySelector('#modalDetallesAgenda .modal-body').innerHTML = `
+            <div class="alert alert-danger">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              Error al cargar los detalles: ${data.error}
+            </div>
+          `;
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        document.querySelector('#modalDetallesAgenda .modal-body').innerHTML = `
+          <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Error de conexión al cargar los detalles.
+          </div>
+        `;
+      });
+
+  } catch (error) {
+    console.error('Error al mostrar detalles de agenda:', error);
+    if (typeof showToast !== 'undefined') {
+      showToast('Error al mostrar detalles de la agenda', 'error');
+    } else {
+      alert('Error al mostrar detalles de la agenda');
+    }
+  }
+};
+
+/**
+ * Función para editar una agenda de firma
+ */
+window.editarAgenda = function(agendaId) {
+  console.log('✏️ Editar agenda:', agendaId);
+  
+  try {
+    // Abrir la página de agenda de firma en modo edición
+    const editarUrl = `/workflow/agenda-firma/?editar_id=${agendaId}&from_modal=1`;
+    const ventana = window.open(editarUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+    
+    if (!ventana) {
+      // Si el popup fue bloqueado, mostrar alternativa
+      if (confirm('No se pudo abrir la ventana de edición. ¿Desea navegar a la página de agenda de firma?')) {
+        window.location.href = editarUrl;
+      }
+    } else {
+      // Mostrar mensaje informativo
+      if (typeof showToast !== 'undefined') {
+        showToast('Abriendo editor de agenda de firma...', 'info');
+      }
+    }
+    
+  } catch (error) {
+    console.error('Error al abrir editor de agenda:', error);
+    if (typeof showToast !== 'undefined') {
+      showToast('Error al abrir el editor de agenda', 'error');
+    } else {
+      alert('Error al abrir el editor de agenda');
+    }
+  }
+};
+
+/**
+ * Función para abrir modal de agendar firma
+ */
+window.abrirModalAgendarFirma = function(solicitudId) {
+  console.log('📅 Abrir modal para agendar firma, solicitud:', solicitudId);
+  
+  try {
+    // Crear modal dinámico para agendar firma
+    const modalHtml = `
+      <div class="modal fade" id="modalAgendarFirma" tabindex="-1" aria-labelledby="modalAgendarFirmaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content" style="border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border: none; padding: 24px 32px 20px 32px;">
+              <h5 class="modal-title text-white fw-bold" id="modalAgendarFirmaLabel">
+                <i class="fas fa-calendar-plus me-2"></i>
+                Agendar Cita de Firma
+              </h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="padding: 32px;">
+              <form id="formAgendarFirma">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label for="fechaFirma" class="form-label fw-semibold">
+                      <i class="fas fa-calendar me-2 text-primary"></i>
+                      Fecha de la Cita *
+                    </label>
+                    <input type="date" class="form-control" id="fechaFirma" name="fecha" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="horaFirma" class="form-label fw-semibold">
+                      <i class="fas fa-clock me-2 text-primary"></i>
+                      Hora de la Cita *
+                    </label>
+                    <input type="time" class="form-control" id="horaFirma" name="hora" required>
+                  </div>
+                  <div class="col-12">
+                    <label for="lugarFirma" class="form-label fw-semibold">
+                      <i class="fas fa-map-marker-alt me-2 text-primary"></i>
+                      Lugar de la Firma *
+                    </label>
+                    <select class="form-select" id="lugarFirma" name="lugar_firma" required>
+                      <option value="">Seleccionar lugar...</option>
+                      <option value="delivery">Delivery</option>
+                      <option value="apoyo">Apoyo</option>
+                      <option value="casa_matriz">Casa Matriz</option>
+                    </select>
+                  </div>
+                  <div class="col-12">
+                    <label for="comentariosFirma" class="form-label fw-semibold">
+                      <i class="fas fa-comment me-2 text-secondary"></i>
+                      Comentarios
+                    </label>
+                    <textarea class="form-control" id="comentariosFirma" name="comentarios" rows="3" placeholder="Comentarios adicionales sobre la cita..."></textarea>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer" style="padding: 24px 32px; border: none; background: #f8f9fa;">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                <i class="fas fa-times me-2"></i>Cancelar
+              </button>
+              <button type="button" class="btn btn-success" id="btnGuardarCitaFirma">
+                <i class="fas fa-save me-2"></i>Agendar Cita
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Remover modal existente si existe
+    const existingModal = document.getElementById('modalAgendarFirma');
+    if (existingModal) {
+      existingModal.remove();
+    }
+
+    // Agregar modal al DOM
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    // Configurar fecha mínima (hoy)
+    const fechaInput = document.getElementById('fechaFirma');
+    const today = new Date().toISOString().split('T')[0];
+    fechaInput.min = today;
+
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalAgendarFirma'));
+    modal.show();
+
+    // Event listener para guardar cita
+    document.getElementById('btnGuardarCitaFirma').addEventListener('click', function() {
+      guardarCitaFirma(solicitudId, modal);
+    });
+
+  } catch (error) {
+    console.error('Error al abrir modal de agendar firma:', error);
+    if (typeof showToast !== 'undefined') {
+      showToast('Error al abrir el formulario de agenda', 'error');
+    } else {
+      alert('Error al abrir el formulario de agenda');
+    }
+  }
+};
+
+/**
+ * Función auxiliar para guardar cita de firma
+ */
+function guardarCitaFirma(solicitudId, modal) {
+  const form = document.getElementById('formAgendarFirma');
+  const formData = new FormData(form);
+  
+  // Validar campos requeridos
+  if (!formData.get('fecha') || !formData.get('hora') || !formData.get('lugar_firma')) {
+    if (typeof showToast !== 'undefined') {
+      showToast('Por favor complete todos los campos obligatorios', 'warning');
+    } else {
+      alert('Por favor complete todos los campos obligatorios');
+    }
+    return;
+  }
+
+  // Combinar fecha y hora
+  const fecha = formData.get('fecha');
+  const hora = formData.get('hora');
+  const fechaHora = `${fecha}T${hora}:00`;
+
+  const btnGuardar = document.getElementById('btnGuardarCitaFirma');
+  const textoOriginal = btnGuardar.innerHTML;
+  btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Guardando...';
+  btnGuardar.disabled = true;
+
+  // Datos para enviar
+  const datos = {
+    solicitud_id: solicitudId,
+    fecha_hora: fechaHora,
+    lugar_firma: formData.get('lugar_firma'),
+    comentarios: formData.get('comentarios') || ''
+  };
+
+  console.log('📅 Guardando cita:', datos);
+
+  // Enviar datos al servidor
+  fetch('/workflow/api/agenda-firma/crear-cita/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCsrfToken()
+    },
+    body: JSON.stringify(datos)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      modal.hide();
+      if (typeof showToast !== 'undefined') {
+        showToast('Cita de firma agendada correctamente', 'success');
+      } else {
+        alert('Cita de firma agendada correctamente');
+      }
+      
+      // Recargar página para mostrar la nueva cita
+      setTimeout(() => {
+        location.reload();
+      }, 1500);
+      
+    } else {
+      if (typeof showToast !== 'undefined') {
+        showToast('Error al agendar cita: ' + data.error, 'error');
+      } else {
+        alert('Error al agendar cita: ' + data.error);
+      }
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    if (typeof showToast !== 'undefined') {
+      showToast('Error de conexión al agendar cita', 'error');
+    } else {
+      alert('Error de conexión al agendar cita');
+    }
+  })
+  .finally(() => {
+    btnGuardar.innerHTML = textoOriginal;
+    btnGuardar.disabled = false;
+  });
+}
+
+// Función auxiliar para obtener CSRF token
+function getCsrfToken() {
+  return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+         document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
 
 </script>
 

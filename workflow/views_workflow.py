@@ -768,7 +768,9 @@ def detalle_solicitud(request, solicitud_id):
                         'mensaje_personalizado': req_transicion.mensaje_personalizado,
                         'archivo_actual': None,
                         'esta_cumplido': False,
-                        'tipo_transicion': 'entrada'
+                        'tipo_transicion': 'entrada',
+                        'es_agenda_firma': req_transicion.requisito.tipo_especial == 'agenda_firma',
+                        'agenda_firma': None
                     }
         
         # Verificar qué archivos ya están subidos (usar RequisitoSolicitud)
@@ -828,11 +830,39 @@ def detalle_solicitud(request, solicitud_id):
                         except Exception as e:
                             print(f"❌ F1 Error creando calificación: {e}")
 
-                requisitos_necesarios[req_id]['archivo_actual'] = req_sol
-                requisitos_necesarios[req_id]['esta_cumplido'] = req_sol.cumplido and bool(req_sol.archivo)
+                # Lógica especial para requisito de agenda de firma
+                if req_sol.requisito.tipo_especial == 'agenda_firma':
+                    # ✅ Para agenda de firma, obtener información pero no marcar como faltante
+                    from .modelsWorkflow import AgendaFirma
+                    agenda_firma = AgendaFirma.objects.filter(solicitud=solicitud).first()
+                    
+                    requisitos_necesarios[req_id]['archivo_actual'] = req_sol
+                    # Siempre marcar como cumplido para que no bloquee el proceso
+                    requisitos_necesarios[req_id]['esta_cumplido'] = True  
+                    requisitos_necesarios[req_id]['agenda_firma'] = agenda_firma
+                    requisitos_necesarios[req_id]['es_agenda_firma'] = True
+                    # Agregar info adicional para el template
+                    requisitos_necesarios[req_id]['tiene_cita_real'] = bool(agenda_firma)
+                else:
+                    # Lógica normal para archivos
+                    requisitos_necesarios[req_id]['archivo_actual'] = req_sol
+                    requisitos_necesarios[req_id]['esta_cumplido'] = req_sol.cumplido and bool(req_sol.archivo)
+                    requisitos_necesarios[req_id]['es_agenda_firma'] = False
+                
                 requisitos_necesarios[req_id]['calificaciones_backoffice'] = list(calificaciones)
                 requisitos_necesarios[req_id]['comentarios_backoffice'] = list(comentarios)
                 requisitos_necesarios[req_id]['ultima_calificacion'] = calificaciones.first() if calificaciones.exists() else None
+        
+        # Verificar agenda de firma para requisitos que no tienen RequisitoSolicitud todavía
+        for req_id, req_data in requisitos_necesarios.items():
+            if req_data['es_agenda_firma'] and not req_data['archivo_actual']:
+                from .modelsWorkflow import AgendaFirma
+                agenda_firma = AgendaFirma.objects.filter(solicitud=solicitud).first()
+                req_data['agenda_firma'] = agenda_firma
+                # Siempre marcar como cumplido para que no bloquee el proceso
+                req_data['esta_cumplido'] = True
+                # Agregar info adicional para el template
+                req_data['tiene_cita_real'] = bool(agenda_firma)
         
         # Asignar archivos a cada subestado (por ahora todos los subestados muestran los mismos archivos)
         for subestado in solicitud.etapa_actual.subestados.all():
@@ -8091,10 +8121,9 @@ def verificar_requisitos_transicion(solicitud, transicion):
         
         # Lógica especial para requisito de agenda de firma
         if req_transicion.requisito.tipo_especial == 'agenda_firma':
-            # Para agenda de firma, verificar si existe una cita agendada
-            from workflow.modelsWorkflow import AgendaFirma
-            tiene_cita_agendada = AgendaFirma.objects.filter(solicitud=solicitud).exists()
-            esta_cumplido = tiene_cita_agendada
+            # ✅ IMPORTANTE: Agenda de firma NO bloquea transiciones en Back Office
+            # Es un requisito informativo que no impide el avance del proceso
+            esta_cumplido = True  # Siempre considerar como cumplido para no bloquear
         else:
             # Considerar un requisito como cumplido si:
             # 1. Existe el RequisitoSolicitud Y
@@ -10779,10 +10808,12 @@ def api_obtener_requisitos_faltantes_detallado(request, solicitud_id):
             
             # Lógica especial para requisito de agenda de firma
             if req_transicion.requisito.tipo_especial == 'agenda_firma':
-                # Para agenda de firma, verificar si existe una cita agendada
+                # ✅ IMPORTANTE: Agenda de firma es informativa, no bloquea el proceso
+                # Verificar si existe una cita agendada para mostrar el estado correcto en la UI
                 from workflow.modelsWorkflow import AgendaFirma
                 tiene_cita_agendada = AgendaFirma.objects.filter(solicitud=solicitud).exists()
-                esta_completo = tiene_cita_agendada
+                # Para efectos de conteo y validación, siempre considerarlo completo
+                esta_completo = True  # No cuenta como faltante para validaciones
             else:
                 # Determinar si está completo - considerar archivos subidos desde drawer
                 # Un requisito está completo si:
@@ -16187,6 +16218,11 @@ def api_validar_documentos_backoffice(request, solicitud_id):
         
         # Validar documentos - Solo documentos OBLIGATORIOS calificados como "malo" bloquean el avance
         for req_sol in requisitos_solicitud:
+            # ✅ IMPORTANTE: Excluir agenda de firma de todas las validaciones bloqueantes
+            if req_sol.requisito.tipo_especial == 'agenda_firma':
+                print(f"📅 SALTANDO validación de agenda de firma: {req_sol.requisito.nombre} (no bloquea)")
+                continue  # Saltar completamente la validación de agenda de firma
+            
             # Buscar la calificación más reciente
             calificacion = CalificacionDocumentoBackoffice.objects.filter(
                 requisito_solicitud=req_sol
@@ -16260,6 +16296,11 @@ def api_validar_documentos_backoffice(request, solicitud_id):
         # ✅ NUEVO: Incluir documentos definidos en RequisitoTransicion que NO están en RequisitoSolicitud
         # Estos son documentos requeridos que el usuario aún no ha subido
         for req_id, req_info in requisitos_definidos.items():
+            # ✅ IMPORTANTE: Excluir agenda de firma de validaciones de documentos faltantes
+            if req_info['requisito'].tipo_especial == 'agenda_firma':
+                print(f"📅 SALTANDO documento faltante agenda de firma: {req_info['requisito'].nombre} (no bloquea)")
+                continue  # Saltar completamente la agenda de firma
+            
             # Si no existe un RequisitoSolicitud para este requisito
             if not requisitos_solicitud.filter(requisito_id=req_id).exists():
                 documentos_pendientes.append({
@@ -16274,6 +16315,11 @@ def api_validar_documentos_backoffice(request, solicitud_id):
         
         # Verificar documentos obligatorios que no han sido calificados
         for req_id, req_info in requisitos_definidos.items():
+            # ✅ IMPORTANTE: Excluir agenda de firma de validaciones de documentos obligatorios
+            if req_info['requisito'].tipo_especial == 'agenda_firma':
+                print(f"📅 SALTANDO validación obligatoria agenda de firma: {req_info['requisito'].nombre} (no bloquea)")
+                continue  # Saltar completamente la agenda de firma
+            
             es_obligatorio = req_info['obligatorio']
             if es_obligatorio:
                 # Buscar si existe calificación para este documento obligatorio
@@ -17630,6 +17676,61 @@ def api_crear_cita_firma(request):
         return JsonResponse({
             'success': False,
             'error': f'Error al crear cita: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_obtener_detalles_agenda_firma(request, agenda_id):
+    """
+    API para obtener detalles de una agenda de firma específica
+    """
+    try:
+        # Verificar que la agenda existe
+        try:
+            agenda = AgendaFirma.objects.select_related('solicitud', 'creado_por').get(id=agenda_id)
+        except AgendaFirma.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Agenda de firma no encontrada'
+            }, status=404)
+        
+        # Verificar permisos - el usuario debe poder ver la solicitud
+        solicitud = agenda.solicitud
+        if not (request.user.is_superuser or 
+                request.user.is_staff or 
+                solicitud.creada_por == request.user or 
+                solicitud.asignada_a == request.user):
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para ver esta agenda'
+            }, status=403)
+        
+        # Preparar datos de la agenda
+        agenda_data = {
+            'id': agenda.id,
+            'fecha_hora': agenda.fecha_hora.isoformat(),
+            'fecha_formateada': agenda.fecha_formateada,
+            'lugar_firma': agenda.lugar_firma,
+            'lugar_firma_display': agenda.lugar_firma_display,
+            'comentarios': agenda.comentarios,
+            'cliente_nombre': agenda.cliente_nombre,
+            'cliente_cedula': agenda.cliente_cedula,
+            'creado_por': agenda.creado_por.get_full_name() or agenda.creado_por.username,
+            'fecha_creacion': agenda.fecha_creacion.isoformat(),
+            'solicitud_codigo': agenda.solicitud_codigo
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'agenda': agenda_data
+        })
+        
+    except Exception as e:
+        print(f"❌ Error al obtener detalles de agenda {agenda_id}: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': f'Error interno del servidor: {str(e)}'
         }, status=500)
 
 
