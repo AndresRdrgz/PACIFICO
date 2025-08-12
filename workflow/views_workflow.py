@@ -755,6 +755,11 @@ def detalle_solicitud(request, solicitud_id):
         # Procesar requisitos de transiciones de entrada
         for transicion in transiciones_entrada:
             for req_transicion in transicion.requisitos_obligatorios.all():
+                # ✅ FILTRAR POR TIPO DE PRÉSTAMO usando el método del modelo
+                if solicitud.cotizacion and hasattr(solicitud.cotizacion, 'tipoPrestamo'):
+                    if not req_transicion.aplica_para_cotizacion(solicitud.cotizacion):
+                        continue  # Saltar este requisito si no aplica para este tipo de préstamo
+                
                 req_id = req_transicion.requisito.id
                 if req_id not in requisitos_necesarios:
                     requisitos_necesarios[req_id] = {
@@ -763,7 +768,9 @@ def detalle_solicitud(request, solicitud_id):
                         'mensaje_personalizado': req_transicion.mensaje_personalizado,
                         'archivo_actual': None,
                         'esta_cumplido': False,
-                        'tipo_transicion': 'entrada'
+                        'tipo_transicion': 'entrada',
+                        'es_agenda_firma': req_transicion.requisito.tipo_especial == 'agenda_firma',
+                        'agenda_firma': None
                     }
         
         # Verificar qué archivos ya están subidos (usar RequisitoSolicitud)
@@ -823,11 +830,39 @@ def detalle_solicitud(request, solicitud_id):
                         except Exception as e:
                             print(f"❌ F1 Error creando calificación: {e}")
 
-                requisitos_necesarios[req_id]['archivo_actual'] = req_sol
-                requisitos_necesarios[req_id]['esta_cumplido'] = req_sol.cumplido and bool(req_sol.archivo)
+                # Lógica especial para requisito de agenda de firma
+                if req_sol.requisito.tipo_especial == 'agenda_firma':
+                    # ✅ Para agenda de firma, obtener información pero no marcar como faltante
+                    from .modelsWorkflow import AgendaFirma
+                    agenda_firma = AgendaFirma.objects.filter(solicitud=solicitud).first()
+                    
+                    requisitos_necesarios[req_id]['archivo_actual'] = req_sol
+                    # Siempre marcar como cumplido para que no bloquee el proceso
+                    requisitos_necesarios[req_id]['esta_cumplido'] = True  
+                    requisitos_necesarios[req_id]['agenda_firma'] = agenda_firma
+                    requisitos_necesarios[req_id]['es_agenda_firma'] = True
+                    # Agregar info adicional para el template
+                    requisitos_necesarios[req_id]['tiene_cita_real'] = bool(agenda_firma)
+                else:
+                    # Lógica normal para archivos
+                    requisitos_necesarios[req_id]['archivo_actual'] = req_sol
+                    requisitos_necesarios[req_id]['esta_cumplido'] = req_sol.cumplido and bool(req_sol.archivo)
+                    requisitos_necesarios[req_id]['es_agenda_firma'] = False
+                
                 requisitos_necesarios[req_id]['calificaciones_backoffice'] = list(calificaciones)
                 requisitos_necesarios[req_id]['comentarios_backoffice'] = list(comentarios)
                 requisitos_necesarios[req_id]['ultima_calificacion'] = calificaciones.first() if calificaciones.exists() else None
+        
+        # Verificar agenda de firma para requisitos que no tienen RequisitoSolicitud todavía
+        for req_id, req_data in requisitos_necesarios.items():
+            if req_data['es_agenda_firma'] and not req_data['archivo_actual']:
+                from .modelsWorkflow import AgendaFirma
+                agenda_firma = AgendaFirma.objects.filter(solicitud=solicitud).first()
+                req_data['agenda_firma'] = agenda_firma
+                # Siempre marcar como cumplido para que no bloquee el proceso
+                req_data['esta_cumplido'] = True
+                # Agregar info adicional para el template
+                req_data['tiene_cita_real'] = bool(agenda_firma)
         
         # Asignar archivos a cada subestado (por ahora todos los subestados muestran los mismos archivos)
         for subestado in solicitud.etapa_actual.subestados.all():
@@ -1983,6 +2018,7 @@ def api_crear_transicion(request, pipeline_id):
             etapa_destino_id = request.POST.get('etapa_destino')
             nombre = request.POST.get('nombre')
             requiere_permiso = request.POST.get('requiere_permiso') == 'true'
+            tipo_prestamo_aplicable = request.POST.get('tipo_prestamo_aplicable', 'todos')
             
             if not all([etapa_origen_id, etapa_destino_id, nombre]):
                 return JsonResponse({'success': False, 'error': 'Todos los campos son obligatorios'})
@@ -1990,12 +2026,22 @@ def api_crear_transicion(request, pipeline_id):
             etapa_origen = get_object_or_404(Etapa, id=etapa_origen_id, pipeline=pipeline)
             etapa_destino = get_object_or_404(Etapa, id=etapa_destino_id, pipeline=pipeline)
             
+            # Verificar si ya existe una transición con el mismo tipo de préstamo
+            if TransicionEtapa.objects.filter(
+                pipeline=pipeline,
+                etapa_origen=etapa_origen,
+                etapa_destino=etapa_destino,
+                tipo_prestamo_aplicable=tipo_prestamo_aplicable
+            ).exists():
+                return JsonResponse({'success': False, 'error': f'Ya existe una transición de {etapa_origen.nombre} a {etapa_destino.nombre} para {dict(TransicionEtapa.TIPO_PRESTAMO_CHOICES)[tipo_prestamo_aplicable]}'})
+            
             transicion = TransicionEtapa.objects.create(
                 pipeline=pipeline,
                 etapa_origen=etapa_origen,
                 etapa_destino=etapa_destino,
                 nombre=nombre,
-                requiere_permiso=requiere_permiso
+                requiere_permiso=requiere_permiso,
+                tipo_prestamo_aplicable=tipo_prestamo_aplicable
             )
             
             return JsonResponse({
@@ -2005,7 +2051,8 @@ def api_crear_transicion(request, pipeline_id):
                     'nombre': transicion.nombre,
                     'etapa_origen': transicion.etapa_origen.nombre,
                     'etapa_destino': transicion.etapa_destino.nombre,
-                    'requiere_permiso': transicion.requiere_permiso
+                    'requiere_permiso': transicion.requiere_permiso,
+                    'tipo_prestamo_aplicable': transicion.tipo_prestamo_aplicable
                 }
             })
         except Exception as e:
@@ -2163,6 +2210,7 @@ def api_editar_transicion(request, transicion_id):
             nombre = request.POST.get('nombre')
             etapa_origen_id = request.POST.get('etapa_origen')
             etapa_destino_id = request.POST.get('etapa_destino')
+            tipo_prestamo_aplicable = request.POST.get('tipo_prestamo_aplicable', 'todos')
             
             # Validaciones
             if not nombre or not etapa_origen_id or not etapa_destino_id:
@@ -2187,23 +2235,25 @@ def api_editar_transicion(request, transicion_id):
                     'error': 'Una o ambas etapas no existen o no pertenecen al pipeline'
                 })
             
-            # Verificar que no hay otra transición con el mismo origen y destino
+            # Verificar que no hay otra transición con el mismo origen, destino y tipo de préstamo
             transicion_existente = TransicionEtapa.objects.filter(
                 pipeline=transicion.pipeline,
                 etapa_origen=etapa_origen,
-                etapa_destino=etapa_destino
+                etapa_destino=etapa_destino,
+                tipo_prestamo_aplicable=tipo_prestamo_aplicable
             ).exclude(id=transicion_id).first()
             
             if transicion_existente:
                 return JsonResponse({
                     'success': False, 
-                    'error': 'Ya existe una transición entre estas etapas'
+                    'error': f'Ya existe una transición de {etapa_origen.nombre} a {etapa_destino.nombre} para {dict(TransicionEtapa.TIPO_PRESTAMO_CHOICES)[tipo_prestamo_aplicable]}'
                 })
             
             # Actualizar la transición
             transicion.nombre = nombre
             transicion.etapa_origen = etapa_origen
             transicion.etapa_destino = etapa_destino
+            transicion.tipo_prestamo_aplicable = tipo_prestamo_aplicable
             transicion.save()
             
             return JsonResponse({'success': True})
@@ -2329,7 +2379,8 @@ def api_obtener_datos_pipeline(request, pipeline_id):
                 'etapa_destino': transicion.etapa_destino.nombre,
                 'etapa_origen_id': transicion.etapa_origen.id,
                 'etapa_destino_id': transicion.etapa_destino.id,
-                'requiere_permiso': transicion.requiere_permiso
+                'requiere_permiso': transicion.requiere_permiso,
+                'tipo_prestamo_aplicable': transicion.tipo_prestamo_aplicable
             })
         
         # Requisitos
@@ -4280,6 +4331,7 @@ def api_crear_transicion(request, pipeline_id):
             etapa_destino_id = request.POST.get('etapa_destino')
             nombre = request.POST.get('nombre')
             requiere_permiso = request.POST.get('requiere_permiso') == 'true'
+            tipo_prestamo_aplicable = request.POST.get('tipo_prestamo_aplicable', 'todos')
             
             if not all([etapa_origen_id, etapa_destino_id, nombre]):
                 return JsonResponse({'success': False, 'error': 'Todos los campos son obligatorios'})
@@ -4287,12 +4339,22 @@ def api_crear_transicion(request, pipeline_id):
             etapa_origen = get_object_or_404(Etapa, id=etapa_origen_id, pipeline=pipeline)
             etapa_destino = get_object_or_404(Etapa, id=etapa_destino_id, pipeline=pipeline)
             
+            # Verificar si ya existe una transición con el mismo tipo de préstamo
+            if TransicionEtapa.objects.filter(
+                pipeline=pipeline,
+                etapa_origen=etapa_origen,
+                etapa_destino=etapa_destino,
+                tipo_prestamo_aplicable=tipo_prestamo_aplicable
+            ).exists():
+                return JsonResponse({'success': False, 'error': f'Ya existe una transición de {etapa_origen.nombre} a {etapa_destino.nombre} para {dict(TransicionEtapa.TIPO_PRESTAMO_CHOICES)[tipo_prestamo_aplicable]}'})
+            
             transicion = TransicionEtapa.objects.create(
                 pipeline=pipeline,
                 etapa_origen=etapa_origen,
                 etapa_destino=etapa_destino,
                 nombre=nombre,
-                requiere_permiso=requiere_permiso
+                requiere_permiso=requiere_permiso,
+                tipo_prestamo_aplicable=tipo_prestamo_aplicable
             )
             
             return JsonResponse({
@@ -4302,7 +4364,8 @@ def api_crear_transicion(request, pipeline_id):
                     'nombre': transicion.nombre,
                     'etapa_origen': transicion.etapa_origen.nombre,
                     'etapa_destino': transicion.etapa_destino.nombre,
-                    'requiere_permiso': transicion.requiere_permiso
+                    'requiere_permiso': transicion.requiere_permiso,
+                    'tipo_prestamo_aplicable': transicion.tipo_prestamo_aplicable
                 }
             })
         except Exception as e:
@@ -4460,6 +4523,7 @@ def api_editar_transicion(request, transicion_id):
             nombre = request.POST.get('nombre')
             etapa_origen_id = request.POST.get('etapa_origen')
             etapa_destino_id = request.POST.get('etapa_destino')
+            tipo_prestamo_aplicable = request.POST.get('tipo_prestamo_aplicable', 'todos')
             
             # Validaciones
             if not nombre or not etapa_origen_id or not etapa_destino_id:
@@ -4484,23 +4548,25 @@ def api_editar_transicion(request, transicion_id):
                     'error': 'Una o ambas etapas no existen o no pertenecen al pipeline'
                 })
             
-            # Verificar que no hay otra transición con el mismo origen y destino
+            # Verificar que no hay otra transición con el mismo origen, destino y tipo de préstamo
             transicion_existente = TransicionEtapa.objects.filter(
                 pipeline=transicion.pipeline,
                 etapa_origen=etapa_origen,
-                etapa_destino=etapa_destino
+                etapa_destino=etapa_destino,
+                tipo_prestamo_aplicable=tipo_prestamo_aplicable
             ).exclude(id=transicion_id).first()
             
             if transicion_existente:
                 return JsonResponse({
                     'success': False, 
-                    'error': 'Ya existe una transición entre estas etapas'
+                    'error': f'Ya existe una transición de {etapa_origen.nombre} a {etapa_destino.nombre} para {dict(TransicionEtapa.TIPO_PRESTAMO_CHOICES)[tipo_prestamo_aplicable]}'
                 })
             
             # Actualizar la transición
             transicion.nombre = nombre
             transicion.etapa_origen = etapa_origen
             transicion.etapa_destino = etapa_destino
+            transicion.tipo_prestamo_aplicable = tipo_prestamo_aplicable
             transicion.save()
             
             return JsonResponse({'success': True})
@@ -4626,7 +4692,8 @@ def api_obtener_datos_pipeline(request, pipeline_id):
                 'etapa_destino': transicion.etapa_destino.nombre,
                 'etapa_origen_id': transicion.etapa_origen.id,
                 'etapa_destino_id': transicion.etapa_destino.id,
-                'requiere_permiso': transicion.requiere_permiso
+                'requiere_permiso': transicion.requiere_permiso,
+                'tipo_prestamo_aplicable': transicion.tipo_prestamo_aplicable
             })
         
         # Requisitos
@@ -8016,27 +8083,32 @@ def verificar_requisitos_transicion(solicitud, transicion):
         obligatorio=True
     ).select_related('requisito')
     
-    # Filtrar requisitos basado en el tipo de préstamo de la cotización
-    if solicitud.cotizacion:
-        # Obtener el tipo de préstamo de la cotización
-        tipo_prestamo = solicitud.cotizacion.tipoPrestamo
-        
-        # Filtrar requisitos considerando su tipo_prestamo_aplicable
-        requisitos_aplicables = []
-        for req_transicion in requisitos_transicion:
-            requisito_pipeline = RequisitoPipeline.objects.filter(
-                pipeline=solicitud.pipeline,
-                requisito=req_transicion.requisito
-            ).first()
+    # ✅ FILTRAR POR TIPO DE PRÉSTAMO usando RequisitoTransicion.tipo_prestamo_aplicable
+    try:
+        if solicitud.cotizacion and hasattr(solicitud.cotizacion, 'tipoPrestamo'):
+            tipo_prestamo = solicitud.cotizacion.tipoPrestamo
+            requisitos_aplicables = []
             
-            # Si no existe RequisitoPipeline o si aplica para este tipo de préstamo
-            if (not requisito_pipeline or 
-                requisito_pipeline.tipo_prestamo_aplicable == 'todos' or
-                (requisito_pipeline.tipo_prestamo_aplicable == 'personal' and tipo_prestamo == 'personal') or
-                (requisito_pipeline.tipo_prestamo_aplicable == 'auto' and tipo_prestamo == 'auto')):
-                requisitos_aplicables.append(req_transicion)
-        
-        requisitos_transicion = requisitos_aplicables
+            for req_transicion in requisitos_transicion:
+                try:
+                    # Verificar si el requisito de transición aplica para este tipo de préstamo
+                    # Usar refresh_from_db para asegurar que tenemos los campos más recientes
+                    req_transicion.refresh_from_db()
+                    tipo_prestamo_aplicable = getattr(req_transicion, 'tipo_prestamo_aplicable', 'todos')
+                    
+                    if (tipo_prestamo_aplicable == 'todos' or
+                        (tipo_prestamo_aplicable == 'personal' and tipo_prestamo == 'personal') or
+                        (tipo_prestamo_aplicable == 'auto' and tipo_prestamo == 'auto')):
+                        requisitos_aplicables.append(req_transicion)
+                except Exception as e:
+                    # Si hay algún error, incluir el requisito por seguridad
+                    print(f"Error filtrando requisito en verificar_requisitos_transicion {getattr(req_transicion, 'id', 'unknown')}: {str(e)}")
+                    requisitos_aplicables.append(req_transicion)
+            
+            requisitos_transicion = requisitos_aplicables
+    except Exception as e:
+        print(f"Error general en verificar_requisitos_transicion: {str(e)}")
+        # En caso de error, continuar con todos los requisitos sin filtrar
     
     requisitos_faltantes = []
     
@@ -8049,10 +8121,9 @@ def verificar_requisitos_transicion(solicitud, transicion):
         
         # Lógica especial para requisito de agenda de firma
         if req_transicion.requisito.tipo_especial == 'agenda_firma':
-            # Para agenda de firma, verificar si existe una cita agendada
-            from workflow.modelsWorkflow import AgendaFirma
-            tiene_cita_agendada = AgendaFirma.objects.filter(solicitud=solicitud).exists()
-            esta_cumplido = tiene_cita_agendada
+            # ✅ IMPORTANTE: Agenda de firma NO bloquea transiciones en Back Office
+            # Es un requisito informativo que no impide el avance del proceso
+            esta_cumplido = True  # Siempre considerar como cumplido para no bloquear
         else:
             # Considerar un requisito como cumplido si:
             # 1. Existe el RequisitoSolicitud Y
@@ -10354,6 +10425,23 @@ def api_obtener_transiciones_validas(request, solicitud_id):
             etapa_origen=solicitud.etapa_actual
         ).select_related('etapa_destino')
         
+        # ✅ FILTRAR POR TIPO DE PRÉSTAMO usando TransicionEtapa.tipo_prestamo_aplicable
+        if solicitud.cotizacion and hasattr(solicitud.cotizacion, 'tipoPrestamo'):
+            tipo_prestamo = solicitud.cotizacion.tipoPrestamo
+            transiciones_aplicables = []
+            
+            for transicion in transiciones_validas:
+                try:
+                    # Usar el método aplica_para_cotizacion del modelo
+                    if transicion.aplica_para_cotizacion(solicitud.cotizacion):
+                        transiciones_aplicables.append(transicion)
+                except Exception as e:
+                    # Si hay algún error, incluir la transición por seguridad
+                    print(f"Error filtrando transición {transicion.id}: {str(e)}")
+                    transiciones_aplicables.append(transicion)
+            
+            transiciones_validas = transiciones_aplicables
+        
         transiciones_data = []
         for transicion in transiciones_validas:
             try:
@@ -10371,7 +10459,8 @@ def api_obtener_transiciones_validas(request, solicitud_id):
                     'requiere_permiso': transicion.requiere_permiso,
                     'puede_realizar': len(requisitos_faltantes) == 0,
                     'requisitos_faltantes': requisitos_faltantes,
-                    'total_requisitos_faltantes': len(requisitos_faltantes)
+                    'total_requisitos_faltantes': len(requisitos_faltantes),
+                    'tipo_prestamo_aplicable': transicion.tipo_prestamo_aplicable
                 })
             except Exception as transicion_error:
                 # Si hay error en una transición específica, continuar con las demás
@@ -10474,7 +10563,8 @@ def api_obtener_requisitos_transicion_pipeline(request, pipeline_id):
                     'requisito_id': rt.requisito.id,
                     'requisito_nombre': rt.requisito.nombre,
                     'obligatorio': rt.obligatorio,
-                    'mensaje_personalizado': rt.mensaje_personalizado or ''
+                    'mensaje_personalizado': rt.mensaje_personalizado or '',
+                    'tipo_prestamo_aplicable': rt.tipo_prestamo_aplicable
                 }
                 for rt in requisitos_transicion if rt.transicion_id == transicion.id
             ]
@@ -10527,11 +10617,13 @@ def api_crear_requisito_transicion(request):
         requisito_id = data.get('requisito_id')
         obligatorio = data.get('obligatorio', True)
         mensaje_personalizado = data.get('mensaje_personalizado', '')
+        tipo_prestamo_aplicable = data.get('tipo_prestamo_aplicable', 'todos')
         
         print(f"transicion_id: {transicion_id} (type: {type(transicion_id)})")
         print(f"requisito_id: {requisito_id} (type: {type(requisito_id)})")
         print(f"obligatorio: {obligatorio} (type: {type(obligatorio)})")
         print(f"mensaje_personalizado: {mensaje_personalizado}")
+        print(f"tipo_prestamo_aplicable: {tipo_prestamo_aplicable}")
         
         if not all([transicion_id, requisito_id]):
             return JsonResponse({'error': 'Transición y requisito son obligatorios'}, status=400)
@@ -10540,15 +10632,23 @@ def api_crear_requisito_transicion(request):
         requisito = get_object_or_404(Requisito, id=requisito_id)
         
         # Verificar que no existe ya esta combinación
-        if RequisitoTransicion.objects.filter(transicion=transicion, requisito=requisito).exists():
-            return JsonResponse({'error': 'Este requisito ya está asignado a esta transición'}, status=400)
+        if RequisitoTransicion.objects.filter(
+            transicion=transicion, 
+            requisito=requisito, 
+            tipo_prestamo_aplicable=tipo_prestamo_aplicable
+        ).exists():
+            tipo_prestamo_display = dict(RequisitoTransicion.TIPO_PRESTAMO_CHOICES).get(tipo_prestamo_aplicable, tipo_prestamo_aplicable)
+            return JsonResponse({
+                'error': f'Este requisito ya está asignado a esta transición para "{tipo_prestamo_display}"'
+            }, status=400)
         
         # Crear el requisito de transición
         requisito_transicion = RequisitoTransicion.objects.create(
             transicion=transicion,
             requisito=requisito,
             obligatorio=obligatorio,
-            mensaje_personalizado=mensaje_personalizado
+            mensaje_personalizado=mensaje_personalizado,
+            tipo_prestamo_aplicable=tipo_prestamo_aplicable
         )
         
         return JsonResponse({
@@ -10560,7 +10660,8 @@ def api_crear_requisito_transicion(request):
                 'requisito_id': requisito.id,
                 'requisito_nombre': requisito.nombre,
                 'obligatorio': requisito_transicion.obligatorio,
-                'mensaje_personalizado': requisito_transicion.mensaje_personalizado
+                'mensaje_personalizado': requisito_transicion.mensaje_personalizado,
+                'tipo_prestamo_aplicable': requisito_transicion.tipo_prestamo_aplicable
             },
             'mensaje': f'Requisito "{requisito.nombre}" asignado a la transición "{transicion.nombre}"'
         })
@@ -10586,10 +10687,12 @@ def api_actualizar_requisito_transicion(request, requisito_transicion_id):
         data = json.loads(request.body)
         obligatorio = data.get('obligatorio', requisito_transicion.obligatorio)
         mensaje_personalizado = data.get('mensaje_personalizado', requisito_transicion.mensaje_personalizado)
+        tipo_prestamo_aplicable = data.get('tipo_prestamo_aplicable', requisito_transicion.tipo_prestamo_aplicable)
         
         # Actualizar campos
         requisito_transicion.obligatorio = obligatorio
         requisito_transicion.mensaje_personalizado = mensaje_personalizado
+        requisito_transicion.tipo_prestamo_aplicable = tipo_prestamo_aplicable
         requisito_transicion.save()
         
         return JsonResponse({
@@ -10597,7 +10700,8 @@ def api_actualizar_requisito_transicion(request, requisito_transicion_id):
             'requisito_transicion': {
                 'id': requisito_transicion.id,
                 'obligatorio': requisito_transicion.obligatorio,
-                'mensaje_personalizado': requisito_transicion.mensaje_personalizado
+                'mensaje_personalizado': requisito_transicion.mensaje_personalizado,
+                'tipo_prestamo_aplicable': requisito_transicion.tipo_prestamo_aplicable
             },
             'mensaje': 'Requisito de transición actualizado exitosamente'
         })
@@ -10669,28 +10773,30 @@ def api_obtener_requisitos_faltantes_detallado(request, solicitud_id):
             transicion=transicion
         ).select_related('requisito')
         
-        # Filtrar requisitos basado en el tipo de préstamo de la cotización
-        if solicitud.cotizacion:
-            # Obtener el tipo de préstamo de la cotización
-            tipo_prestamo = solicitud.cotizacion.tipoPrestamo
-            
-            # Filtrar requisitos considerando su tipo_prestamo_aplicable
-            # Buscar el RequisitoPipeline para cada requisito para verificar su aplicabilidad
-            requisitos_aplicables = []
-            for req_transicion in requisitos_transicion:
-                requisito_pipeline = RequisitoPipeline.objects.filter(
-                    pipeline=solicitud.pipeline,
-                    requisito=req_transicion.requisito
-                ).first()
+        # ✅ FILTRAR POR TIPO DE PRÉSTAMO usando RequisitoTransicion.tipo_prestamo_aplicable
+        try:
+            if solicitud.cotizacion and hasattr(solicitud.cotizacion, 'tipoPrestamo'):
+                tipo_prestamo = solicitud.cotizacion.tipoPrestamo
+                requisitos_aplicables = []
                 
-                # Si no existe RequisitoPipeline o si aplica para este tipo de préstamo
-                if (not requisito_pipeline or 
-                    requisito_pipeline.tipo_prestamo_aplicable == 'todos' or
-                    (requisito_pipeline.tipo_prestamo_aplicable == 'personal' and tipo_prestamo == 'personal') or
-                    (requisito_pipeline.tipo_prestamo_aplicable == 'auto' and tipo_prestamo == 'auto')):
-                    requisitos_aplicables.append(req_transicion)
-            
-            requisitos_transicion = requisitos_aplicables
+                for req_transicion in requisitos_transicion:
+                    try:
+                        # Verificar si el requisito de transición aplica para este tipo de préstamo
+                        tipo_prestamo_aplicable = getattr(req_transicion, 'tipo_prestamo_aplicable', 'todos')
+                        
+                        if (tipo_prestamo_aplicable == 'todos' or
+                            (tipo_prestamo_aplicable == 'personal' and tipo_prestamo == 'personal') or
+                            (tipo_prestamo_aplicable == 'auto' and tipo_prestamo == 'auto')):
+                            requisitos_aplicables.append(req_transicion)
+                    except Exception as e:
+                        # Si hay algún error, incluir el requisito por seguridad
+                        print(f"Error filtrando requisito {getattr(req_transicion, 'id', 'unknown')}: {str(e)}")
+                        requisitos_aplicables.append(req_transicion)
+                
+                requisitos_transicion = requisitos_aplicables
+        except Exception as e:
+            print(f"Error general en filtrado de requisitos: {str(e)}")
+            # En caso de error, continuar con todos los requisitos
         
         requisitos_detallados = []
         requisitos_obligatorios = []
@@ -10710,10 +10816,12 @@ def api_obtener_requisitos_faltantes_detallado(request, solicitud_id):
             
             # Lógica especial para requisito de agenda de firma
             if req_transicion.requisito.tipo_especial == 'agenda_firma':
-                # Para agenda de firma, verificar si existe una cita agendada
+                # ✅ IMPORTANTE: Agenda de firma es informativa, no bloquea el proceso
+                # Verificar si existe una cita agendada para mostrar el estado correcto en la UI
                 from workflow.modelsWorkflow import AgendaFirma
                 tiene_cita_agendada = AgendaFirma.objects.filter(solicitud=solicitud).exists()
-                esta_completo = tiene_cita_agendada
+                # Para efectos de conteo y validación, siempre considerarlo completo
+                esta_completo = True  # No cuenta como faltante para validaciones
             else:
                 # Determinar si está completo - considerar archivos subidos desde drawer
                 # Un requisito está completo si:
@@ -16087,6 +16195,11 @@ def api_validar_documentos_backoffice(request, solicitud_id):
         requisitos_definidos = {}
         for transicion in transiciones_entrada:
             for req_transicion in transicion.requisitos_obligatorios.all():
+                # ✅ FILTRAR POR TIPO DE PRÉSTAMO usando el método del modelo
+                if solicitud.cotizacion and hasattr(solicitud.cotizacion, 'tipoPrestamo'):
+                    if not req_transicion.aplica_para_cotizacion(solicitud.cotizacion):
+                        continue  # Saltar este requisito si no aplica para este tipo de préstamo
+                
                 req_id = req_transicion.requisito.id
                 if req_id not in requisitos_definidos:
                     requisitos_definidos[req_id] = {
@@ -16113,6 +16226,11 @@ def api_validar_documentos_backoffice(request, solicitud_id):
         
         # Validar documentos - Solo documentos OBLIGATORIOS calificados como "malo" bloquean el avance
         for req_sol in requisitos_solicitud:
+            # ✅ IMPORTANTE: Excluir agenda de firma de todas las validaciones bloqueantes
+            if req_sol.requisito.tipo_especial == 'agenda_firma':
+                print(f"📅 SALTANDO validación de agenda de firma: {req_sol.requisito.nombre} (no bloquea)")
+                continue  # Saltar completamente la validación de agenda de firma
+            
             # Buscar la calificación más reciente
             calificacion = CalificacionDocumentoBackoffice.objects.filter(
                 requisito_solicitud=req_sol
@@ -16186,6 +16304,11 @@ def api_validar_documentos_backoffice(request, solicitud_id):
         # ✅ NUEVO: Incluir documentos definidos en RequisitoTransicion que NO están en RequisitoSolicitud
         # Estos son documentos requeridos que el usuario aún no ha subido
         for req_id, req_info in requisitos_definidos.items():
+            # ✅ IMPORTANTE: Excluir agenda de firma de validaciones de documentos faltantes
+            if req_info['requisito'].tipo_especial == 'agenda_firma':
+                print(f"📅 SALTANDO documento faltante agenda de firma: {req_info['requisito'].nombre} (no bloquea)")
+                continue  # Saltar completamente la agenda de firma
+            
             # Si no existe un RequisitoSolicitud para este requisito
             if not requisitos_solicitud.filter(requisito_id=req_id).exists():
                 documentos_pendientes.append({
@@ -16200,6 +16323,11 @@ def api_validar_documentos_backoffice(request, solicitud_id):
         
         # Verificar documentos obligatorios que no han sido calificados
         for req_id, req_info in requisitos_definidos.items():
+            # ✅ IMPORTANTE: Excluir agenda de firma de validaciones de documentos obligatorios
+            if req_info['requisito'].tipo_especial == 'agenda_firma':
+                print(f"📅 SALTANDO validación obligatoria agenda de firma: {req_info['requisito'].nombre} (no bloquea)")
+                continue  # Saltar completamente la agenda de firma
+            
             es_obligatorio = req_info['obligatorio']
             if es_obligatorio:
                 # Buscar si existe calificación para este documento obligatorio
@@ -17556,6 +17684,61 @@ def api_crear_cita_firma(request):
         return JsonResponse({
             'success': False,
             'error': f'Error al crear cita: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_obtener_detalles_agenda_firma(request, agenda_id):
+    """
+    API para obtener detalles de una agenda de firma específica
+    """
+    try:
+        # Verificar que la agenda existe
+        try:
+            agenda = AgendaFirma.objects.select_related('solicitud', 'creado_por').get(id=agenda_id)
+        except AgendaFirma.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Agenda de firma no encontrada'
+            }, status=404)
+        
+        # Verificar permisos - el usuario debe poder ver la solicitud
+        solicitud = agenda.solicitud
+        if not (request.user.is_superuser or 
+                request.user.is_staff or 
+                solicitud.creada_por == request.user or 
+                solicitud.asignada_a == request.user):
+            return JsonResponse({
+                'success': False,
+                'error': 'No tienes permisos para ver esta agenda'
+            }, status=403)
+        
+        # Preparar datos de la agenda
+        agenda_data = {
+            'id': agenda.id,
+            'fecha_hora': agenda.fecha_hora.isoformat(),
+            'fecha_formateada': agenda.fecha_formateada,
+            'lugar_firma': agenda.lugar_firma,
+            'lugar_firma_display': agenda.lugar_firma_display,
+            'comentarios': agenda.comentarios,
+            'cliente_nombre': agenda.cliente_nombre,
+            'cliente_cedula': agenda.cliente_cedula,
+            'creado_por': agenda.creado_por.get_full_name() or agenda.creado_por.username,
+            'fecha_creacion': agenda.fecha_creacion.isoformat(),
+            'solicitud_codigo': agenda.solicitud_codigo
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'agenda': agenda_data
+        })
+        
+    except Exception as e:
+        print(f"❌ Error al obtener detalles de agenda {agenda_id}: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': f'Error interno del servidor: {str(e)}'
         }, status=500)
 
 

@@ -6580,14 +6580,34 @@
         try {
             console.log('📅 Abriendo modal para agendar firma, requisito ID:', requisitoId);
             
-            // Obtener información de la solicitud actual desde el contexto global
-            const solicitudId = window.currentSolicitudId || document.querySelector('[data-solicitud-id]')?.getAttribute('data-solicitud-id');
+            // Obtener información de la solicitud actual desde múltiples fuentes
+            let solicitudId = window.currentSolicitudId || 
+                             document.querySelector('[data-solicitud-id]')?.getAttribute('data-solicitud-id') ||
+                             window.currentModalSolicitudId ||
+                             document.querySelector('meta[name="solicitud-id"]')?.getAttribute('content');
+            
+            // Intentar extraer de la URL si no se encuentra
             if (!solicitudId) {
-                console.error('❌ No se encontró ID de solicitud');
+                const urlParams = new URLSearchParams(window.location.search);
+                solicitudId = urlParams.get('solicitud_id');
+            }
+            
+            // Log para debug
+            console.log('🔍 Buscando solicitudId:', {
+                currentSolicitudId: window.currentSolicitudId,
+                dataSolicitudId: document.querySelector('[data-solicitud-id]')?.getAttribute('data-solicitud-id'),
+                currentModalSolicitudId: window.currentModalSolicitudId,
+                metaContent: document.querySelector('meta[name="solicitud-id"]')?.getAttribute('content'),
+                urlParam: new URLSearchParams(window.location.search).get('solicitud_id'),
+                finalSolicitudId: solicitudId
+            });
+            
+            if (!solicitudId) {
+                console.error('❌ No se encontró ID de solicitud después de todos los intentos');
                 if (typeof showToast !== 'undefined') {
-                    showToast('Error: No se pudo identificar la solicitud', 'error');
+                    showToast('Error: No se pudo identificar la solicitud. Por favor, recarga la página.', 'error');
                 } else {
-                    alert('Error: No se pudo identificar la solicitud');
+                    alert('Error: No se pudo identificar la solicitud. Por favor, recarga la página.');
                 }
                 return;
             }
@@ -6704,20 +6724,31 @@
 
         // Función para guardar cita de firma
         async function guardarCitaFirma(solicitudId, requisitoId) {
+            console.log('💾 Iniciando guardado de cita de firma:', { solicitudId, requisitoId });
+            
             // Obtener referencia del botón y texto original fuera del try
             const btnGuardar = document.getElementById('btnGuardarCitaFirma');
             const textoOriginal = btnGuardar ? btnGuardar.innerHTML : '';
             
             try {
                 const form = document.getElementById('formAgendaFirma');
+                if (!form) {
+                    console.error('❌ No se encontró el formulario formAgendaFirma');
+                    throw new Error('No se encontró el formulario');
+                }
+                
                 const formData = new FormData(form);
                 
                 // Validar campos requeridos
                 const fecha = formData.get('fecha');
                 const hora = formData.get('hora');
                 const lugarFirma = formData.get('lugar_firma');
+                const comentarios = formData.get('comentarios') || '';
+                
+                console.log('📋 Datos del formulario:', { fecha, hora, lugarFirma, comentarios });
                 
                 if (!fecha || !hora || !lugarFirma) {
+                    console.warn('⚠️ Campos faltantes:', { fecha: !!fecha, hora: !!hora, lugarFirma: !!lugarFirma });
                     if (typeof showToast !== 'undefined') {
                         showToast('Por favor completa todos los campos obligatorios', 'warning');
                     } else {
@@ -6730,11 +6761,19 @@
                 const fechaHora = `${fecha}T${hora}:00`;
                 
                 const data = {
-                    solicitud_id: solicitudId,
+                    solicitud_id: parseInt(solicitudId),
                     fecha_hora: fechaHora,
                     lugar_firma: lugarFirma,
-                    comentarios: formData.get('comentarios') || ''
+                    comentarios: comentarios
                 };
+
+                console.log('📤 Datos a enviar:', data);
+
+                // Obtener CSRF token
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                                 document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || '';
+                
+                console.log('🔐 CSRF Token encontrado:', !!csrfToken);
 
                 // Deshabilitar botón mientras se procesa
                 if (btnGuardar) {
@@ -6743,13 +6782,20 @@
                 }
 
             // Enviar solicitud
+            console.log('🌐 Enviando petición a API...');
             const response = await fetch('/workflow/api/agenda-firma/crear-cita/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+                    'X-CSRFToken': csrfToken
                 },
                 body: JSON.stringify(data)
+            });
+
+            console.log('📥 Respuesta recibida:', {
+                status: response.status,
+                statusText: response.statusText,
+                ok: response.ok
             });
 
             const result = await response.json();
@@ -6820,17 +6866,34 @@
             }
 
             } catch (error) {
-                console.error('❌ Error al guardar cita de firma:', error);
-                if (typeof showToast !== 'undefined') {
-                    showToast('Error al agendar la cita: ' + error.message, 'error');
+                console.error('❌ Error al guardar cita de firma:', {
+                    error: error.message,
+                    stack: error.stack,
+                    solicitudId,
+                    requisitoId,
+                    csrfToken: !!csrfToken
+                });
+                
+                let errorMessage = 'Error al agendar la cita';
+                if (error.message.includes('Failed to fetch')) {
+                    errorMessage = 'Error de conexión. Verifica tu conexión a internet.';
+                } else if (error.message.includes('CSRF')) {
+                    errorMessage = 'Error de seguridad. Por favor, recarga la página.';
                 } else {
-                    alert('Error al agendar la cita: ' + error.message);
+                    errorMessage = `Error al agendar la cita: ${error.message}`;
+                }
+                
+                if (typeof showToast !== 'undefined') {
+                    showToast(errorMessage, 'error');
+                } else {
+                    alert(errorMessage);
                 }
             } finally {
+                console.log('🔄 Finalizando función guardarCitaFirma');
                 // Restaurar botón
                 if (btnGuardar) {
                     btnGuardar.disabled = false;
-                    btnGuardar.innerHTML = textoOriginal;
+                    btnGuardar.innerHTML = textoOriginal || '<i class="fas fa-save me-2"></i>Agendar Cita';
                 }
             }
         }

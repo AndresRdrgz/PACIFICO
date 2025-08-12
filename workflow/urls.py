@@ -238,6 +238,7 @@ urlpatterns = [
     path('api/agenda-firma/citas/', views_workflow.api_listar_citas_calendario, name='api_listar_citas_calendario'),
     path('api/agenda-firma/buscar-solicitudes/', views_workflow.api_buscar_solicitudes_agenda, name='api_buscar_solicitudes_agenda'),
     path('api/agenda-firma/crear-cita/', views_workflow.api_crear_cita_firma, name='api_crear_cita_firma'),
+    path('api/agenda-firma/<int:agenda_id>/detalles/', views_workflow.api_obtener_detalles_agenda_firma, name='api_obtener_detalles_agenda_firma'),
     path('api/agenda-firma/cita/<int:cita_id>/', views_workflow.api_obtener_cita_firma, name='api_obtener_cita_firma'),
     path('api/agenda-firma/solicitud/<int:solicitud_id>/', views_workflow.api_obtener_citas_solicitud, name='api_obtener_citas_solicitud'),
     path('api/agenda-firma/editar-cita/<int:cita_id>/', views_workflow.api_editar_cita_firma, name='api_editar_cita_firma'),

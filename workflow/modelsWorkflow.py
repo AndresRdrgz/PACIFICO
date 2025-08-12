@@ -87,17 +87,45 @@ class SubEstado(models.Model):
 
 
 class TransicionEtapa(models.Model):
+    TIPO_PRESTAMO_CHOICES = [
+        ('todos', 'Todos los préstamos'),
+        ('personal', 'Solo préstamo personal'),
+        ('auto', 'Solo préstamo de auto'),
+    ]
+    
     pipeline = models.ForeignKey(Pipeline, on_delete=models.CASCADE, related_name='transiciones')
     etapa_origen = models.ForeignKey(Etapa, on_delete=models.CASCADE, related_name='transiciones_salida')
     etapa_destino = models.ForeignKey(Etapa, on_delete=models.CASCADE, related_name='transiciones_entrada')
     nombre = models.CharField(max_length=100)
     requiere_permiso = models.BooleanField(default=False)
+    tipo_prestamo_aplicable = models.CharField(
+        max_length=20,
+        choices=TIPO_PRESTAMO_CHOICES,
+        default='todos',
+        help_text="Tipo de préstamo al que aplica esta transición"
+    )
 
     class Meta:
         unique_together = ('pipeline', 'etapa_origen', 'etapa_destino')
 
     def __str__(self):
         return f"{self.etapa_origen.nombre} -> {self.etapa_destino.nombre} ({self.nombre})"
+    
+    def aplica_para_cotizacion(self, cotizacion):
+        """
+        Determina si esta transición aplica para una cotización específica
+        """
+        if not cotizacion:
+            return True  # Si no hay cotización, mostrar todas las transiciones
+        
+        if self.tipo_prestamo_aplicable == 'todos':
+            return True
+        elif self.tipo_prestamo_aplicable == 'personal':
+            return cotizacion.tipoPrestamo == 'personal'
+        elif self.tipo_prestamo_aplicable == 'auto':
+            return cotizacion.tipoPrestamo == 'auto'
+        
+        return True  # Default: mostrar la transición
 
 
 class PermisoEtapa(models.Model):
@@ -941,18 +969,46 @@ class RequisitoTransicion(models.Model):
     """
     Modelo para definir qué requisitos son obligatorios para transiciones específicas
     """
+    TIPO_PRESTAMO_CHOICES = [
+        ('todos', 'Todos los préstamos'),
+        ('personal', 'Solo préstamo personal'),
+        ('auto', 'Solo préstamo de auto'),
+    ]
+    
     transicion = models.ForeignKey(TransicionEtapa, on_delete=models.CASCADE, related_name='requisitos_obligatorios')
     requisito = models.ForeignKey(Requisito, on_delete=models.CASCADE)
     obligatorio = models.BooleanField(default=True, help_text="Si es obligatorio para esta transición")
     mensaje_personalizado = models.TextField(blank=True, null=True, help_text="Mensaje personalizado para este requisito")
+    tipo_prestamo_aplicable = models.CharField(
+        max_length=20,
+        choices=TIPO_PRESTAMO_CHOICES,
+        default='todos',
+        help_text="Tipo de préstamo al que aplica este requisito de transición"
+    )
 
     class Meta:
-        unique_together = ('transicion', 'requisito')
+        unique_together = ('transicion', 'requisito', 'tipo_prestamo_aplicable')
         verbose_name = "Requisito de Transición"
         verbose_name_plural = "Requisitos de Transición"
 
     def __str__(self):
         return f"{self.transicion} - {self.requisito.nombre} ({'Obligatorio' if self.obligatorio else 'Opcional'})"
+    
+    def aplica_para_cotizacion(self, cotizacion):
+        """
+        Determina si este requisito de transición aplica para una cotización específica
+        """
+        if not cotizacion:
+            return True  # Si no hay cotización, mostrar todos los requisitos
+        
+        if self.tipo_prestamo_aplicable == 'todos':
+            return True
+        elif self.tipo_prestamo_aplicable == 'personal':
+            return cotizacion.tipoPrestamo == 'personal'
+        elif self.tipo_prestamo_aplicable == 'auto':
+            return cotizacion.tipoPrestamo == 'auto'
+        
+        return True  # Default: mostrar el requisito
 
 
 # --------------------------------------
