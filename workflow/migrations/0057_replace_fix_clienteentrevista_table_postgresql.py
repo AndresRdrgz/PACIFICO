@@ -74,7 +74,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunPython(
-            create_table_if_not_exists_database_agnostic,
-            reverse_create_table_database_agnostic,
+            create_table_if_not_exists_postgresql,
+            reverse_create_table_postgresql,
         ),
     ]
