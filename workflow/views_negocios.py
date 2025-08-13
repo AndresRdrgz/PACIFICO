@@ -327,6 +327,9 @@ def enrich_solicitud_data(solicitud):
         # Datos de etiquetas
         'show_digital_badge': getattr(solicitud, 'origen', '') == 'Canal Digital',
         'has_etiquetas': bool(getattr(solicitud, 'etiquetas_oficial', '')),
+        
+        # NUEVA FUNCIONALIDAD: Estado de reconsideración
+        'es_reconsideracion': getattr(solicitud, 'es_reconsideracion', False),
     }
     
     # Agregar todos los datos enriquecidos al objeto solicitud

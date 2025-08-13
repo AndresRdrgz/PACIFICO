@@ -188,6 +188,202 @@
         color: #858796;
         margin-top: 5px;
     }
+    
+    /* Analysis Grid Styles - matching main committee template */
+    .main-section-content {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 1.5rem;
+    }
+    
+    .analysis-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 1.5rem;
+        margin: 0;
+    }
+    
+    .section-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e9ecef;
+        overflow: hidden;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        min-height: 400px;
+    }
+    
+    .section-header {
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.3s ease;
+        user-select: none;
+        padding: 1rem 1.25rem;
+        background: linear-gradient(135deg, #1e40af, #3b82f6);
+        color: white;
+        border-radius: 12px 12px 0 0;
+    }
+
+    .section-header:hover {
+        background: linear-gradient(135deg, #1d4ed8, #2563eb);
+    }
+
+    .section-header-content {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex: 1;
+    }
+    
+    .section-header-content i {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1.1rem;
+    }
+
+    .section-title {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+        color: white;
+    }
+
+    .section-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+    }
+
+    .section-toggle:hover {
+        background-color: rgba(255, 255, 255, 0.3);
+        transform: scale(1.1);
+    }
+
+    .toggle-icon {
+        font-size: 0.9rem;
+        transition: transform 0.3s ease;
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    .section-header.collapsed .toggle-icon {
+        transform: rotate(-90deg);
+    }
+
+    .section-content {
+        transition: all 0.3s ease;
+        overflow: hidden;
+        max-height: 500px;
+        overflow-y: auto;
+        padding: 1rem 1.25rem;
+        background-color: white;
+        flex: 1;
+        border-top: 1px solid #f1f3f4;
+    }
+
+    .section-content.collapsed {
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        opacity: 0;
+        overflow: hidden;
+    }
+    
+    .info-row-with-status {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 0.875rem 0;
+        border-bottom: 1px solid #e5e7eb;
+        transition: background-color 0.2s ease;
+    }
+    
+    .info-row-with-status:hover {
+        background-color: #f9fafb;
+    }
+    
+    .info-row-with-status:last-child {
+        border-bottom: none;
+    }
+    
+    .info-data {
+        flex: 1;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        min-width: 0;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #374151;
+        font-size: 0.9rem;
+        flex-shrink: 0;
+        margin-right: 1rem;
+        min-width: 120px;
+    }
+    
+    .info-value {
+        color: #6b7280;
+        font-size: 0.9rem;
+        text-align: right;
+        flex: 1;
+        word-break: break-word;
+    }
+    
+    .compliance-status {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        margin-left: 1rem;
+        flex-shrink: 0;
+    }
+    
+    .adjuntos-content {
+        padding: 0.5rem 0;
+    }
+    
+    /* Responsive adjustments for analysis grid */
+    @media (max-width: 1400px) {
+        .analysis-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.25rem;
+        }
+        
+        .section-container {
+            min-height: 350px;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .analysis-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        
+        .section-content {
+            max-height: 400px;
+        }
+        
+        .section-container {
+            min-height: 300px;
+        }
+        
+        .main-section-content {
+            padding: 1rem;
+        }
+        
+        .info-label {
+            min-width: 100px;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -251,91 +447,359 @@
         </div>
     </div>
 
-    <div class="row">
-        <!-- Timeline completo -->
-        <div class="col-lg-8">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-timeline"></i>
-                        Timeline Completo de la Solicitud
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="timeline-completo">
-                        {% for evento in historial_completo %}
-                        <div class="evento-timeline {{ evento.tipo }}">
-                            <div class="evento-header">
-                                <h6 class="evento-titulo">
-                                    {% if evento.tipo == 'reconsideracion' %}
-                                        <i class="fas fa-redo text-danger"></i>
-                                        Reconsideración #{{ evento.numero }} Solicitada
-                                    {% elif evento.tipo == 'reconsideracion_analisis' %}
-                                        <i class="fas fa-search text-primary"></i>
-                                        Reconsideración #{{ evento.numero }} Analizada
-                                    {% elif evento.tipo == 'analisis_consulta' %}
-                                        <i class="fas fa-clipboard-check text-info"></i>
-                                        Análisis de Consulta
-                                    {% elif evento.tipo == 'participacion_comite' %}
-                                        <i class="fas fa-users text-warning"></i>
-                                        Participación Comité - {{ evento.nivel }}
-                                    {% endif %}
-                                </h6>
-                                <span class="evento-fecha">{{ evento.fecha|date:"d/m/Y H:i" }}</span>
+    <!-- Análisis Detallado Anterior -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-info">
+                <i class="fas fa-search"></i>
+                Análisis Detallado Anterior
+            </h6>
+            <button class="btn btn-sm btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#analisisDetallado">
+                <i class="fas fa-eye"></i> Ver/Ocultar
+            </button>
+        </div>
+        <div class="collapse show" id="analisisDetallado">
+            <div class="card-body p-0">
+                <div class="main-section-content">
+                    <div class="analysis-grid">
+                        <!-- 1. Información de Cliente -->
+                        <div class="col-md-4">
+                            <div class="section-container">
+                                <div class="section-header" onclick="toggleSection(this)">
+                                    <div class="section-header-content">
+                                        <i class="fas fa-user text-info"></i>
+                                        <h3 class="section-title">Información de Cliente</h3>
+                                    </div>
+                                    <div class="section-toggle">
+                                        <i class="fas fa-chevron-down toggle-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="section-content">
+                                    <div class="info-row-with-status">
+                                        <div class="info-data">
+                                            <span class="info-label">Cliente:</span>
+                                            <span class="info-value">{{ solicitud.cliente_nombre_completo|default:"Sin datos" }}</span>
+                                        </div>
+                                        <div class="compliance-status">
+                                            
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-status">
+                                        <div class="info-data">
+                                            <span class="info-label">Cédula:</span>
+                                            <span class="info-value">{{ solicitud.cedulaCliente|default:"Sin datos" }}</span>
+                                        </div>
+                                        <div class="compliance-status">
+                                            
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-status">
+                                        <div class="info-data">
+                                            <span class="info-label">Teléfono:</span>
+                                            <span class="info-value">{{ solicitud.telefonoCliente|default:"Sin datos" }}</span>
+                                        </div>
+                                        <div class="compliance-status">
+                                            
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-status">
+                                        <div class="info-data">
+                                            <span class="info-label">Email:</span>
+                                            <span class="info-value">{{ solicitud.correoCliente|default:"Sin datos" }}</span>
+                                        </div>
+                                        <div class="compliance-status">
+                                            
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-status">
+                                        <div class="info-data">
+                                            <span class="info-label">Dirección:</span>
+                                            <span class="info-value">{{ solicitud.direccionCliente|default:"Sin datos" }}</span>
+                                        </div>
+                                        <div class="compliance-status">
+                                            
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-status">
+                                        <div class="info-data">
+                                            <span class="info-label">Pipeline:</span>
+                                            <span class="info-value">{{ solicitud.pipeline.nombre }}</span>
+                                        </div>
+                                        <div class="compliance-status">
+                                            
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            
-                            <div class="evento-usuario">
-                                <i class="fas fa-user"></i>
-                                {{ evento.usuario.get_full_name|default:evento.usuario.username }}
-                            </div>
-                            
-                            <div class="evento-descripcion">
-                                {% if evento.tipo == 'reconsideracion' %}
-                                    <strong>Motivo:</strong> {{ evento.motivo }}
-                                    {% if evento.cotizacion_cambio %}
-                                    <br><span class="badge badge-info mt-2">
-                                        <i class="fas fa-exchange-alt"></i> Se cambió la cotización
-                                    </span>
-                                    {% endif %}
-                                {% elif evento.tipo == 'reconsideracion_analisis' %}
-                                    <strong>Decisión:</strong> 
-                                    <span class="badge badge-resultado badge-{{ evento.estado|upper }}">
-                                        {{ evento.estado|capfirst }}
-                                    </span>
-                                    <br><strong>Comentario:</strong> {{ evento.comentario_analisis }}
-                                {% elif evento.tipo == 'analisis_consulta' %}
-                                    {{ evento.comentario }}
-                                {% elif evento.tipo == 'participacion_comite' %}
-                                    <strong>Resultado:</strong>
-                                    <span class="badge badge-resultado badge-{{ evento.resultado }}">
-                                        {{ evento.resultado }}
-                                    </span>
-                                    {% if evento.comentario %}
-                                    <br><strong>Comentario:</strong> {{ evento.comentario }}
-                                    {% endif %}
-                                {% endif %}
-                            </div>
-                            
-                            {% if evento.tipo == 'reconsideracion' %}
-                            <div class="evento-meta">
-                                <i class="fas fa-info-circle"></i>
-                                Estado actual: {{ evento.estado|capfirst }}
-                            </div>
-                            {% endif %}
                         </div>
-                        {% empty %}
-                        <div class="text-center text-muted py-4">
-                            <i class="fas fa-inbox fa-3x mb-3"></i>
-                            <p>No hay historial disponible</p>
+
+                        <!-- 2. Detalle de la Solicitud -->
+                        <div class="col-md-4">
+                            <div class="section-container">
+                                <div class="section-header" onclick="toggleSection(this)">
+                                    <div class="section-header-content">
+                                        <i class="fas fa-calculator text-primary"></i>
+                                        <h3 class="section-title">Detalle de la Solicitud</h3>
+                                    </div>
+                                    <div class="section-toggle">
+                                        <i class="fas fa-chevron-down toggle-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="section-content">
+                                    {% if solicitud.cotizacion %}
+                                    <div class="info-row-with-status">
+                                        <div class="info-data">
+                                            <span class="info-label">Tipo de Préstamo:</span>
+                                            <span class="info-value">{{ solicitud.cotizacion.tipoPrestamo|capfirst|default:"Sin datos" }}</span>
+                                        </div>
+                                        <div class="compliance-status">
+                                            
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-status">
+                                        <div class="info-data">
+                                            <span class="info-label">Monto Préstamo:</span>
+                                            <span class="info-value">
+                                                {% if solicitud.cotizacion.montoPrestamo %}
+                                                    ${{ solicitud.cotizacion.montoPrestamo|floatformat:2 }}
+                                                {% else %}
+                                                    Sin datos
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                        <div class="compliance-status">
+                                            
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-status">
+                                        <div class="info-data">
+                                            <span class="info-label">Plazo:</span>
+                                            <span class="info-value">
+                                                {% if solicitud.cotizacion.plazo %}
+                                                    {{ solicitud.cotizacion.plazo }} meses
+                                                {% else %}
+                                                    Sin datos
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                        <div class="compliance-status">
+                                            
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-status">
+                                        <div class="info-data">
+                                            <span class="info-label">Cuota Mensual:</span>
+                                            <span class="info-value">
+                                                {% if solicitud.cotizacion.cuotaMensual %}
+                                                    ${{ solicitud.cotizacion.cuotaMensual|floatformat:2 }}
+                                                {% else %}
+                                                    Sin datos
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                        <div class="compliance-status">
+                                            
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <div class="text-center py-4">
+                                        <i class="fas fa-exclamation-triangle fa-2x text-muted mb-3"></i>
+                                        <p class="text-muted">No hay información de cotización disponible</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
-                        {% endfor %}
+
+                        <!-- 3. Información del Producto -->
+                        <div class="col-md-4">
+                            <div class="section-container">
+                                <div class="section-header" onclick="toggleSection(this)">
+                                    <div class="section-header-content">
+                                        <i class="fas fa-car text-warning"></i>
+                                        <h3 class="section-title">Información del Vehículo</h3>
+                                    </div>
+                                    <div class="section-toggle">
+                                        <i class="fas fa-chevron-down toggle-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="section-content">
+                                    {% if solicitud.cotizacion %}
+                                    <div class="info-row-with-status">
+                                        <div class="info-data">
+                                            <span class="info-label">Marca:</span>
+                                            <span class="info-value">{{ solicitud.cotizacion.marcaVehiculo|default:"Sin datos" }}</span>
+                                        </div>
+                                        <div class="compliance-status">
+                                            
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-status">
+                                        <div class="info-data">
+                                            <span class="info-label">Modelo:</span>
+                                            <span class="info-value">{{ solicitud.cotizacion.modeloVehiculo|default:"Sin datos" }}</span>
+                                        </div>
+                                        <div class="compliance-status">
+                                            
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-status">
+                                        <div class="info-data">
+                                            <span class="info-label">Año:</span>
+                                            <span class="info-value">{{ solicitud.cotizacion.anoVehiculo|default:"Sin datos" }}</span>
+                                        </div>
+                                        <div class="compliance-status">
+                                            
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-status">
+                                        <div class="info-data">
+                                            <span class="info-label">Valor Vehículo:</span>
+                                            <span class="info-value">
+                                                {% if solicitud.cotizacion.valorVehiculo %}
+                                                    ${{ solicitud.cotizacion.valorVehiculo|floatformat:2 }}
+                                                {% else %}
+                                                    Sin datos
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                        <div class="compliance-status">
+                                            
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <div class="text-center py-4">
+                                        <i class="fas fa-car fa-2x text-muted mb-3"></i>
+                                        <p class="text-muted">No hay información del vehículo disponible</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Documentos Adjuntos -->
+                        <div class="col-md-4">
+                            <div class="section-container">
+                                <div class="section-header" onclick="toggleSection(this)">
+                                    <div class="section-header-content">
+                                        <i class="fas fa-paperclip text-success"></i>
+                                        <h3 class="section-title">Documentos Adjuntos</h3>
+                                    </div>
+                                    <div class="section-toggle">
+                                        <i class="fas fa-chevron-down toggle-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="section-content">
+                                    <div class="adjuntos-content">
+                                        <div class="text-center py-4">
+                                            <i class="fas fa-folder-open fa-2x text-muted mb-3"></i>
+                                            <p class="text-muted">Los documentos adjuntos están disponibles en el expediente completo.</p>
+                                            <a href="/workflow/solicitud/{{ solicitud.id }}/" class="btn btn-sm btn-outline-primary" target="_blank">
+                                                <i class="fas fa-external-link-alt"></i> Ver Expediente Completo
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <!-- Sidebar con información -->
-        <div class="col-lg-4">
+    </div>
+
+    <div class="row">
+        <!-- Timeline completo - moved before analysis for better context -->
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-timeline"></i>
+                        Timeline Completo de la Solicitud
+                    </h6>
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#timelineSection">
+                        <i class="fas fa-eye"></i> Ver/Ocultar Timeline
+                    </button>
+                </div>
+                <div class="collapse" id="timelineSection">
+                    <div class="card-body">
+                        <div class="timeline-completo">
+                            {% for evento in historial_completo %}
+                            <div class="evento-timeline {{ evento.tipo }}">
+                                <div class="evento-header">
+                                    <h6 class="evento-titulo">
+                                        {% if evento.tipo == 'reconsideracion' %}
+                                            <i class="fas fa-redo text-danger"></i>
+                                            Reconsideración #{{ evento.numero }} Solicitada
+                                        {% elif evento.tipo == 'reconsideracion_analisis' %}
+                                            <i class="fas fa-search text-primary"></i>
+                                            Reconsideración #{{ evento.numero }} Analizada
+                                        {% elif evento.tipo == 'analisis_consulta' %}
+                                            <i class="fas fa-clipboard-check text-info"></i>
+                                            Análisis de Consulta
+                                        {% elif evento.tipo == 'participacion_comite' %}
+                                            <i class="fas fa-users text-warning"></i>
+                                            Participación Comité - {{ evento.nivel }}
+                                        {% endif %}
+                                    </h6>
+                                    <span class="evento-fecha">{{ evento.fecha|date:"d/m/Y H:i" }}</span>
+                                </div>
+                                
+                                <div class="evento-usuario">
+                                    <i class="fas fa-user"></i>
+                                    {{ evento.usuario.get_full_name|default:evento.usuario.username }}
+                                </div>
+                                
+                                <div class="evento-descripcion">
+                                    {% if evento.tipo == 'reconsideracion' %}
+                                        <strong>Motivo:</strong> {{ evento.motivo }}
+                                        {% if evento.cotizacion_cambio %}
+                                        <br><span class="badge badge-info mt-2">
+                                            <i class="fas fa-exchange-alt"></i> Se cambió la cotización
+                                        </span>
+                                        {% endif %}
+                                    {% elif evento.tipo == 'reconsideracion_analisis' %}
+                                        <strong>Decisión:</strong> 
+                                        <span class="badge badge-resultado badge-{{ evento.estado|upper }}">
+                                            {{ evento.estado|capfirst }}
+                                        </span>
+                                        <br><strong>Comentario:</strong> {{ evento.comentario_analisis }}
+                                    {% elif evento.tipo == 'analisis_consulta' %}
+                                        {{ evento.comentario }}
+                                    {% elif evento.tipo == 'participacion_comite' %}
+                                        <strong>Resultado:</strong>
+                                        <span class="badge badge-resultado badge-{{ evento.resultado }}">
+                                            {{ evento.resultado }}
+                                        </span>
+                                        {% if evento.comentario %}
+                                        <br><strong>Comentario:</strong> {{ evento.comentario }}
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                                
+                                {% if evento.tipo == 'reconsideracion' %}
+                                <div class="evento-meta">
+                                    <i class="fas fa-info-circle"></i>
+                                    Estado actual: {{ evento.estado|capfirst }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% empty %}
+                            <div class="text-center text-muted py-4">
+                                <i class="fas fa-inbox fa-3x mb-3"></i>
+                                <p>No hay historial disponible</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Sidebar con información - moved to top for better context -->
+        <div class="col-lg-6">
             <!-- Reconsideración actual -->
             <div class="reconsideracion-actual-card">
                 <h5 class="mb-3">
@@ -361,41 +825,11 @@
                 </div>
                 {% endif %}
             </div>
-            
-            <!-- Comparación de cotizaciones -->
-            {% if reconsideracion_actual.usar_nueva_cotizacion %}
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-warning">
-                        <i class="fas fa-balance-scale"></i>
-                        Comparación de Cotizaciones
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="comparacion-grid">
-                        <div class="comparacion-item">
-                            <h6 class="text-muted">Original</h6>
-                            {% if reconsideracion_actual.cotizacion_original %}
-                            <p class="mb-1"><strong>Monto:</strong> ${{ reconsideracion_actual.cotizacion_original.montoPrestamo|floatformat:2 }}</p>
-                            <p class="mb-1"><strong>Plazo:</strong> {{ reconsideracion_actual.cotizacion_original.plazo }} meses</p>
-                            <p class="mb-0"><strong>Tipo:</strong> {{ reconsideracion_actual.cotizacion_original.tipoPrestamo|capfirst }}</p>
-                            {% endif %}
-                        </div>
-                        <div class="comparacion-item">
-                            <h6 class="text-primary">Nueva</h6>
-                            {% if reconsideracion_actual.cotizacion_nueva %}
-                            <p class="mb-1"><strong>Monto:</strong> ${{ reconsideracion_actual.cotizacion_nueva.montoPrestamo|floatformat:2 }}</p>
-                            <p class="mb-1"><strong>Plazo:</strong> {{ reconsideracion_actual.cotizacion_nueva.plazo }} meses</p>
-                            <p class="mb-0"><strong>Tipo:</strong> {{ reconsideracion_actual.cotizacion_nueva.tipoPrestamo|capfirst }}</p>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-            
+        </div>
+
+        <div class="col-lg-6">
             <!-- Información de la solicitud -->
-            <div class="card shadow mb-4">
+            <div class="card shadow mb-4" style="height: fit-content;">
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-secondary">
                         <i class="fas fa-file-alt"></i>
@@ -430,6 +864,42 @@
             </div>
         </div>
     </div>
+
+    <!-- Comparación de cotizaciones (if applicable) - full width for better visibility -->
+    {% if reconsideracion_actual.usar_nueva_cotizacion %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-warning">
+                        <i class="fas fa-balance-scale"></i>
+                        Comparación de Cotizaciones
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="comparacion-grid">
+                        <div class="comparacion-item">
+                            <h6 class="text-muted">Original</h6>
+                            {% if reconsideracion_actual.cotizacion_original %}
+                            <p class="mb-1"><strong>Monto:</strong> ${{ reconsideracion_actual.cotizacion_original.montoPrestamo|floatformat:2 }}</p>
+                            <p class="mb-1"><strong>Plazo:</strong> {{ reconsideracion_actual.cotizacion_original.plazo }} meses</p>
+                            <p class="mb-0"><strong>Tipo:</strong> {{ reconsideracion_actual.cotizacion_original.tipoPrestamo|capfirst }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="comparacion-item">
+                            <h6 class="text-primary">Nueva</h6>
+                            {% if reconsideracion_actual.cotizacion_nueva %}
+                            <p class="mb-1"><strong>Monto:</strong> ${{ reconsideracion_actual.cotizacion_nueva.montoPrestamo|floatformat:2 }}</p>
+                            <p class="mb-1"><strong>Plazo:</strong> {{ reconsideracion_actual.cotizacion_nueva.plazo }} meses</p>
+                            <p class="mb-0"><strong>Tipo:</strong> {{ reconsideracion_actual.cotizacion_nueva.tipoPrestamo|capfirst }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Modal para participación -->
@@ -441,9 +911,7 @@
                     <i class="fas fa-users"></i>
                     Participación en Comité - Reconsideración #{{ reconsideracion_actual.numero_reconsideracion }}
                 </h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="alert alert-info">
@@ -477,7 +945,7 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-primary" onclick="enviarParticipacion()">
                     <i class="fas fa-paper-plane"></i>
                     Enviar Participación
@@ -490,13 +958,30 @@
 
 {% block extra_js %}
 <script>
+// Section toggle functionality for analysis grid
+function toggleSection(headerElement) {
+    const contentElement = headerElement.nextElementSibling;
+    const isCollapsed = contentElement.classList.contains('collapsed');
+    
+    if (isCollapsed) {
+        // Expand
+        contentElement.classList.remove('collapsed');
+        headerElement.classList.remove('collapsed');
+    } else {
+        // Collapse
+        contentElement.classList.add('collapsed');
+        headerElement.classList.add('collapsed');
+    }
+}
+
 function abrirModalParticipacion() {
-    $('#modalParticipacionComite').modal('show');
+    const modal = new bootstrap.Modal(document.getElementById('modalParticipacionComite'));
+    modal.show();
 }
 
 function enviarParticipacion() {
-    const resultado = $('#resultado_comite').val();
-    const comentario = $('#comentario_comite').val().trim();
+    const resultado = document.getElementById('resultado_comite').value;
+    const comentario = document.getElementById('comentario_comite').value.trim();
     
     if (!resultado) {
         alert('Debe seleccionar una decisión.');
@@ -505,7 +990,7 @@ function enviarParticipacion() {
     
     if (!comentario || comentario.length < 10) {
         alert('Debe ingresar un comentario con al menos 10 caracteres.');
-        $('#comentario_comite').focus();
+        document.getElementById('comentario_comite').focus();
         return;
     }
     
@@ -514,41 +999,52 @@ function enviarParticipacion() {
     }
     
     // Deshabilitar botón
-    $('button[onclick="enviarParticipacion()"]').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Enviando...');
+    const btn = document.querySelector('button[onclick="enviarParticipacion()"]');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
     
-    // Enviar participación (integrar con la API del comité existente)
-    $.ajax({
-        url: "{% url 'workflow:api_participar_comite' solicitud.id %}",
+    // Prepare form data
+    const formData = new FormData();
+    formData.append('resultado', resultado);
+    formData.append('comentario', comentario);
+    formData.append('es_reconsideracion', 'true');
+    formData.append('reconsideracion_id', '{{ reconsideracion_actual.id }}');
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    
+    // Enviar participación
+    fetch("{% url 'workflow:api_participar_comite' solicitud.id %}", {
         method: 'POST',
-        data: {
-            resultado: resultado,
-            comentario: comentario,
-            es_reconsideracion: true,
-            reconsideracion_id: {{ reconsideracion_actual.id }},
-            csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
-        },
-        success: function(response) {
-            if (response.success) {
-                $('#modalParticipacionComite').modal('hide');
-                alert('Participación enviada exitosamente.');
-                location.reload();
-            } else {
-                alert('Error: ' + response.error);
-            }
-        },
-        error: function() {
-            alert('Error al enviar la participación. Intente nuevamente.');
-        },
-        complete: function() {
-            $('button[onclick="enviarParticipacion()"]').prop('disabled', false).html('<i class="fas fa-paper-plane"></i> Enviar Participación');
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
         }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalParticipacionComite'));
+            modal.hide();
+            alert('Participación enviada exitosamente.');
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al enviar la participación. Intente nuevamente.');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar Participación';
     });
 }
 
-$(document).ready(function() {
+document.addEventListener('DOMContentLoaded', function() {
     // Auto-scroll al evento más reciente
-    if ($('.evento-timeline').length > 0) {
-        $('.evento-timeline:first')[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const firstEvent = document.querySelector('.evento-timeline');
+    if (firstEvent) {
+        firstEvent.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 });
 </script>

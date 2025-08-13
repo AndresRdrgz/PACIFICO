@@ -92,7 +92,7 @@ def solicitar_reconsideracion(request, solicitud_id):
                 # Buscar el último comentario del analista
                 ultimo_comentario = solicitud.comentarios.filter(
                     tipo='analista_credito'
-                ).order_by('-fecha_comentario').first()
+                ).order_by('-fecha_creacion').first()
                 
                 if ultimo_comentario:
                     comentario_anterior = ultimo_comentario.comentario
@@ -195,8 +195,7 @@ def solicitar_reconsideracion(request, solicitud_id):
                     etapa=etapa_consulta,
                     subestado=solicitud.subestado_actual,
                     usuario_responsable=request.user,
-                    fecha_inicio=timezone.now(),
-                    observaciones=f"Reconsideración #{numero_reconsideracion} solicitada: {motivo[:100]}..."
+                    fecha_inicio=timezone.now()
                 )
                 
                 # Crear comentario de sistema
@@ -204,8 +203,7 @@ def solicitar_reconsideracion(request, solicitud_id):
                     solicitud=solicitud,
                     usuario=request.user,
                     comentario=f"Solicitud enviada para reconsideración #{numero_reconsideracion}. Motivo: {motivo}",
-                    tipo='sistema',
-                    fecha_comentario=timezone.now()
+                    tipo='general'
                 )
                 
                 # Notificar cambio
@@ -266,13 +264,15 @@ def detalle_reconsideracion_analista(request, solicitud_id):
     # Obtener análisis anteriores
     analisis_anteriores = solicitud.comentarios.filter(
         tipo='analista_credito'
-    ).order_by('fecha_comentario')
+    ).order_by('fecha_creacion')
     
     # Obtener participaciones de comité anteriores si existen
     participaciones_comite = []
     try:
-        from .views_comite import obtener_participaciones_comite
-        participaciones_comite = obtener_participaciones_comite(solicitud)
+        from .modelsWorkflow import ParticipacionComite
+        participaciones_comite = ParticipacionComite.objects.filter(
+            solicitud=solicitud
+        ).select_related('usuario', 'nivel', 'usuario__userprofile').order_by('nivel__orden', '-fecha_modificacion')
     except ImportError:
         pass
     
@@ -324,12 +324,12 @@ def detalle_reconsideracion_comite(request, solicitud_id):
     # Agregar análisis de consulta
     analisis_consulta = solicitud.comentarios.filter(
         tipo='analista_credito'
-    ).order_by('fecha_comentario')
+    ).order_by('fecha_creacion')
     
     for analisis in analisis_consulta:
         historial_completo.append({
             'tipo': 'analisis_consulta',
-            'fecha': analisis.fecha_comentario,
+            'fecha': analisis.fecha_creacion,
             'usuario': analisis.usuario,
             'comentario': analisis.comentario,
         })
@@ -434,8 +434,7 @@ def api_procesar_reconsideracion_analista(request, solicitud_id):
                 solicitud=solicitud,
                 usuario=request.user,
                 comentario=f"Reconsideración #{reconsideracion.numero_reconsideracion} {decision}: {comentario}",
-                tipo='analista_credito',
-                fecha_comentario=timezone.now()
+                tipo='analista'
             )
             
             # Notificar cambio
@@ -554,11 +553,7 @@ def api_solicitar_reconsideracion(request, solicitud_id):
                 'message': 'Debe proporcionar un motivo para la reconsideración.'
             })
         
-        if len(motivo) < 50:
-            return JsonResponse({
-                'success': False,
-                'message': 'El motivo debe tener al menos 50 caracteres.'
-            })
+
         
         with transaction.atomic():
             # Validar cotización seleccionada
@@ -663,8 +658,7 @@ def api_solicitar_reconsideracion(request, solicitud_id):
                 etapa=etapa_consulta,
                 subestado=solicitud.subestado_actual,
                 usuario_responsable=request.user,
-                fecha_inicio=timezone.now(),
-                observaciones=f"Reconsideración #{numero_reconsideracion} solicitada: {motivo[:100]}..."
+                fecha_inicio=timezone.now()
             )
             
             # Crear comentario de sistema
@@ -672,8 +666,7 @@ def api_solicitar_reconsideracion(request, solicitud_id):
                 solicitud=solicitud,
                 usuario=request.user,
                 comentario=f"Solicitud enviada para reconsideración #{numero_reconsideracion}. Motivo: {motivo}",
-                tipo='general',
-                fecha_creacion=timezone.now()
+                tipo='general'
             )
             
             # Notificar cambio
@@ -748,6 +741,7 @@ def api_cotizaciones_cliente(request, solicitud_id):
                 'id': cot.id,
                 'monto': float(cot.auxMonto2) if cot.auxMonto2 else (float(cot.montoPrestamo) if cot.montoPrestamo else 0),
                 'plazo': cot.plazo if hasattr(cot, 'plazo') and cot.plazo else (cot.plazoPago if hasattr(cot, 'plazoPago') and cot.plazoPago else 0),
+                'plazoPago': cot.plazoPago if hasattr(cot, 'plazoPago') and cot.plazoPago else 0,
                 'tipoPrestamo': cot.tipoPrestamo if cot.tipoPrestamo else 'personal',
                 'fecha_creacion': cot.created_at.isoformat() if hasattr(cot, 'created_at') and cot.created_at else '',
                 'es_actual': cot.id == solicitud.cotizacion.id if solicitud.cotizacion else False,
@@ -756,6 +750,10 @@ def api_cotizaciones_cliente(request, solicitud_id):
                 'oficial': cot.oficial if cot.oficial else '',
                 'sucursal': cot.sucursal if cot.sucursal else '',
                 'tasa': float(cot.tasa) if hasattr(cot, 'tasa') and cot.tasa else None,
+                # Car-specific fields for auto loans
+                'marca': cot.marca if hasattr(cot, 'marca') and cot.marca else '',
+                'modelo': cot.modelo if hasattr(cot, 'modelo') and cot.modelo else '',
+                'yearCarro': cot.yearCarro if hasattr(cot, 'yearCarro') and cot.yearCarro else None,
                 # Additional fields that might be useful
                 'edad': cot.edad if hasattr(cot, 'edad') and cot.edad else None,
                 'sexo': cot.sexo if hasattr(cot, 'sexo') and cot.sexo else '',
@@ -903,9 +901,9 @@ def crear_timeline_reconsideracion(solicitud):
     for comentario in solicitud.comentarios.filter(tipo__in=['analista_credito', 'sistema']):
         eventos.append({
             'tipo': 'comentario',
-            'fecha': comentario.fecha_comentario,
+            'fecha': comentario.fecha_creacion,
             'titulo': f"Comentario - {comentario.get_tipo_display()}",
-            'descripcion': comentario.comentario,
+            'descripción': comentario.comentario,
             'usuario': comentario.usuario,
             'tipo_comentario': comentario.tipo,
         })

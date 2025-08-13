@@ -8737,6 +8737,26 @@
         } else {
             console.error('Formulario general tab not found!');
         }
+        
+        // Event listener for reconsideracion tab activation
+        const reconsideracionTab = document.getElementById('reconsideracion-tab');
+        if (reconsideracionTab) {
+            reconsideracionTab.addEventListener('shown.bs.tab', function (event) {
+                console.log('🔄 Reconsideración tab activated');
+                
+                // Get current solicitud ID and refresh the history
+                const solicitudId = window.currentModalSolicitudId || window.currentSolicitudId;
+                
+                if (solicitudId) {
+                    console.log('🔄 Refreshing reconsideration history for solicitud:', solicitudId);
+                    cargarHistorialReconsideraciones(solicitudId);
+                } else {
+                    console.warn('⚠️ No solicitud ID available for reconsideration history reload');
+                }
+            });
+        } else {
+            console.log('Reconsideration tab not found - this is normal if user cannot access reconsiderations');
+        }
     });
 
     // ========================================
@@ -10489,6 +10509,12 @@
             return;
         }
 
+        // Hide the selected cotización display
+        const selectedDisplay = document.getElementById('cotizacionSeleccionadaDisplay');
+        if (selectedDisplay) {
+            selectedDisplay.style.display = 'none';
+        }
+
         // Show the section
         section.style.display = 'block';
         
@@ -10643,23 +10669,19 @@
             
             <div class="cotizacion-details">
                 <div class="cotizacion-detail">
-                    <strong>Oficial</strong>
-                    <span>${cotizacion.oficial || 'N/A'}</span>
+                    <strong>Marca</strong>
+                    <span>${cotizacion.marca || 'N/A'}</span>
                 </div>
                 <div class="cotizacion-detail">
-                    <strong>Sucursal</strong>
-                    <span>${cotizacion.sucursal || 'N/A'}</span>
+                    <strong>Auto</strong>
+                    <span>${cotizacion.modelo || 'N/A'}</span>
                 </div>
                 <div class="cotizacion-detail">
                     <strong>Plazo</strong>
-                    <span>${cotizacion.plazo ? `${cotizacion.plazo} meses` : 'N/A'}</span>
-                </div>
-                <div class="cotizacion-detail">
-                    <strong>Tasa</strong>
-                    <span>${cotizacion.tasa ? `${cotizacion.tasa}%` : 'N/A'}</span>
+                    <span>${cotizacion.plazoPago ? `${cotizacion.plazoPago} meses` : 'N/A'}</span>
                 </div>
                 <div class="cotizacion-monto">
-                    <strong>Monto: ${montoFormateado}</strong>
+                    <strong>Monto Financiado: ${montoFormateado}</strong>
                 </div>
             </div>
             
@@ -10709,10 +10731,25 @@
         const selectedCard = document.querySelector(`#cotizacionesGridReconsideracion .cotizacion-card[data-cotizacion-id="${cotizacionId}"]`);
         if (selectedCard) {
             selectedCard.classList.add('selected');
+            
+            // Get cotización details from the card
+            const cotizacionData = {
+                id: cotizacionId,
+                marca: selectedCard.querySelector('.cotizacion-detail:nth-child(1) span')?.textContent || 'N/A',
+                modelo: selectedCard.querySelector('.cotizacion-detail:nth-child(2) span')?.textContent || 'N/A',
+                plazo: selectedCard.querySelector('.cotizacion-detail:nth-child(3) span')?.textContent || 'N/A',
+                monto: selectedCard.querySelector('.cotizacion-monto strong')?.textContent || 'N/A'
+            };
+            
+            // Display selected cotización
+            mostrarCotizacionSeleccionada(cotizacionData);
         }
         
-        // Close the cotizaciones section
-        ocultarCotizacionesClienteReconsideracion();
+        // Hide the cotizaciones grid but keep the section visible
+        const cotizacionesSection = document.getElementById('cotizacionesClienteSectionReconsideracion');
+        if (cotizacionesSection) {
+            cotizacionesSection.style.display = 'none';
+        }
         
         // Show success message
         showNotification(`Cotización #${cotizacionId} seleccionada para la reconsideración`, 'success');
@@ -10724,13 +10761,114 @@
     }
 
     /**
+     * Populate resultado anterior section
+     */
+    function populateResultadoAnterior(general) {
+        console.log('📋 populateResultadoAnterior called with general data:', general);
+        
+        const resultadoAnteriorElement = document.getElementById('resultadoAnteriorTexto');
+        const resultadoAnteriorSection = document.getElementById('resultadoAnterior');
+        
+        if (!resultadoAnteriorElement || !resultadoAnteriorSection) {
+            console.error('❌ Resultado anterior elements not found');
+            return;
+        }
+        
+        const resultado = general.resultado_consulta || 'Pendiente';
+        
+        // Set the text content
+        resultadoAnteriorElement.textContent = resultado;
+        
+        // Show the section
+        resultadoAnteriorSection.style.display = 'block';
+        
+        // Add visual styling based on the result
+        const iconElement = resultadoAnteriorSection.querySelector('.resultado-icon');
+        if (iconElement) {
+            // Remove existing color classes
+            iconElement.classList.remove('text-warning', 'text-success', 'text-danger', 'text-info');
+            
+            // Add appropriate color based on result
+            switch (resultado.toLowerCase()) {
+                case 'aprobado':
+                    iconElement.classList.add('text-success');
+                    break;
+                case 'rechazado':
+                    iconElement.classList.add('text-danger');
+                    break;
+                case 'alternativa':
+                    iconElement.classList.add('text-warning');
+                    break;
+                case 'en comité':
+                    iconElement.classList.add('text-info');
+                    break;
+                default:
+                    iconElement.classList.add('text-warning'); // Default for 'Pendiente' or unknown
+                    break;
+            }
+        }
+        
+        console.log('✅ Resultado anterior populated:', resultado);
+    }
+
+    /**
+     * Display selected cotización details
+     */
+    function mostrarCotizacionSeleccionada(cotizacionData) {
+        console.log('📋 mostrarCotizacionSeleccionada called with data:', cotizacionData);
+        
+        const displaySection = document.getElementById('cotizacionSeleccionadaDisplay');
+        const contentDiv = document.getElementById('cotizacionSeleccionadaContent');
+        
+        if (displaySection && contentDiv) {
+            contentDiv.innerHTML = `
+                <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                    <div class="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
+                        <div class="flex items-center text-sm font-medium text-gray-700">
+                            <i class="fas fa-calculator text-blue-600 mr-2"></i>
+                            Cotización #${cotizacionData.id}
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button class="inline-flex items-center px-2.5 py-1 text-xs font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-1 transition-colors duration-200" 
+                                    onclick="verDetalleCotizacion(${cotizacionData.id})" 
+                                    title="Ver detalles">
+                                <i class="fas fa-eye mr-1"></i>Ver
+                            </button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex flex-col">
+                            <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Marca</span>
+                            <span class="text-sm text-gray-900 font-medium">${cotizacionData.marca}</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Auto</span>
+                            <span class="text-sm text-gray-900 font-medium">${cotizacionData.modelo}</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Plazo</span>
+                            <span class="text-sm text-gray-900 font-medium">${cotizacionData.plazo}</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Monto Financiado</span>
+                            <span class="text-sm text-gray-900 font-medium text-green-600">${cotizacionData.monto}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            displaySection.style.display = 'block';
+        }
+    }
+
+    /**
      * View cotizacion details
      */
     function verDetalleCotizacion(cotizacionId) {
         console.log('👁️ verDetalleCotizacion called with ID:', cotizacionId);
         
-        // Redirect to cotizacion detail page
-        window.open(`/pacifico/cotizacion/${cotizacionId}/`, '_blank');
+        // Redirect to cotizacion detail page using the correct URL path
+        window.open(`/cotizador/prestAuto/?cotizacion_id=${cotizacionId}`, '_blank');
     }
 
     /**
@@ -10903,6 +11041,9 @@
         // Set up character counter for motivo textarea
         setupMotivoCharacterCounter();
         
+        // Populate resultado anterior
+        populateResultadoAnterior(general);
+        
         // Trigger validation after populating data
         setTimeout(() => {
             if (typeof validarFormularioReconsideracion === 'function') {
@@ -10920,22 +11061,20 @@
             motivoTextarea.addEventListener('input', function() {
                 const currentLength = this.value.length;
                 const maxLength = 2000;
-                const minLength = 50;
                 
-                contadorElement.textContent = `${currentLength} / ${maxLength} caracteres (mínimo ${minLength})`;
+                contadorElement.textContent = `${currentLength} / ${maxLength} caracteres`;
                 
                 // Change color based on length
-                if (currentLength < minLength) {
-                    contadorElement.className = 'text-danger';
-                    motivoTextarea.classList.add('is-invalid');
-                    motivoTextarea.classList.remove('is-valid');
-                } else if (currentLength > maxLength * 0.9) {
+                if (currentLength > maxLength * 0.9) {
                     contadorElement.className = 'text-warning';
                     motivoTextarea.classList.remove('is-invalid', 'is-valid');
-                } else {
+                } else if (currentLength > 0) {
                     contadorElement.className = 'text-muted';
                     motivoTextarea.classList.remove('is-invalid');
                     motivoTextarea.classList.add('is-valid');
+                } else {
+                    contadorElement.className = 'text-muted';
+                    motivoTextarea.classList.remove('is-invalid', 'is-valid');
                 }
                 
                 // Trigger validation check
@@ -10965,6 +11104,19 @@
                 console.log('📻 Cotización actual changed, checked:', this.checked);
                 if (this.checked) {
                     cotizacionesDisponibles.style.display = 'none';
+                    
+                    // Hide the cotizaciones section
+                    const section = document.getElementById('cotizacionesClienteSectionReconsideracion');
+                    if (section) {
+                        section.style.display = 'none';
+                    }
+                    
+                    // Hide the selected cotización display
+                    const selectedDisplay = document.getElementById('cotizacionSeleccionadaDisplay');
+                    if (selectedDisplay) {
+                        selectedDisplay.style.display = 'none';
+                    }
+                    
                     // Clear any previously selected nueva cotización
                     const nuevaCotizacionIdField = document.getElementById('nuevaCotizacionId');
                     if (nuevaCotizacionIdField) {
@@ -10981,6 +11133,22 @@
                 console.log('📻 Cotización nueva changed, checked:', this.checked);
                 if (this.checked) {
                     cotizacionesDisponibles.style.display = 'block';
+                    
+                    // Automatically show and load cotizaciones
+                    const modalElement = document.getElementById('modalReconsideracion');
+                    const solicitudId = modalElement?.dataset?.solicitudId;
+                    
+                    if (solicitudId) {
+                        // Show the cotizaciones section
+                        const section = document.getElementById('cotizacionesClienteSectionReconsideracion');
+                        if (section) {
+                            section.style.display = 'block';
+                        }
+                        
+                        // Load cotizaciones automatically
+                        cargarCotizacionesClienteReconsideracion(solicitudId);
+                    }
+                    
                     // Trigger validation
                     if (typeof validarFormularioReconsideracion === 'function') {
                         validarFormularioReconsideracion();
@@ -11211,13 +11379,24 @@
         if (cotizacionActualSelected) {
             // Use current cotización - get from modal data or hidden field
             const currentData = window.currentModalData;
+            console.log('🔍 DEBUG - currentModalData:', currentData);
+            
             if (currentData && currentData.cotizacion) {
                 cotizacionId = currentData.cotizacion.id || currentData.cotizacion.numero;
                 console.log('✅ Usando cotización actual desde modal data:', cotizacionId);
-            } else {
-                // Fallback: try to get from a hidden field or use a special value
-                cotizacionId = 'actual'; // Backend will understand this means use current cotización
-                console.log('✅ Usando cotización actual (fallback):', cotizacionId);
+            }
+            
+            // If still no cotizacionId, try other sources
+            if (!cotizacionId) {
+                // Try to get from general data
+                if (currentData && currentData.general && currentData.general.cotizacion_id) {
+                    cotizacionId = currentData.general.cotizacion_id;
+                    console.log('✅ Usando cotización ID desde general data:', cotizacionId);
+                } else {
+                    // Fallback: use 'actual' to let backend determine current cotización
+                    cotizacionId = 'actual';
+                    console.log('✅ Usando cotización actual (fallback - backend will determine):', cotizacionId);
+                }
             }
         } else if (cotizacionNuevaSelected) {
             // Use selected cotización from the nueva cotización hidden field
@@ -11242,8 +11421,23 @@
             return;
         }
         
-        if (!cotizacionId) {
+        // Validate cotizacionId (allow 'actual' as a valid value)
+        if (!cotizacionId || (cotizacionId !== 'actual' && !cotizacionId)) {
             showAlert('Por favor, selecciona una cotización.', 'warning');
+            return;
+        }
+        
+        console.log('🎯 Final cotizacionId to use:', cotizacionId);
+        
+        // Show confirmation dialog before proceeding
+        const cotizacionText = cotizacionActualSelected ? 'la cotización actual' : 'la nueva cotización seleccionada';
+        const confirmationMessage = `¿Estás seguro de que deseas enviar esta reconsideración?\n\n` +
+                                  `Motivo: ${motivoTextarea.value.trim()}\n` +
+                                  `Cotización: ${cotizacionText}\n\n` +
+                                  `Esta acción no se puede deshacer.`;
+        
+        if (!confirm(confirmationMessage)) {
+            console.log('🚫 Usuario canceló el envío de reconsideración');
             return;
         }
         
@@ -11275,16 +11469,46 @@
             if (data.success) {
                 showAlert('Reconsideración enviada exitosamente', 'success');
                 
-                // Close modal
-                const modalInstance = bootstrap.Modal.getInstance(modal);
-                modalInstance.hide();
-                
+                // Don't close modal - instead refresh the content to show updated state
                 // Reset form
                 resetFormularioReconsideracion();
                 
-                // Refresh solicitud data
+                // Reload reconsideration history to show the new entry
+                console.log('🔄 Reloading reconsideration history after successful submission');
+                cargarHistorialReconsideraciones(solicitudId);
+                
+                // Update the main solicitud modal if it's open to reflect new state
                 if (typeof cargarDatosSolicitud === 'function') {
                     cargarDatosSolicitud(solicitudId);
+                }
+                
+                // If the main modal is open, update the reconsideration tab status
+                if (window.currentModalData && window.currentModalData.solicitud) {
+                    // Update the solicitud data with the new reconsideration status
+                    window.currentModalData.solicitud.es_reconsideracion = true;
+                    configurarTabReconsideracion(window.currentModalData.solicitud);
+                }
+                
+                // Update button state to reflect that reconsideration has been sent
+                const btnSolicitar = document.getElementById('btnSolicitarReconsideracion');
+                const statusDiv = document.getElementById('reconsideracionStatus');
+                const statusText = document.getElementById('reconsideracionStatusText');
+                
+                if (btnSolicitar) {
+                    btnSolicitar.style.display = 'none';
+                }
+                
+                if (statusText && statusDiv) {
+                    statusText.innerHTML = `
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-clock me-2 text-warning"></i>
+                            <div>
+                                <strong>Reconsideración en proceso</strong>
+                                <br><small class="text-muted">Su solicitud de reconsideración ha sido enviada y está siendo revisada por el comité.</small>
+                            </div>
+                        </div>
+                    `;
+                    statusDiv.className = 'alert alert-info';
                 }
                 
             } else {
@@ -11470,41 +11694,15 @@
                 </div>
             </div>
             <div class="modal-body-modern-reconsideracion">
-                <!-- Instructions Section -->
-                <div class="instructions-section">
-                    <div class="instructions-content">
-                        <div class="instructions-header">
-                            <i class="fas fa-lightbulb instructions-icon"></i>
-                            <h6 class="instructions-title">
-                                Instrucciones para Solicitar Reconsideración
-                            </h6>
-                        </div>
-                        <div class="instructions-grid">
-                            <div class="instructions-column">
-                                <ul class="instructions-list">
-                                    <li><strong>Motivo:</strong> Explique detalladamente por qué solicita la reconsideración</li>
-                                    <li><strong>Cotización:</strong> Seleccione si usar la cotización actual o una diferente</li>
-                                    <li><strong>Revisión:</strong> Su solicitud será revisada por el comité correspondiente</li>
-                                </ul>
-                            </div>
-                            <div class="instructions-column">
-                                <ul class="instructions-list">
-                                    <li><strong>Tiempo:</strong> El proceso puede tomar 2-3 días hábiles</li>
-                                    <li><strong>Notificación:</strong> Recibirá una notificación del resultado</li>
-                                    <li><strong>Historial:</strong> Puede consultar el estado en la pestaña "Reconsideración"</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
                 <!-- Mostrar resultado anterior -->
-                <div class="resultado-anterior-section" id="resultadoAnterior">
-                    <div class="resultado-anterior-content">
-                        <i class="fas fa-exclamation-triangle resultado-icon"></i>
-                        <div class="resultado-text">
-                            <strong>Resultado anterior:</strong>
-                            <span id="resultadoAnteriorTexto"></span>
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4 shadow-sm" id="resultadoAnterior" style="display: none;">
+                    <div class="flex items-center">
+                        <i class="fas fa-exclamation-triangle resultado-icon text-yellow-600 mr-3 text-lg"></i>
+                        <div class="flex-1">
+                            <div class="text-sm font-medium text-yellow-800">
+                                <strong>Resultado anterior:</strong>
+                                <span id="resultadoAnteriorTexto" class="ml-2 font-semibold"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -11578,11 +11776,23 @@
                         <div id="cotizacionesDisponibles" class="cotizaciones-disponibles-section" style="display: none;">
                             <h6 class="cotizaciones-disponibles-title">Seleccione una cotización:</h6>
                             
-                            <!-- Button to show all cotizaciones -->
-                            <div class="cotizaciones-action-section">
-                                <button type="button" class="btn-cotizaciones" id="btnVerCotizacionesReconsideracion" onclick="mostrarCotizacionesClienteReconsideracion()" title="Ver todas las cotizaciones del cliente">
-                                    <i class="fas fa-calculator me-2"></i>Ver Todas las Cotizaciones del Cliente
-                                </button>
+                            <!-- Selected Cotización Display -->
+                            <div id="cotizacionSeleccionadaDisplay" class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4 shadow-sm" style="display: none;">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h6 class="text-sm font-semibold text-green-800 flex items-center">
+                                        <i class="fas fa-check-circle text-green-600 mr-2"></i>
+                                        Cotización Seleccionada
+                                    </h6>
+                                    <button type="button" 
+                                            class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-100 border border-blue-300 rounded-md hover:bg-blue-200 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors duration-200" 
+                                            onclick="mostrarCotizacionesClienteReconsideracion()" 
+                                            title="Cambiar cotización">
+                                        <i class="fas fa-edit mr-1"></i>Cambiar
+                                    </button>
+                                </div>
+                                <div id="cotizacionSeleccionadaContent" class="space-y-2">
+                                    <!-- Selected cotización details will be displayed here -->
+                                </div>
                             </div>
                             
                             <!-- Cotizaciones del Cliente Section -->

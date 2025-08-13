@@ -195,6 +195,8 @@
                             </div>
                             <span class="cotizacion-badge">Actual</span>
                         </div>
+                        <!-- Hidden input for current cotización -->
+                        <input type="radio" name="cotizacion_id" value="{{ solicitud.cotizacion.id|default:'' }}" id="cotizacion-actual-id" checked style="display: none;">
                     </div>
                     
                     <!-- Cotizaciones disponibles -->
@@ -206,7 +208,7 @@
                         <div class="cotizacion-option" data-cotizacion-id="{{ cotizacion.id }}">
                             <div class="cotizacion-details">
                                 <div class="cotizacion-info">
-                                    <input type="radio" name="nueva_cotizacion_id" value="{{ cotizacion.id }}" class="mr-2">
+                                    <input type="radio" name="cotizacion_id" value="{{ cotizacion.id }}" class="mr-2">
                                     <strong>Cotización #{{ cotizacion.id }}</strong>
                                     <br>
                                     <small class="text-muted">
@@ -247,16 +249,19 @@ $(document).ready(function() {
         if ($(this).val() === 'actual') {
             $('#cotizacion-actual').show();
             $('#cotizaciones-disponibles').hide();
-            $('input[name="usar_nueva_cotizacion"]').remove();
+            // Asegurar que se use la cotización actual
+            $('input[name="cotizacion_id"]').prop('checked', false);
+            $('#cotizacion-actual-id').prop('checked', true);
         } else {
             $('#cotizacion-actual').hide();
             $('#cotizaciones-disponibles').show();
-            // Agregar campo hidden para indicar que se usa nueva cotización
-            if (!$('input[name="usar_nueva_cotizacion"]').length) {
-                $('#form-reconsideracion').append('<input type="hidden" name="usar_nueva_cotizacion" value="on">');
-            }
+            // Desmarcar la cotización actual
+            $('#cotizacion-actual-id').prop('checked', false);
         }
     });
+    
+    // Inicializar estado
+    $('#cotizacion-actual-id').prop('checked', true);
     
     // Manejar selección de cotización
     $('.cotizacion-option').click(function() {
@@ -271,26 +276,42 @@ $(document).ready(function() {
     $('#form-reconsideracion').submit(function(e) {
         var motivo = $('#motivo').val().trim();
         
-        if (motivo.length < 50) {
+        if (!motivo) {
             e.preventDefault();
-            alert('El motivo debe tener al menos 50 caracteres para una explicación adecuada.');
+            alert('Debe proporcionar un motivo para la reconsideración.');
             $('#motivo').focus();
             return false;
         }
         
         if ($('input[name="cotizacion_opcion"]:checked').val() === 'nueva') {
-            if (!$('input[name="nueva_cotizacion_id"]:checked').length) {
+            if (!$('input[name="cotizacion_id"]:checked').length) {
                 e.preventDefault();
                 alert('Debe seleccionar una cotización.');
                 return false;
             }
         }
         
+        // Debug: Log form data
+        console.log('Form data being submitted:');
+        console.log('Motivo:', motivo);
+        console.log('Cotización opción:', $('input[name="cotizacion_opcion"]:checked').val());
+        console.log('Cotización ID seleccionada:', $('input[name="cotizacion_id"]:checked').val());
+        
         // Confirmar envío
         if (!confirm('¿Está seguro de que desea enviar esta reconsideración? Una vez enviada, será revisada por el equipo de consulta.')) {
             e.preventDefault();
             return false;
         }
+        
+        // Mostrar loading state
+        var submitBtn = $(this).find('button[type="submit"]');
+        var originalText = submitBtn.html();
+        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Enviando...');
+        
+        // Re-enable button after a delay in case of error
+        setTimeout(function() {
+            submitBtn.prop('disabled', false).html(originalText);
+        }, 10000);
     });
 });
 </script>

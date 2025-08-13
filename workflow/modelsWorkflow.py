@@ -707,6 +707,8 @@ class SolicitudComentario(models.Model):
     TIPO_CHOICES = [
         ('general', 'General'),
         ('analista', 'Analista'),
+        ('analista_credito', 'Analista de Crédito'),
+        ('sistema', 'Sistema'),
     ]
     
     RESULTADO_ANALISIS_CHOICES = [
