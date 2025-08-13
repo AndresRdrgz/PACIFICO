@@ -311,6 +311,16 @@ class ModalRequisitos {
      * Determinar estado de un requisito
      */
     determinarEstadoRequisito(requisito) {
+        // Lógica especial para agenda de firma
+        if (requisito.tipo_especial === 'agenda_firma') {
+            if (requisito.esta_cumplido && requisito.agenda_firma && requisito.agenda_firma.tiene_cita) {
+                return 'completado';
+            } else {
+                return 'faltante';
+            }
+        }
+
+        // Lógica normal para requisitos con archivos
         if (requisito.esta_cumplido && requisito.archivo_actual) {
             return 'completado';
         } else if (requisito.archivo_actual && !requisito.esta_cumplido) {

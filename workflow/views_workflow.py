@@ -882,13 +882,13 @@ def detalle_solicitud(request, solicitud_id):
 
                 # Lógica especial para requisito de agenda de firma
                 if req_sol.requisito.tipo_especial == 'agenda_firma':
-                    # ✅ Para agenda de firma, obtener información pero no marcar como faltante
+                    # ✅ Para agenda de firma, verificar si realmente existe una cita agendada
                     from .modelsWorkflow import AgendaFirma
                     agenda_firma = AgendaFirma.objects.filter(solicitud=solicitud).first()
                     
                     requisitos_necesarios[req_id]['archivo_actual'] = req_sol
-                    # Siempre marcar como cumplido para que no bloquee el proceso
-                    requisitos_necesarios[req_id]['esta_cumplido'] = True  
+                    # Solo marcar como cumplido si realmente existe una cita agendada
+                    requisitos_necesarios[req_id]['esta_cumplido'] = bool(agenda_firma)
                     requisitos_necesarios[req_id]['agenda_firma'] = agenda_firma
                     requisitos_necesarios[req_id]['es_agenda_firma'] = True
                     # Agregar info adicional para el template
@@ -909,8 +909,8 @@ def detalle_solicitud(request, solicitud_id):
                 from .modelsWorkflow import AgendaFirma
                 agenda_firma = AgendaFirma.objects.filter(solicitud=solicitud).first()
                 req_data['agenda_firma'] = agenda_firma
-                # Siempre marcar como cumplido para que no bloquee el proceso
-                req_data['esta_cumplido'] = True
+                # Solo marcar como cumplido si realmente existe una cita agendada
+                req_data['esta_cumplido'] = bool(agenda_firma)
                 # Agregar info adicional para el template
                 req_data['tiene_cita_real'] = bool(agenda_firma)
         
@@ -8469,7 +8469,10 @@ def verificar_requisitos_transicion(solicitud, transicion):
         if req_transicion.requisito.tipo_especial == 'agenda_firma':
             # ✅ IMPORTANTE: Agenda de firma NO bloquea transiciones en Back Office
             # Es un requisito informativo que no impide el avance del proceso
-            esta_cumplido = True  # Siempre considerar como cumplido para no bloquear
+            # Pero solo se considera cumplido si realmente existe una cita agendada
+            from .modelsWorkflow import AgendaFirma
+            agenda_firma = AgendaFirma.objects.filter(solicitud=solicitud).first()
+            esta_cumplido = bool(agenda_firma)  # Solo cumplido si existe cita
         else:
             # Considerar un requisito como cumplido si:
             # 1. Existe el RequisitoSolicitud Y
@@ -11238,8 +11241,8 @@ def api_obtener_requisitos_faltantes_detallado(request, solicitud_id):
                 # Verificar si existe una cita agendada para mostrar el estado correcto en la UI
                 from workflow.modelsWorkflow import AgendaFirma
                 tiene_cita_agendada = AgendaFirma.objects.filter(solicitud=solicitud).exists()
-                # Para efectos de conteo y validación, siempre considerarlo completo
-                esta_completo = True  # No cuenta como faltante para validaciones
+                # Para efectos de conteo y validación, solo considerarlo completo si tiene cita
+                esta_completo = tiene_cita_agendada  # Solo completo si existe cita agendada
             else:
                 # Determinar si está completo - considerar archivos subidos desde drawer
                 # Un requisito está completo si:
