@@ -45,8 +45,8 @@ def user_navigation_permissions(request):
     if user_role in ['Supervisor', 'Administrador']:
         context['can_access_comite'] = True
     
-    # Acceso a Bandejas de Trabajo: Analistas siempre pueden ver, otros según permisos
-    if user_role == 'Analista':
+    # Acceso a Bandejas de Trabajo: Analistas y Back Office siempre pueden ver, otros según permisos
+    if user_role in ['Analista', 'Back Office']:
         context['can_access_bandejas_trabajo'] = True
     else:
         try:

@@ -8665,8 +8665,8 @@ def vista_mixta_bandejas(request):
         # Obtener etapas grupales donde el usuario tiene permisos
         grupos_usuario = request.user.groups.all()
         
-        if user_role == 'Analista':
-            # Los analistas SOLO ven las bandejas donde tienen PermisoBandeja específico
+        if user_role in ['Analista', 'Back Office']:
+            # Los analistas y Back Office SOLO ven las bandejas donde tienen PermisoBandeja específico
             if etapa_seleccionada:
                 # Si hay etapa seleccionada, verificar que tenga permisos para esa etapa específica
                 etapas_grupales = Etapa.objects.filter(
@@ -8899,8 +8899,8 @@ def vista_mixta_bandejas(request):
         except UserProfile.DoesNotExist:
             user_role = None
         
-        if user_role == 'Analista':
-            # Los analistas solo ven etapas donde tienen PermisoBandeja específico
+        if user_role in ['Analista', 'Back Office']:
+            # Los analistas y Back Office solo ven etapas donde tienen PermisoBandeja específico
             etapas_con_bandeja = Etapa.objects.filter(
                 es_bandeja_grupal=True,
                 permisos_bandeja__usuario=request.user,
@@ -11861,7 +11861,7 @@ def api_obtener_grupos(request):
 
 @login_required
 def detalle_solicitud_analisis(request, solicitud_id):
-    """Vista especializada para análisis de solicitudes por parte de analistas"""
+    """Vista especializada para análisis de solicitudes por parte de analistas y Back Office"""
     
     solicitud = get_object_or_404(Solicitud, id=solicitud_id)
     
