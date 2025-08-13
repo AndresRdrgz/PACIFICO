@@ -74,8 +74,8 @@ def user_navigation_permissions(request):
     except:
         pass
     
-    # Acceso a Pendientes y Errores: Roles administrativos
-    if user_role in ['Supervisor', 'Administrador']:
+    # Acceso a Pendientes y Errores: Roles administrativos y Back Office
+    if user_role in ['Supervisor', 'Administrador', 'Back Office']:
         context['can_access_pendientes_errores'] = True
     
     return context

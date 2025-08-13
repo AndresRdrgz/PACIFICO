@@ -8957,19 +8957,39 @@ def api_tomar_solicitud(request, solicitud_id):
                 'error': 'Esta solicitud no está disponible para tomar.'
             })
         
-        # === SISTEMA DE PERMISOS SUPER STAFF ===
+        # === SISTEMA DE PERMISOS INTEGRADO ===
         # Los usuarios super staff (is_staff=True) pueden tomar cualquier solicitud
         if request.user.is_staff:
             # Super staff tiene permisos completos
             tiene_permiso = True
         else:
             # Verificar permisos regulares para usuarios normales
+            tiene_permiso = False
+            
+            # 1. Verificar permisos por grupos (PermisoEtapa)
             grupos_usuario = request.user.groups.all()
-            tiene_permiso = PermisoEtapa.objects.filter(
-                etapa=solicitud.etapa_actual,
-                grupo__in=grupos_usuario,
-                puede_autoasignar=True
-            ).exists()
+            if grupos_usuario.exists():
+                tiene_permiso = PermisoEtapa.objects.filter(
+                    etapa=solicitud.etapa_actual,
+                    grupo__in=grupos_usuario,
+                    puede_autoasignar=True
+                ).exists()
+            
+            # 2. Si no tiene permisos por grupo, verificar permisos individuales (PermisoBandeja)
+            if not tiene_permiso:
+                # Verificar si el usuario tiene rol "Back Office" o "Analista"
+                try:
+                    from pacifico.models import UserProfile
+                    user_profile = UserProfile.objects.get(user=request.user)
+                    if user_profile.rol in ['Back Office', 'Analista']:
+                        # Verificar permisos específicos de bandeja
+                        tiene_permiso = PermisoBandeja.objects.filter(
+                            etapa=solicitud.etapa_actual,
+                            usuario=request.user,
+                            puede_tomar=True
+                        ).exists()
+                except (UserProfile.DoesNotExist, ImportError):
+                    pass
         
         if not tiene_permiso:
             return JsonResponse({

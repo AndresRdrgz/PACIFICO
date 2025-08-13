@@ -16,6 +16,7 @@ Se ha implementado exitosamente el nuevo rol **"Back Office"** en el sistema, co
 | **Solicitudes Asignadas** | ✅ Completo | Por rol |
 | **Filtros por Etapa** | ✅ Completo | Por rol |
 | **Filtros por Pipeline** | ✅ Completo | Por rol |
+| **Pendientes y Errores** | ✅ Completo | Por rol |
 
 ### ❌ **Permisos NO Otorgados**
 
@@ -23,7 +24,6 @@ Se ha implementado exitosamente el nuevo rol **"Back Office"** en el sistema, co
 |---------------|--------|------|
 | **Negocios** | ❌ Sin acceso | Por rol |
 | **Comité** | ❌ Sin acceso | Por rol |
-| **Pendientes/Errores** | ❌ Sin acceso | Por rol |
 | **Canal Digital** | ❌ Sin acceso | Por grupo |
 
 ## 🔄 **Acceso Condicional (Según Configuración)**
@@ -42,8 +42,12 @@ Se ha implementado exitosamente el nuevo rol **"Back Office"** en el sistema, co
 
 ### 2. **Context Processor**
 - **Archivo**: `workflow/context_processors.py`
-- **Cambio**: Rol "Back Office" incluido en acceso a bandejas de trabajo
-- **Lógica**: `user_role in ['Analista', 'Back Office']`
+- **Cambios**: 
+  - Rol "Back Office" incluido en acceso a bandejas de trabajo
+  - Rol "Back Office" incluido en acceso a pendientes y errores
+- **Lógica**: 
+  - Bandejas: `user_role in ['Analista', 'Back Office']`
+  - Pendientes: `user_role in ['Supervisor', 'Administrador', 'Back Office']`
 
 ### 3. **Vistas del Workflow**
 - **Archivo**: `workflow/views_workflow.py`
@@ -59,6 +63,19 @@ Se ha implementado exitosamente el nuevo rol **"Back Office"** en el sistema, co
   - Listar usuarios con rol Back Office
   - Información de ayuda y permisos
 
+### 5. **Template Base Actualizado**
+- **Archivo**: `workflow/templates/workflow/base.html`
+- **Cambio**: Pestaña "Pendientes y errores" movida a sección independiente "Gestión"
+- **Antes**: Anidada dentro de sección "Negocios"
+- **Después**: Sección independiente accesible para usuarios con `can_access_pendientes_errores = True`
+
+### 6. **Comando de Prueba de Template**
+- **Archivo**: `workflow/management/commands/test_template_rendering.py`
+- **Funcionalidades**:
+  - Verificar renderizado del template para usuarios específicos
+  - Analizar estructura del menú que verá cada usuario
+  - Validar que las variables del context processor funcionen correctamente
+
 ## 🚀 **Configuración y Uso**
 
 ### **1. Asignar Rol a Usuario**
@@ -72,6 +89,20 @@ python manage.py setup_backoffice_role --list
 
 # Ver información de ayuda
 python manage.py setup_backoffice_role
+```
+
+### **2. Verificar Permisos y Funcionalidad**
+
+```bash
+# Probar permisos del context processor
+python manage.py test_backoffice_permissions --username juan.perez
+
+# Probar renderizado del template
+python manage.py test_template_rendering --username juan.perez
+
+# Probar todos los usuarios Back Office
+python manage.py test_backoffice_permissions
+python manage.py test_template_rendering
 ```
 
 ### **2. Configurar Permisos de Bandeja**
@@ -115,6 +146,10 @@ PermisoBandeja.objects.create(
 # Acceso a Bandejas de Trabajo: Analistas y Back Office siempre pueden ver
 if user_role in ['Analista', 'Back Office']:
     context['can_access_bandejas_trabajo'] = True
+
+# Acceso a Pendientes y Errores: Roles administrativos y Back Office
+if user_role in ['Supervisor', 'Administrador', 'Back Office']:
+    context['can_access_pendientes_errores'] = True
 ```
 
 ### **Vista Mixta de Bandejas**
@@ -139,6 +174,38 @@ if user_role in ['Analista', 'Back Office']:
     ).exclude(nombre__iexact="Comité de Crédito").select_related('pipeline').distinct()
 ```
 
+## 📱 **Estructura del Menú para el Rol Back Office**
+
+### **Menú de Navegación Visible**
+
+```
+📱 Navegación Principal
+  └── Dashboard
+
+📋 Bandejas de Trabajo
+  └── Bandejas de Trabajo
+
+⚠️  Gestión
+  └── Pendientes y errores
+
+👤 Usuario
+  ├── Mi Perfil
+  └── Cerrar Sesión
+```
+
+### **Secciones NO Visibles**
+- ❌ **Negocios** (Cotizaciones, Formularios, Agenda de Firma)
+- ❌ **Comité** (Acceso restringido)
+- ❌ **Canal Digital** (Acceso por grupo específico)
+- ❌ **Administración** (Solo superusuarios)
+- ❌ **Reportes** (Solo superusuarios)
+
+### **Ubicación de la Pestaña "Pendientes y Errores"**
+- **Sección**: "Gestión" (independiente)
+- **Acceso**: Directo por rol "Back Office"
+- **No requiere**: Acceso a sección "Negocios"
+- **Funcionalidad**: Completa con tres subpestañas
+
 ## 📊 **Casos de Uso Comunes**
 
 ### **👨‍💼 Usuario Back Office - Análisis de Solicitudes**
@@ -148,6 +215,7 @@ if user_role in ['Analista', 'Back Office']:
    - Tomar solicitudes de bandejas grupales
    - Analizar requisitos de transición
    - Gestionar solicitudes asignadas
+   - **Acceso completo a Pendientes y Errores** (nueva funcionalidad)
 3. **Restricciones**: No puede ver todas las bandejas del sistema
 
 ### **🔧 Administrador - Configuración de Permisos**
