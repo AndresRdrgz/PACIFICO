@@ -271,6 +271,7 @@ class UserProfile(models.Model):
             ('Asistente', 'Asistente'),
             ('Administrador', 'Administrador'),
             ('Supervisor', 'Supervisor'),
+            ('Analista', 'Analista'),
             ('Usuario', 'Usuario'),
         ],
         default='Usuario'

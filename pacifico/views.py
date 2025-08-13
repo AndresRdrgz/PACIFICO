@@ -661,9 +661,14 @@ def cotizacionesList(request):
 
     filtered_cotizaciones = cotizacion_filter.qs
 
-    # Filter cotizaciones by addedBy current user
-    if request.user.is_authenticated and not request.user.is_staff:
-        filtered_cotizaciones = filtered_cotizaciones.filter(added_by=request.user)
+    # Usar la función helper para obtener cotizaciones con supervisión
+    try:
+        from pacifico.utils_cotizaciones import obtener_cotizaciones_para_usuario
+        filtered_cotizaciones = obtener_cotizaciones_para_usuario(request.user, filtered_cotizaciones)
+    except ImportError:
+        # Fallback: solo cotizaciones propias
+        if request.user.is_authenticated and not request.user.is_staff:
+            filtered_cotizaciones = filtered_cotizaciones.filter(added_by=request.user)
 
     # Filter by the last 30 days
     end_date = timezone.now()
@@ -726,10 +731,16 @@ def get_lineas(request):
 
 @login_required
 def main_menu(request):
-    if request.user.is_authenticated and not request.user.is_staff:
-        cotizaciones = Cotizacion.objects.filter(added_by=request.user)
-    else:
-        cotizaciones = Cotizacion.objects.all()
+    # Usar la función helper para obtener cotizaciones con supervisión
+    try:
+        from pacifico.utils_cotizaciones import obtener_cotizaciones_para_usuario
+        cotizaciones = obtener_cotizaciones_para_usuario(request.user)
+    except ImportError:
+        # Fallback: solo cotizaciones propias
+        if request.user.is_authenticated and not request.user.is_staff:
+            cotizaciones = Cotizacion.objects.filter(added_by=request.user)
+        else:
+            cotizaciones = Cotizacion.objects.all()
     
     # Apply filters
     cotizacion_filter = CotizacionFilter(request.GET, queryset=cotizaciones)

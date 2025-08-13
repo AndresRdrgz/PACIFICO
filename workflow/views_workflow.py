@@ -636,7 +636,34 @@ def bandeja_trabajo(request):
     if request.user.is_superuser:
         cotizaciones = Cotizacion.objects.all().order_by('-created_at')[:100]  # Últimas 100 cotizaciones
     else:
-        cotizaciones = Cotizacion.objects.filter(added_by=request.user).order_by('-created_at')[:100]
+        # Usuario normal: ver sus propias cotizaciones
+        cotizaciones_propias = Cotizacion.objects.filter(added_by=request.user).order_by('-created_at')[:100]
+        
+        # Verificar si es supervisor de grupo
+        cotizaciones_supervisadas = Cotizacion.objects.none()
+        try:
+            from pacifico.utils_grupos import obtener_grupos_supervisados_por_usuario
+            grupos_supervisados = obtener_grupos_supervisados_por_usuario(request.user)
+            
+            if grupos_supervisados.exists():
+                # Obtener usuarios supervisados
+                usuarios_supervisados = []
+                for grupo_profile in grupos_supervisados:
+                    miembros = grupo_profile.group.user_set.all()
+                    usuarios_supervisados.extend(miembros)
+                
+                # Filtrar cotizaciones de usuarios supervisados
+                if usuarios_supervisados:
+                    cotizaciones_supervisadas = Cotizacion.objects.filter(
+                        added_by__in=usuarios_supervisados
+                    ).order_by('-created_at')[:100]
+        except ImportError:
+            pass  # Si no existe el módulo, continuar sin supervisión
+        
+        # Combinar cotizaciones propias + supervisadas y tomar las últimas 100
+        cotizaciones = list(cotizaciones_propias) + list(cotizaciones_supervisadas)
+        cotizaciones.sort(key=lambda x: x.created_at, reverse=True)
+        cotizaciones = cotizaciones[:100]
     
     context = {
         'pipelines': Pipeline.objects.all(),
@@ -3399,7 +3426,34 @@ def nueva_solicitud(request):
     if request.user.is_superuser:
         cotizaciones = Cotizacion.objects.all().order_by('-created_at')[:100]  # Últimas 100 cotizaciones
     else:
-        cotizaciones = Cotizacion.objects.filter(added_by=request.user).order_by('-created_at')[:100]
+        # Usuario normal: ver sus propias cotizaciones
+        cotizaciones_propias = Cotizacion.objects.filter(added_by=request.user).order_by('-created_at')[:100]
+        
+        # Verificar si es supervisor de grupo
+        cotizaciones_supervisadas = Cotizacion.objects.none()
+        try:
+            from pacifico.utils_grupos import obtener_grupos_supervisados_por_usuario
+            grupos_supervisados = obtener_grupos_supervisados_por_usuario(request.user)
+            
+            if grupos_supervisados.exists():
+                # Obtener usuarios supervisados
+                usuarios_supervisados = []
+                for grupo_profile in grupos_supervisados:
+                    miembros = grupo_profile.group.user_set.all()
+                    usuarios_supervisados.extend(miembros)
+                
+                # Filtrar cotizaciones de usuarios supervisados
+                if usuarios_supervisados:
+                    cotizaciones_supervisadas = Cotizacion.objects.filter(
+                        added_by__in=usuarios_supervisados
+                    ).order_by('-created_at')[:100]
+        except ImportError:
+            pass  # Si no existe el módulo, continuar sin supervisión
+        
+        # Combinar cotizaciones propias + supervisadas y tomar las últimas 100
+        cotizaciones = list(cotizaciones_propias) + list(cotizaciones_supervisadas)
+        cotizaciones.sort(key=lambda x: x.created_at, reverse=True)
+        cotizaciones = cotizaciones[:100]
     
     context = {
         'pipelines': Pipeline.objects.all(),
@@ -8597,25 +8651,52 @@ def vista_mixta_bandejas(request):
             ).order_by('-fecha_ultima_actualizacion')
     else:
         # Usuarios regulares - permisos normales
-        grupos_usuario = request.user.groups.all()
+        from django.db.models import Q
+        from pacifico.models import UserProfile
+        
+        # Obtener el rol del usuario
+        try:
+            user_profile = UserProfile.objects.get(user=request.user)
+            user_role = user_profile.rol
+        except UserProfile.DoesNotExist:
+            user_role = None
         
         # === BANDEJA GRUPAL ===
         # Obtener etapas grupales donde el usuario tiene permisos
-        if etapa_seleccionada:
-            # Si hay etapa seleccionada, verificar que el usuario tenga permisos para esa etapa específica
-            etapas_grupales = Etapa.objects.filter(
-                id=etapa_seleccionada.id,
-                es_bandeja_grupal=True,
-                permisos__grupo__in=grupos_usuario,
-                permisos__puede_autoasignar=True
-            ).distinct()
+        grupos_usuario = request.user.groups.all()
+        
+        if user_role == 'Analista':
+            # Los analistas SOLO ven las bandejas donde tienen PermisoBandeja específico
+            if etapa_seleccionada:
+                # Si hay etapa seleccionada, verificar que tenga permisos para esa etapa específica
+                etapas_grupales = Etapa.objects.filter(
+                    id=etapa_seleccionada.id,
+                    es_bandeja_grupal=True,
+                    permisos_bandeja__usuario=request.user,
+                    permisos_bandeja__puede_ver=True
+                ).distinct()
+            else:
+                # Si no hay etapa seleccionada, mostrar SOLO las etapas donde tiene permisos directos
+                etapas_grupales = Etapa.objects.filter(
+                    es_bandeja_grupal=True,
+                    permisos_bandeja__usuario=request.user,
+                    permisos_bandeja__puede_ver=True
+                ).exclude(nombre__iexact="Comité de Crédito").distinct()
         else:
-            # Si no hay etapa seleccionada, mostrar todas las etapas donde tiene permisos excepto Comité de Crédito
-            etapas_grupales = Etapa.objects.filter(
-                es_bandeja_grupal=True,
-                permisos__grupo__in=grupos_usuario,
-                permisos__puede_autoasignar=True
-            ).exclude(nombre__iexact="Comité de Crédito").distinct()
+            # Otros roles: filtro normal por grupos
+            if etapa_seleccionada:
+                etapas_grupales = Etapa.objects.filter(
+                    id=etapa_seleccionada.id,
+                    es_bandeja_grupal=True,
+                    permisos__grupo__in=grupos_usuario,
+                    permisos__puede_autoasignar=True
+                ).distinct()
+            else:
+                etapas_grupales = Etapa.objects.filter(
+                    es_bandeja_grupal=True,
+                    permisos__grupo__in=grupos_usuario,
+                    permisos__puede_autoasignar=True
+                ).exclude(nombre__iexact="Comité de Crédito").distinct()
         
         # Solicitudes grupales (sin asignar)
         solicitudes_grupales = Solicitud.objects.filter(
@@ -8807,7 +8888,32 @@ def vista_mixta_bandejas(request):
     etapas_unicas = sorted(list(etapas_unicas))
     
     # Obtener todas las etapas con bandeja habilitada (para el dropdown) excepto Comité de Crédito
-    etapas_con_bandeja = Etapa.objects.filter(es_bandeja_grupal=True).exclude(nombre__iexact="Comité de Crédito").select_related('pipeline')
+    # Etapas con bandeja - solo las que el usuario puede ver
+    if request.user.is_superuser or request.user.is_staff:
+        etapas_con_bandeja = Etapa.objects.filter(es_bandeja_grupal=True).exclude(nombre__iexact="Comité de Crédito").select_related('pipeline')
+    else:
+        # Para usuarios regulares, solo mostrar etapas donde tienen permisos
+        try:
+            user_profile = UserProfile.objects.get(user=request.user)
+            user_role = user_profile.rol
+        except UserProfile.DoesNotExist:
+            user_role = None
+        
+        if user_role == 'Analista':
+            # Los analistas solo ven etapas donde tienen PermisoBandeja específico
+            etapas_con_bandeja = Etapa.objects.filter(
+                es_bandeja_grupal=True,
+                permisos_bandeja__usuario=request.user,
+                permisos_bandeja__puede_ver=True
+            ).exclude(nombre__iexact="Comité de Crédito").select_related('pipeline').distinct()
+        else:
+            # Otros roles: filtro por grupos
+            grupos_usuario = request.user.groups.all()
+            etapas_con_bandeja = Etapa.objects.filter(
+                es_bandeja_grupal=True,
+                permisos__grupo__in=grupos_usuario,
+                permisos__puede_autoasignar=True
+            ).exclude(nombre__iexact="Comité de Crédito").select_related('pipeline').distinct()
     
     context = {
         'solicitudes_grupales': solicitudes_grupales,
