@@ -1778,8 +1778,9 @@
             const container = document.getElementById('cliente-info-container');
             
             // Fetch client compliance data
-            const response = await fetch(`/workflow/api/solicitud/${solicitudId}/calificaciones/`);
-            const calificaciones = response.ok ? await response.json() : [];
+            const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/calificaciones/`);
+            const responseData = response.ok ? await response.json() : { calificaciones: [] };
+            const calificaciones = responseData.calificaciones || [];
             
             // Helper function to get compliance badge
             function getComplianceBadge(campo, calificaciones) {
@@ -1854,8 +1855,9 @@
             const solicitud = templateData.solicitud;
             
             // Fetch compliance data
-            const response = await fetch(`/workflow/api/solicitud/${solicitudId}/calificaciones/`);
-            const calificaciones = response.ok ? await response.json() : [];
+            const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/calificaciones/`);
+            const responseData = response.ok ? await response.json() : { calificaciones: [] };
+            const calificaciones = responseData.calificaciones || [];
             
             // Helper function to get compliance badge
             function getComplianceBadge(campo, calificaciones) {
@@ -1934,8 +1936,9 @@
             const cotizacion = templateData.solicitud.cotizacion;
             
             // Fetch compliance data
-            const response = await fetch(`/workflow/api/solicitud/${solicitudId}/calificaciones/`);
-            const calificaciones = response.ok ? await response.json() : [];
+            const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/calificaciones/`);
+            const responseData = response.ok ? await response.json() : { calificaciones: [] };
+            const calificaciones = responseData.calificaciones || [];
             
             // Helper function to get compliance badge
             function getComplianceBadge(campo, calificaciones) {
@@ -2025,8 +2028,9 @@
             const container = document.getElementById('adjuntos-container');
             
             // Fetch compliance data for documents
-            const response = await fetch(`/workflow/api/solicitud/${solicitudId}/calificaciones/`);
-            const calificaciones = response.ok ? await response.json() : [];
+            const response = await fetch(`/workflow/api/solicitudes/${solicitudId}/calificaciones/`);
+            const responseData = response.ok ? await response.json() : { calificaciones: [] };
+            const calificaciones = responseData.calificaciones || [];
             
             // Helper function to get compliance badge
             function getComplianceBadge(campo, calificaciones) {
@@ -2263,9 +2267,9 @@
                     
                     showNotification('Decisión procesada exitosamente. Redirigiendo...', 'success');
                     
-                    // Redirect after short delay
+                    // Redirect to vista mixta after short delay
                     setTimeout(() => {
-                        window.location.href = "{% url 'workflow:negocios' %}";
+                        window.location.href = data.redirect_url || "{% url 'workflow:vista_mixta_bandejas' %}";
                     }, 2000);
                 } else {
                     showNotification('Error: ' + (data.error || 'Error desconocido'), 'error');
@@ -2273,7 +2277,7 @@
             })
             .catch(error => {
                 console.error('Error:', error);
-                showNotification('Error al procesar la decisión. Intente nuevamente.', 'error');
+                showNotification('Error procesando reconsideración: ' + error.message, 'error');
             })
             .finally(() => {
                 button.disabled = false;

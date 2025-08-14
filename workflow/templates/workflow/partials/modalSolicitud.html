@@ -1997,6 +1997,59 @@
         color: #0056b3;
         font-weight: 500;
     }
+    
+    /* === Nueva Reconsideración Request Section === */
+    .reconsideracion-new-request-section {
+        animation: fadeInUp 0.5s ease-out;
+        border: 1px solid rgba(40, 167, 69, 0.2);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .reconsideracion-new-request-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, #28a745, #20c997, #28a745);
+        background-size: 200% 100%;
+        animation: shimmerGreen 2s infinite;
+    }
+    
+    @keyframes shimmerGreen {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+    
+    .reconsideracion-new-request-section .btn-success {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        border: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
+    }
+    
+    .reconsideracion-new-request-section .btn-success:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        background: linear-gradient(135deg, #218838, #1e7e34);
+    }
+    
+    .reconsideracion-new-request-section .btn-outline-secondary {
+        border-color: #6c757d;
+        color: #6c757d;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .reconsideracion-new-request-section .btn-outline-secondary:hover {
+        background: #6c757d;
+        border-color: #6c757d;
+        color: white;
+        transform: translateY(-1px);
+    }
 
     .diligencia-container {
         min-height: 200px;
@@ -4959,6 +5012,7 @@
 
             // Store current modal data globally for updates
             window.currentModalData = data;
+            window.currentSolicitudData = data.solicitud; // Store solicitud data for reconsideración logic
 
             // Validate data structure
             if (!data || typeof data !== 'object') {
@@ -10129,9 +10183,11 @@
         console.log('   current_user_id:', currentUserId);
         console.log('   es_propietario:', esPropietario ? '✅' : '❌');
         
-        // Check for active reconsideración
-        const tieneReconsideracionActiva = solicitud.es_reconsideracion || false;
-        console.log('🔄 Reconsideración activa:', tieneReconsideracionActiva ? '✅' : '❌');
+        // Check for active reconsideración - REMOVED old boolean flag logic
+        // We no longer check es_reconsideracion flag here since it stays true even after rejection
+        // The actual active reconsideración check is done later in configurarTabReconsideracion
+        const tieneReconsideracionActiva = false; // Always false here, real check is done via API
+        console.log('🔄 Reconsideración activa (ignoring boolean flag):', tieneReconsideracionActiva ? '✅' : '❌');
         
         // Determine result and reason
         let canRequest = false;
@@ -10161,12 +10217,24 @@
     }
 
     // Function to load reconsideraciones history
+    // Add debounce mechanism to prevent duplicate API calls
+    let cargarHistorialReconsideracionesInProgress = false;
+    
     function cargarHistorialReconsideraciones(solicitudId) {
+        // Prevent multiple simultaneous calls
+        if (cargarHistorialReconsideracionesInProgress) {
+            console.log('🚫 cargarHistorialReconsideraciones already in progress, skipping...');
+            return;
+        }
+        
         // Validate solicitudId
         if (!solicitudId || solicitudId === 'undefined' || solicitudId === 'null') {
             console.error('Invalid solicitudId provided to cargarHistorialReconsideraciones:', solicitudId);
             return;
         }
+        
+        console.log('🔍 cargarHistorialReconsideraciones called for solicitud:', solicitudId);
+        cargarHistorialReconsideracionesInProgress = true;
         
         const container = document.getElementById('modalSolicitudReconsideraciones');
         if (!container) {
@@ -10174,12 +10242,36 @@
             return;
         }
         
-        const loadingPlaceholder = container.querySelector('.loading-placeholder');
-        const emptyState = container.querySelector('.empty-state');
+        let loadingPlaceholder = container.querySelector('.loading-placeholder');
+        let emptyState = container.querySelector('.empty-state');
         
-        if (!loadingPlaceholder || !emptyState) {
-            console.error('Loading placeholder or empty state not found');
-            return;
+        // Create loading and empty state elements if they don't exist
+        if (!loadingPlaceholder) {
+            console.warn('Loading placeholder not found, creating it...');
+            loadingPlaceholder = document.createElement('div');
+            loadingPlaceholder.className = 'loading-placeholder';
+            loadingPlaceholder.style.display = 'none';
+            loadingPlaceholder.innerHTML = `
+                <div class="d-flex justify-content-center align-items-center p-4">
+                    <div class="spinner-border text-primary me-3" role="status">
+                        <span class="visually-hidden">Cargando historial...</span>
+                    </div>
+                    <span class="text-muted">Cargando historial de reconsideraciones...</span>
+                </div>
+            `;
+            container.appendChild(loadingPlaceholder);
+        }
+        
+        if (!emptyState) {
+            console.warn('Empty state not found, creating it...');
+            emptyState = document.createElement('div');
+            emptyState.className = 'empty-state text-center p-4';
+            emptyState.style.display = 'none';
+            emptyState.innerHTML = `
+                <i class="fas fa-redo mb-3 text-muted" style="font-size: 3rem;"></i>
+                <p class="text-muted">No hay reconsideraciones para esta solicitud</p>
+            `;
+            container.appendChild(emptyState);
         }
         
         // Show loading
@@ -10205,6 +10297,9 @@
             } else {
                 emptyState.style.display = 'flex';
             }
+            
+            // Reset the in-progress flag
+            cargarHistorialReconsideracionesInProgress = false;
         })
         .catch(error => {
             console.error('Error loading reconsideraciones:', error);
@@ -10215,15 +10310,19 @@
                 <p class="text-muted">Error al cargar el historial de reconsideraciones</p>
                 <small class="text-muted">${error.message}</small>
             `;
+            
+            // Reset the in-progress flag
+            cargarHistorialReconsideracionesInProgress = false;
         });
     }
 
     // Function to render reconsideraciones history
     function renderHistorialReconsideraciones(reconsideraciones) {
         const container = document.getElementById('modalSolicitudReconsideraciones');
-        const emptyState = container.querySelector('.empty-state');
         
-        emptyState.style.display = 'none';
+        // Clear all existing content to prevent duplicates
+        container.innerHTML = '';
+        console.log('🧹 Cleared reconsideración container to prevent duplicates');
         
         const historialHtml = reconsideraciones.map(recon => {
             const estadoClass = `estado-${recon.estado}`;
@@ -10308,8 +10407,46 @@
             `;
         }).join('');
         
-        // Replace empty state with history
-        emptyState.outerHTML = historialHtml;
+        // Check if the most recent reconsideración is rejected and user can request a new one
+        const mostRecentRecon = reconsideraciones[0]; // Array should be ordered by reciente first
+        const isUserOwner = parseInt(window.currentUserId || '0') === parseInt(window.currentSolicitudData?.propietario_id || '0');
+        
+        let additionalContent = '';
+        
+        if (mostRecentRecon && mostRecentRecon.estado === 'rechazada' && isUserOwner) {
+            additionalContent = `
+                <div class="reconsideracion-new-request-section mt-4 p-4" style="background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 12px; border-left: 4px solid #28a745;">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="me-3">
+                            <i class="fas fa-redo-alt text-success" style="font-size: 2rem;"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-1 text-success">
+                                <strong>¿Nueva Reconsideración?</strong>
+                            </h6>
+                            <small class="text-muted">
+                                Su última reconsideración fue rechazada. Puede solicitar una nueva si lo considera necesario.
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-success btn-sm flex-grow-1" onclick="abrirModalReconsideracion(currentSolicitudId)">
+                            <i class="fas fa-plus me-1"></i>
+                            Solicitar Nueva Reconsideración
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="scrollToReconsideracionSection()">
+                            <i class="fas fa-arrow-up me-1"></i>
+                            Ver Estado Actual
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Add the historial content and additional content to the container
+        container.innerHTML = historialHtml + additionalContent;
+        console.log('✅ Rendered', reconsideraciones.length, 'reconsideraciones in historial');
     }
 
     // Function to get display name for estado
@@ -10335,6 +10472,27 @@
             hour: '2-digit',
             minute: '2-digit'
         });
+    }
+
+    // Helper function to scroll to reconsideración section
+    function scrollToReconsideracionSection() {
+        const reconsideracionTab = document.getElementById('reconsideracion-tab');
+        const reconsideracionStatus = document.getElementById('reconsideracionStatus');
+        
+        if (reconsideracionTab) {
+            // First activate the tab if not already active
+            if (!reconsideracionTab.classList.contains('active')) {
+                reconsideracionTab.click();
+                // Wait for tab to switch, then scroll
+                setTimeout(() => {
+                    if (reconsideracionStatus) {
+                        reconsideracionStatus.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 200);
+            } else if (reconsideracionStatus) {
+                reconsideracionStatus.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
     }
 
     // Function to show/hide reconsideracion tab and content
@@ -10374,30 +10532,36 @@
         console.log('📊 Enhanced reconsideración result:', result);
         
         if (canRequest) {
-            // Check if there's an active reconsideration in the solicitud data
-            const tieneReconsideracionActiva = solicitud.es_reconsideracion || false;
+            // Check for ACTIVE reconsideration (not rejected ones)
+            // We need to check the actual reconsideración history, not just the es_reconsideracion flag
+            console.log('🔄 Verificando reconsideración activa detallada...');
             
-            console.log('🔄 Tiene reconsideración activa:', tieneReconsideracionActiva);
-            
-            if (tieneReconsideracionActiva) {
-                statusText.innerHTML = `
-                    <strong><i class="fas fa-hourglass-half"></i> Reconsideración en Proceso</strong><br>
-                    Esta solicitud tiene una reconsideración actualmente en revisión.
-                `;
-                statusDiv.className = 'alert alert-warning';
-                btnSolicitar.style.display = 'none';
-            } else {
-                statusText.innerHTML = `
-                    <strong><i class="fas fa-check-circle text-success"></i> Solicitud Elegible</strong><br>
-                    Esta solicitud puede ser reconsiderada porque está en estado "<strong>${estadoExtraido}</strong>" y usted es el propietario.
-                    <br><small class="text-muted mt-1">
-                        <i class="fas fa-info-circle"></i> 
-                        Las reconsideraciones están disponibles para solicitudes "Rechazadas" o con "Alternativa".
-                    </small>
-                `;
-                statusDiv.className = 'alert alert-success';
-                btnSolicitar.style.display = 'inline-block';
-            }
+            // Load and check actual reconsideración history to determine if there's an active one
+            verificarReconsideracionActiva(solicitudId, function(tieneReconsideracionActiva) {
+                if (tieneReconsideracionActiva) {
+                    statusText.innerHTML = `
+                        <strong><i class="fas fa-hourglass-half"></i> Reconsideración en Proceso</strong><br>
+                        Esta solicitud tiene una reconsideración actualmente en revisión.
+                        <br><small class="text-muted mt-1">
+                            <i class="fas fa-clock"></i> 
+                            Debe esperar a que se complete antes de solicitar una nueva.
+                        </small>
+                    `;
+                    statusDiv.className = 'alert alert-warning';
+                    btnSolicitar.style.display = 'none';
+                } else {
+                    statusText.innerHTML = `
+                        <strong><i class="fas fa-check-circle text-success"></i> Solicitud Elegible</strong><br>
+                        Esta solicitud puede ser reconsiderada porque está en estado "<strong>${estadoExtraido}</strong>" y usted es el propietario.
+                        <br><small class="text-muted mt-1">
+                            <i class="fas fa-info-circle"></i> 
+                            Las reconsideraciones están disponibles para solicitudes "Rechazadas" o con "Alternativa".
+                        </small>
+                    `;
+                    statusDiv.className = 'alert alert-success';
+                    btnSolicitar.style.display = 'inline-block';
+                }
+            });
         } else {
             // Provide specific feedback based on the reason
             let alertClass = 'alert alert-secondary';
@@ -10472,6 +10636,43 @@
         // Load history using the correct solicitud ID
         console.log('📚 Loading reconsideraciones history for solicitud:', solicitudId);
         cargarHistorialReconsideraciones(solicitudId);
+    }
+
+    // Function to verify if there's an ACTIVE reconsideración (not rejected)
+    function verificarReconsideracionActiva(solicitudId, callback) {
+        console.log('🔍 Verificando reconsideración activa para solicitud:', solicitudId);
+        
+        fetch(`/workflow/api/solicitud/${solicitudId}/reconsideracion/historial/`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('📊 Historial de reconsideraciones obtenido:', data);
+            
+            let tieneReconsideracionActiva = false;
+            
+            if (data.success && data.reconsideraciones && data.reconsideraciones.length > 0) {
+                // Check if there's any reconsideración in active states (not 'rechazada' or 'aprobada')
+                const estadosActivos = ['enviada', 'en_revision', 'enviada_comite'];
+                
+                tieneReconsideracionActiva = data.reconsideraciones.some(recon => {
+                    const esActiva = estadosActivos.includes(recon.estado);
+                    console.log(`   - Reconsideración #${recon.numero || recon.id}: ${recon.estado} - ${esActiva ? 'ACTIVA' : 'INACTIVA'}`);
+                    return esActiva;
+                });
+            }
+            
+            console.log(`🎯 Resultado final: ${tieneReconsideracionActiva ? 'Tiene reconsideración ACTIVA' : 'NO tiene reconsideración activa'}`);
+            callback(tieneReconsideracionActiva);
+        })
+        .catch(error => {
+            console.error('❌ Error verificando reconsideración activa:', error);
+            // En caso de error, asumimos que no hay reconsideración activa para permitir el intento
+            callback(false);
+        });
     }
 
     // Function to request reconsideration

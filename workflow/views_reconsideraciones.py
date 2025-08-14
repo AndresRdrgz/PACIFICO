@@ -388,9 +388,21 @@ def api_procesar_reconsideracion_analista(request, solicitud_id):
                 'error': 'No hay reconsideración pendiente'
             })
         
-        data = json.loads(request.body)
+        # Handle both FormData and JSON
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+        else:
+            # FormData from frontend
+            data = request.POST
+            
         decision = data.get('decision')  # 'aprobar', 'rechazar', 'enviar_comite'
         comentario = data.get('comentario', '').strip()
+        
+        if not decision:
+            return JsonResponse({
+                'success': False,
+                'error': 'La decisión es obligatoria'
+            })
         
         if not comentario:
             return JsonResponse({
@@ -406,13 +418,56 @@ def api_procesar_reconsideracion_analista(request, solicitud_id):
             
             if decision == 'aprobar':
                 reconsideracion.estado = 'aprobada'
-                # Mover solicitud a siguiente etapa
-                # TODO: Implementar lógica de siguiente etapa
+                # Mover solicitud a "Resultado Consulta" etapa
+                etapa_resultado = Etapa.objects.filter(
+                    pipeline=solicitud.pipeline,
+                    nombre__icontains='resultado'
+                ).first()
+                
+                if etapa_resultado:
+                    # Clear previous result and set as approved
+                    solicitud.etapa_actual = etapa_resultado
+                    solicitud.subestado_actual = etapa_resultado.subestados.filter(
+                        nombre__icontains='aprobad'
+                    ).first() or etapa_resultado.subestados.first()
+                    solicitud.resultado_consulta = 'Aprobado'
+                    solicitud.asignada_a = None  # Liberar asignación
+                    solicitud.save()
+                    
+                    # Crear historial
+                    HistorialSolicitud.objects.create(
+                        solicitud=solicitud,
+                        etapa=etapa_resultado,
+                        subestado=solicitud.subestado_actual,
+                        usuario_responsable=request.user,
+                        fecha_inicio=timezone.now()
+                    )
                 
             elif decision == 'rechazar':
                 reconsideracion.estado = 'rechazada'
-                # Devolver a propietario
-                # TODO: Implementar lógica de devolución
+                # Mantener en "Resultado Consulta" pero como rechazado
+                etapa_resultado = Etapa.objects.filter(
+                    pipeline=solicitud.pipeline,
+                    nombre__icontains='resultado'
+                ).first()
+                
+                if etapa_resultado:
+                    solicitud.etapa_actual = etapa_resultado
+                    solicitud.subestado_actual = etapa_resultado.subestados.filter(
+                        nombre__icontains='rechazad'
+                    ).first() or etapa_resultado.subestados.first()
+                    solicitud.resultado_consulta = 'Rechazado'
+                    solicitud.asignada_a = None  # Liberar asignación
+                    solicitud.save()
+                    
+                    # Crear historial
+                    HistorialSolicitud.objects.create(
+                        solicitud=solicitud,
+                        etapa=etapa_resultado,
+                        subestado=solicitud.subestado_actual,
+                        usuario_responsable=request.user,
+                        fecha_inicio=timezone.now()
+                    )
                 
             elif decision == 'enviar_comite':
                 reconsideracion.estado = 'enviada_comite'
@@ -425,7 +480,17 @@ def api_procesar_reconsideracion_analista(request, solicitud_id):
                 if etapa_comite:
                     solicitud.etapa_actual = etapa_comite
                     solicitud.subestado_actual = etapa_comite.subestados.first()
+                    solicitud.asignada_a = None  # Liberar asignación
                     solicitud.save()
+                    
+                    # Crear historial
+                    HistorialSolicitud.objects.create(
+                        solicitud=solicitud,
+                        etapa=etapa_comite,
+                        subestado=solicitud.subestado_actual,
+                        usuario_responsable=request.user,
+                        fecha_inicio=timezone.now()
+                    )
             
             reconsideracion.save()
             
@@ -434,7 +499,7 @@ def api_procesar_reconsideracion_analista(request, solicitud_id):
                 solicitud=solicitud,
                 usuario=request.user,
                 comentario=f"Reconsideración #{reconsideracion.numero_reconsideracion} {decision}: {comentario}",
-                tipo='analista'
+                tipo='analista_credito'
             )
             
             # Notificar cambio
@@ -442,14 +507,15 @@ def api_procesar_reconsideracion_analista(request, solicitud_id):
         
         return JsonResponse({
             'success': True,
-            'message': f'Reconsideración procesada: {decision}'
+            'message': f'Reconsideración procesada: {decision}',
+            'redirect_url': '/workflow/vista-mixta/'  # Redirect to vista mixta
         })
         
     except Exception as e:
         logger.error(f"Error procesando reconsideración: {str(e)}")
         return JsonResponse({
             'success': False,
-            'error': str(e)
+            'error': f'Error procesando reconsideración: {str(e)}'
         })
 
 

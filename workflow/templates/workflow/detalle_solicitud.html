@@ -1,0 +1,427 @@
+{% extends 'workflow/base.html' %}
+{% load static %}
+{% load file_icon_filters %}
+
+{% block title %}Detalle de Solicitud - {{ solicitud.codigo }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Modern card styling */
+    .modern-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e9ecef;
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+    
+    .modern-card-header {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        color: white;
+        padding: 1rem 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .modern-card-body {
+        padding: 1.5rem;
+    }
+    
+    /* Info rows */
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #374151;
+    }
+    
+    .info-value {
+        color: #6b7280;
+    }
+    
+    /* Badge styling */
+    .badge {
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.375rem 0.75rem;
+        border-radius: 6px;
+    }
+    
+    .badge-primary {
+        background: #3b82f6;
+        color: white;
+    }
+    
+    .badge-success {
+        background: #10b981;
+        color: white;
+    }
+    
+    .badge-warning {
+        background: #f59e0b;
+        color: white;
+    }
+    
+    .badge-danger {
+        background: #ef4444;
+        color: white;
+    }
+    
+    /* Button styling */
+    .btn {
+        border-radius: 8px;
+        font-weight: 500;
+        padding: 0.5rem 1rem;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        border: none;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Card -->
+    <div class="modern-card">
+        <div class="modern-card-header">
+            <h4 class="mb-0">
+                <i class="fas fa-file-alt me-2"></i>
+                Detalle de Solicitud: {{ solicitud.codigo }}
+            </h4>
+            <div>
+                {% if solicitud.etapa_actual %}
+                    <span class="badge badge-primary">{{ solicitud.etapa_actual.nombre }}</span>
+                {% endif %}
+                {% if solicitud.subestado_actual %}
+                    <span class="badge badge-warning ms-1">{{ solicitud.subestado_actual.nombre }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Información General -->
+        <div class="col-lg-6">
+            <div class="modern-card">
+                <div class="modern-card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Información General
+                    </h5>
+                </div>
+                <div class="modern-card-body">
+                    <div class="info-row">
+                        <span class="info-label">Código:</span>
+                        <span class="info-value">{{ solicitud.codigo }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Pipeline:</span>
+                        <span class="info-value">{{ solicitud.pipeline.nombre }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Creada por:</span>
+                        <span class="info-value">{{ solicitud.creada_por.get_full_name|default:solicitud.creada_por.username }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Asignada a:</span>
+                        <span class="info-value">
+                            {% if solicitud.asignada_a %}
+                                {{ solicitud.asignada_a.get_full_name|default:solicitud.asignada_a.username }}
+                            {% else %}
+                                <span class="text-muted">No asignada</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Fecha de creación:</span>
+                        <span class="info-value">{{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Última actualización:</span>
+                        <span class="info-value">{{ solicitud.fecha_ultima_actualizacion|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    {% if solicitud.prioridad %}
+                    <div class="info-row">
+                        <span class="info-label">Prioridad:</span>
+                        <span class="info-value">
+                            <span class="badge {% if solicitud.prioridad == 'Alta' %}badge-danger{% elif solicitud.prioridad == 'Media' %}badge-warning{% else %}badge-success{% endif %}">
+                                {{ solicitud.prioridad }}
+                            </span>
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Información del Cliente -->
+        <div class="col-lg-6">
+            <div class="modern-card">
+                <div class="modern-card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user me-2"></i>
+                        Información del Cliente
+                    </h5>
+                </div>
+                <div class="modern-card-body">
+                    {% if solicitud.cliente %}
+                        <div class="info-row">
+                            <span class="info-label">Nombre:</span>
+                            <span class="info-value">{{ solicitud.cliente.nombreCliente|default:"No especificado" }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Cédula:</span>
+                            <span class="info-value">{{ solicitud.cliente.cedulaCliente|default:"No especificado" }}</span>
+                        </div>
+                        {% if solicitud.cliente.emailContacto %}
+                        <div class="info-row">
+                            <span class="info-label">Email:</span>
+                            <span class="info-value">{{ solicitud.cliente.emailContacto }}</span>
+                        </div>
+                        {% endif %}
+                    {% elif solicitud.cliente_nombre %}
+                        <div class="info-row">
+                            <span class="info-label">Nombre:</span>
+                            <span class="info-value">{{ solicitud.cliente_nombre }}</span>
+                        </div>
+                        {% if solicitud.cliente_cedula %}
+                        <div class="info-row">
+                            <span class="info-label">Cédula:</span>
+                            <span class="info-value">{{ solicitud.cliente_cedula }}</span>
+                        </div>
+                        {% endif %}
+                        {% if solicitud.cliente_telefono %}
+                        <div class="info-row">
+                            <span class="info-label">Teléfono:</span>
+                            <span class="info-value">{{ solicitud.cliente_telefono }}</span>
+                        </div>
+                        {% endif %}
+                        {% if solicitud.cliente_email %}
+                        <div class="info-row">
+                            <span class="info-label">Email:</span>
+                            <span class="info-value">{{ solicitud.cliente_email }}</span>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-muted text-center">
+                            <i class="fas fa-user-slash fa-3x mb-3"></i>
+                            <p>No hay información de cliente disponible</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cotización -->
+    {% if solicitud.cotizacion %}
+    <div class="modern-card">
+        <div class="modern-card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-calculator me-2"></i>
+                Información de Cotización
+            </h5>
+        </div>
+        <div class="modern-card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="info-row">
+                        <span class="info-label">Monto:</span>
+                        <span class="info-value">
+                            {% if solicitud.cotizacion.montoFinanciar %}
+                                ${{ solicitud.cotizacion.montoFinanciar|floatformat:2 }}
+                            {% else %}
+                                No especificado
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-row">
+                        <span class="info-label">Tipo:</span>
+                        <span class="info-value">{{ solicitud.cotizacion.tipoPrestamo|default:"No especificado" }}</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-row">
+                        <span class="info-label">Plazo:</span>
+                        <span class="info-value">
+                            {% if solicitud.cotizacion.plazoPago %}
+                                {{ solicitud.cotizacion.plazoPago }} meses
+                            {% else %}
+                                No especificado
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Historial -->
+    {% if historial %}
+    <div class="modern-card">
+        <div class="modern-card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-history me-2"></i>
+                Historial de la Solicitud
+            </h5>
+        </div>
+        <div class="modern-card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Etapa</th>
+                            <th>Subestado</th>
+                            <th>Usuario</th>
+                            <th>Fecha Inicio</th>
+                            <th>Fecha Fin</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for hist in historial %}
+                        <tr>
+                            <td>{{ hist.etapa.nombre }}</td>
+                            <td>
+                                {% if hist.subestado %}
+                                    {{ hist.subestado.nombre }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if hist.usuario_responsable %}
+                                    {{ hist.usuario_responsable.get_full_name|default:hist.usuario_responsable.username }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ hist.fecha_inicio|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                {% if hist.fecha_fin %}
+                                    {{ hist.fecha_fin|date:"d/m/Y H:i" }}
+                                {% else %}
+                                    <span class="badge badge-success">En curso</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Acciones -->
+    <div class="modern-card">
+        <div class="modern-card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-cog me-2"></i>
+                Acciones
+            </h5>
+        </div>
+        <div class="modern-card-body">
+            <div class="d-flex gap-3">
+                <a href="{% url 'workflow:vista_mixta_bandejas' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>
+                    Volver a Bandejas
+                </a>
+                
+                {% if solicitud.asignada_a == request.user or request.user.is_superuser %}
+                    <button class="btn btn-primary" onclick="editarSolicitud()">
+                        <i class="fas fa-edit me-2"></i>
+                        Editar Solicitud
+                    </button>
+                {% endif %}
+                
+                {% if transiciones_disponibles %}
+                    <div class="dropdown">
+                        <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-forward me-2"></i>
+                            Mover Etapa
+                        </button>
+                        <ul class="dropdown-menu">
+                            {% for transicion in transiciones_disponibles %}
+                                {% if transicion.puede_realizar %}
+                                    <li>
+                                        <a class="dropdown-item" href="javascript:void(0)" onclick="moverEtapa({{ transicion.transicion.id }})">
+                                            {{ transicion.transicion.nombre }}
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li>
+                                        <span class="dropdown-item text-muted">
+                                            {{ transicion.transicion.nombre }} ({{ transicion.total_requisitos_faltantes }} pendientes)
+                                        </span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function editarSolicitud() {
+    // Implementar lógica de edición
+    alert('Función de edición no implementada aún');
+}
+
+function moverEtapa(transicionId) {
+    if (confirm('¿Está seguro que desea mover la solicitud a la siguiente etapa?')) {
+        // Implementar lógica de movimiento de etapa
+        fetch(`/workflow/api/mover-etapa/{{ solicitud.id }}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                'transicion_id': transicionId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error al mover la solicitud: ' + (data.error || 'Error desconocido'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al procesar la solicitud');
+        });
+    }
+}
+</script>
+{% endblock %}

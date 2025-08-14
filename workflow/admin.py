@@ -1052,6 +1052,8 @@ class ReconsideracionSolicitudAdmin(admin.ModelAdmin):
         'creado_en',
         'actualizado_en',
         'numero_reconsideracion',
+        'fecha_solicitud',
+        'fecha_analisis',
     )
     
     fieldsets = (
