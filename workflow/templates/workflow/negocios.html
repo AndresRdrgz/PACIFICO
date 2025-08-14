@@ -7175,9 +7175,9 @@
                     modal.hide();
                 }
                 
-                // Recargar el modal de requisitos para actualizar el estado
+                // Actualizar solo el requisito de agenda de firma sin recargar todo el modal
                 setTimeout(() => {
-                    console.log('🔄 Recargando modal de requisitos después de agendar firma');
+                    console.log('🔄 Actualizando requisito de agenda de firma sin recargar modal');
                     
                     // Cerrar modal de agenda primero si aún está abierto
                     const modalAgenda = document.getElementById('modalAgendaFirma');
@@ -7185,39 +7185,153 @@
                         modalAgenda.remove();
                     }
                     
-                    // Verificar que tenemos los datos necesarios
-                    if (window.currentSolicitudId && window.currentNuevaEtapaId && window.currentNombreEtapa) {
-                        console.log('✅ Datos disponibles para recargar modal:', {
-                            solicitudId: window.currentSolicitudId,
-                            nuevaEtapaId: window.currentNuevaEtapaId,
-                            nombreEtapa: window.currentNombreEtapa
-                        });
+                    // Buscar el requisito específico de agenda de firma y actualizarlo
+                    const requisitoCard = document.querySelector(`[data-requisito-id="${requisitoId}"]`);
+                    if (requisitoCard) {
+                        console.log('✅ Actualizando requisito de agenda de firma en el DOM');
                         
-                        // Cerrar modal de requisitos actual si está abierto
-                        const modalRequisitos = document.getElementById('modalRequisitosFaltantes');
-                        if (modalRequisitos) {
-                            const modalInstance = bootstrap.Modal.getInstance(modalRequisitos);
-                            if (modalInstance) {
-                                modalInstance.hide();
+                        // Actualizar el borde de la tarjeta para mostrar que está completa
+                        requisitoCard.className = 'card mb-3 requisito-card border-success';
+                        
+                        // Actualizar el contador en la sección de requisitos obligatorios
+                        const seccionTitulo = requisitoCard.closest('.seccion-requisitos');
+                        if (seccionTitulo) {
+                            const badgeContador = seccionTitulo.querySelector('.badge.badge-obligatorio');
+                            if (badgeContador && window.currentRequisitosData) {
+                                const obligatoriosCompletos = window.currentRequisitosData.requisitos_obligatorios_completos;
+                                const totalObligatorios = window.currentRequisitosData.total_requisitos_obligatorios;
+                                badgeContador.textContent = `${obligatoriosCompletos}/${totalObligatorios}`;
+                                
+                                // Actualizar también el estilo del badge para reflejar el progreso
+                                if (obligatoriosCompletos === totalObligatorios) {
+                                    badgeContador.className = 'badge badge-obligatorio bg-success text-white';
+                                } else if (obligatoriosCompletos > 0) {
+                                    badgeContador.className = 'badge badge-obligatorio bg-warning text-dark';
+                                } else {
+                                    badgeContador.className = 'badge badge-obligatorio bg-danger text-white';
+                                }
                             }
                         }
                         
-                        // Reabrir modal de requisitos con datos actualizados
-                        setTimeout(() => {
-                            window.mostrarModalRequisitosFaltantes(
-                                window.currentSolicitudId,
-                                window.currentNuevaEtapaId,
-                                window.currentNombreEtapa,
-                                window.currentCallbackExito,
-                                window.currentCallbackCancelacion
-                            );
-                        }, 300);
-                    } else {
-                        console.warn('⚠️ No se encontraron datos para recargar el modal de requisitos');
-                        // Como fallback, intentar recargar la página
-                        if (typeof showToast !== 'undefined') {
-                            showToast('Cita agendada. Recarga la página para ver los cambios.', 'info');
+                        // Obtener el título original para usarlo en el nuevo HTML
+                        const titulo = requisitoCard.querySelector('.card-title');
+                        
+                        // Reemplazar completamente el contenido del card-body con la información de la cita agendada
+                        const cardBody = requisitoCard.querySelector('.card-body');
+                        if (cardBody) {
+                            // Crear el HTML completo para el requisito completado
+                            const requisitoCompletadoHtml = `
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h6 class="card-title text-success mb-1">
+                                            <i class="fas fa-check-circle me-2"></i>
+                                            ${titulo ? titulo.textContent.replace(/^[^a-zA-Z]*/, '') : 'Agenda de Firma'}
+                                        </h6>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-success">Completo</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="alert alert-success mb-3" style="border-radius: 12px; border: none; background: linear-gradient(135deg, rgba(40, 167, 69, 0.1), rgba(25, 135, 84, 0.15));">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-calendar-check me-3 mt-1 text-success" style="font-size: 1.5rem;"></i>
+                                        <div class="flex-grow-1">
+                                            <h6 class="alert-heading mb-2 text-success fw-bold">
+                                                <i class="fas fa-check-circle me-2"></i>
+                                                Firma Agendada
+                                            </h6>
+                                            <div class="row g-2">
+                                                <div class="col-md-6">
+                                                    <strong>Fecha:</strong><br>
+                                                    <span class="text-success">${new Date(fechaHora).toLocaleDateString('es-ES', { 
+                                                        year: 'numeric', 
+                                                        month: 'long', 
+                                                        day: 'numeric' 
+                                                    })} a las ${new Date(fechaHora).toLocaleTimeString('es-ES', { 
+                                                        hour: '2-digit', 
+                                                        minute: '2-digit' 
+                                                    })}</span>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <strong>Lugar:</strong><br>
+                                                    <span class="text-success">${lugarFirma === 'casa_matriz' ? 'Casa Matriz' : 
+                                                          lugarFirma === 'delivery' ? 'Delivery' : 
+                                                          lugarFirma === 'apoyo' ? 'Apoyo' : lugarFirma}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            
+                            // Reemplazar completamente el contenido del card-body
+                            cardBody.innerHTML = requisitoCompletadoHtml;
+                            
+                            // Verificar que no queden elementos del estado anterior
+                            const elementosAnteriores = cardBody.querySelectorAll('.alert-warning, .btn-warning');
+                            elementosAnteriores.forEach(elemento => {
+                                console.log('🗑️ Eliminando elemento del estado anterior:', elemento);
+                                elemento.remove();
+                            });
                         }
+                        
+                        // Actualizar el objeto de datos global para reflejar el cambio
+                        if (window.currentRequisitosData && window.currentRequisitosData.requisitos_obligatorios) {
+                            const requisito = window.currentRequisitosData.requisitos_obligatorios.find(req => req.id == requisitoId);
+                            if (requisito) {
+                                requisito.esta_cumplido = true;
+                                
+                                // Recalcular contadores
+                                const obligatoriosCompletos = window.currentRequisitosData.requisitos_obligatorios.filter(req => req.esta_cumplido).length;
+                                const totalObligatorios = window.currentRequisitosData.requisitos_obligatorios.length;
+                                
+                                window.currentRequisitosData.requisitos_obligatorios_completos = obligatoriosCompletos;
+                                window.currentRequisitosData.total_obligatorios_faltantes = totalObligatorios - obligatoriosCompletos;
+                                
+                                console.log('📊 Contadores actualizados:', {
+                                    obligatoriosCompletos,
+                                    totalObligatorios,
+                                    faltantes: window.currentRequisitosData.total_obligatorios_faltantes
+                                });
+                            }
+                        }
+                        
+                        // Actualizar el contador de requisitos obligatorios
+                        window.verificarTodosRequisitosCompletos();
+                        
+                        // Verificar si todos los requisitos obligatorios están completos
+                        const todosObligatoriosCompletos = window.currentRequisitosData && 
+                            window.currentRequisitosData.total_obligatorios_faltantes === 0;
+                        
+                        // Actualizar el botón "Validar y Continuar" para mostrar el conteo correcto
+                        const btnValidar = document.getElementById('btnValidarYContinuar');
+                        if (btnValidar && window.currentRequisitosData) {
+                            const obligatoriosCompletos = window.currentRequisitosData.requisitos_obligatorios_completos;
+                            const totalObligatorios = window.currentRequisitosData.total_requisitos_obligatorios;
+                            
+                            if (todosObligatoriosCompletos) {
+                                btnValidar.innerHTML = '<i class="fas fa-check me-2"></i>Requisitos Obligatorios Completos - Continuar';
+                                btnValidar.className = 'btn btn-success';
+                                btnValidar.disabled = false;
+                                console.log('🎉 Todos los requisitos obligatorios completos, ejecutando callback de éxito');
+                                // Solo ejecutar callback si realmente se completaron todos los requisitos
+                                if (window.currentCallbackExito && typeof window.currentCallbackExito === 'function') {
+                                    setTimeout(() => {
+                                        window.currentCallbackExito();
+                                    }, 500);
+                                }
+                            } else {
+                                btnValidar.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Completar Requisitos Obligatorios (${obligatoriosCompletos}/${totalObligatorios})`;
+                                btnValidar.className = 'btn btn-warning';
+                                btnValidar.disabled = true;
+                                console.log('📋 Aún faltan requisitos obligatorios por completar');
+                            }
+                        }
+                        
+                        console.log('✅ Requisito de agenda de firma actualizado exitosamente');
+                    } else {
+                        console.warn('⚠️ No se encontró el requisito de agenda de firma para actualizar');
                     }
                 }, 300);
                 

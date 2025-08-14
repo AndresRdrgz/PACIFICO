@@ -2372,24 +2372,44 @@ def api_crear_requisito(request):
         try:
             nombre = request.POST.get('nombre')
             descripcion = request.POST.get('descripcion', '')
+            tipo_especial = request.POST.get('tipo_especial', '')
+            
+            # DEBUG: Imprimir los datos recibidos
+            print(f"🔍 DEBUG api_crear_requisito:")
+            print(f"   nombre: {nombre}")
+            print(f"   descripcion: {descripcion}")
+            print(f"   tipo_especial: {tipo_especial}")
+            print(f"   tipo_especial type: {type(tipo_especial)}")
+            print(f"   request.POST completo: {dict(request.POST)}")
             
             if not nombre:
                 return JsonResponse({'success': False, 'error': 'El nombre es obligatorio'})
             
             requisito = Requisito.objects.create(
                 nombre=nombre,
-                descripcion=descripcion
+                descripcion=descripcion,
+                tipo_especial=tipo_especial if tipo_especial else None
             )
+            
+            # DEBUG: Imprimir el objeto creado
+            print(f"✅ DEBUG: Requisito creado exitosamente:")
+            print(f"   id: {requisito.id}")
+            print(f"   nombre: {requisito.nombre}")
+            print(f"   descripcion: {requisito.descripcion}")
+            print(f"   tipo_especial: {requisito.tipo_especial}")
+            print(f"   tipo_especial en BD: {requisito.tipo_especial}")
             
             return JsonResponse({
                 'success': True,
                 'requisito': {
                     'id': requisito.id,
                     'nombre': requisito.nombre,
-                    'descripcion': requisito.descripcion
+                    'descripcion': requisito.descripcion,
+                    'tipo_especial': requisito.tipo_especial
                 }
             })
         except Exception as e:
+            print(f"❌ ERROR en api_crear_requisito: {str(e)}")
             return JsonResponse({'success': False, 'error': str(e)})
     
     return JsonResponse({'success': False, 'error': 'Método no permitido'})
@@ -2602,6 +2622,17 @@ def api_editar_requisito_pipeline(request, requisito_pipeline_id):
             descripcion = request.POST.get('descripcion', '')
             obligatorio = request.POST.get('obligatorio') == 'on'
             tipo_prestamo_aplicable = request.POST.get('tipo_prestamo_aplicable', 'todos')
+            tipo_especial = request.POST.get('tipo_especial', '')
+            
+            # DEBUG: Imprimir los datos recibidos
+            print(f"🔍 DEBUG api_editar_requisito_pipeline:")
+            print(f"   requisito_pipeline_id: {requisito_pipeline_id}")
+            print(f"   nombre: {nombre}")
+            print(f"   descripcion: {descripcion}")
+            print(f"   obligatorio: {obligatorio}")
+            print(f"   tipo_prestamo_aplicable: {tipo_prestamo_aplicable}")
+            print(f"   tipo_especial: {tipo_especial}")
+            print(f"   request.POST completo: {dict(request.POST)}")
             
             # Validaciones
             if not nombre:
@@ -2612,9 +2643,21 @@ def api_editar_requisito_pipeline(request, requisito_pipeline_id):
             
             # Actualizar el requisito base
             requisito = requisito_pipeline.requisito
+            print(f"🔍 DEBUG: Requisito actual antes de actualizar:")
+            print(f"   id: {requisito.id}")
+            print(f"   nombre: {requisito.nombre}")
+            print(f"   descripcion: {requisito.descripcion}")
+            print(f"   tipo_especial: {requisito.tipo_especial}")
+            
             requisito.nombre = nombre
             requisito.descripcion = descripcion
+            requisito.tipo_especial = tipo_especial if tipo_especial else None
             requisito.save()
+            
+            print(f"✅ DEBUG: Requisito actualizado exitosamente:")
+            print(f"   nombre: {requisito.nombre}")
+            print(f"   descripcion: {requisito.descripcion}")
+            print(f"   tipo_especial: {requisito.tipo_especial}")
             
             # Actualizar el requisito del pipeline
             requisito_pipeline.obligatorio = obligatorio
@@ -2623,6 +2666,7 @@ def api_editar_requisito_pipeline(request, requisito_pipeline_id):
             
             return JsonResponse({'success': True})
         except Exception as e:
+            print(f"❌ ERROR en api_editar_requisito_pipeline: {str(e)}")
             return JsonResponse({'success': False, 'error': str(e)})
     
     return JsonResponse({'success': False, 'error': 'Método no permitido'})
@@ -2695,7 +2739,8 @@ def api_obtener_datos_pipeline(request, pipeline_id):
                 'requisito_nombre': req_pipeline.requisito.nombre,
                 'requisito_descripcion': req_pipeline.requisito.descripcion or '',
                 'obligatorio': req_pipeline.obligatorio,
-                'tipo_prestamo_aplicable': req_pipeline.tipo_prestamo_aplicable
+                'tipo_prestamo_aplicable': req_pipeline.tipo_prestamo_aplicable,
+                'tipo_especial': req_pipeline.requisito.tipo_especial or ''
             })
         
         # Campos personalizados
@@ -4757,35 +4802,7 @@ def api_crear_transicion(request, pipeline_id):
     return JsonResponse({'success': False, 'error': 'Método no permitido'})
 
 
-@login_required
-@superuser_permission_required('workflow.add_requisito')
-def api_crear_requisito(request):
-    """API para crear un requisito"""
-    if request.method == 'POST':
-        try:
-            nombre = request.POST.get('nombre')
-            descripcion = request.POST.get('descripcion', '')
-            
-            if not nombre:
-                return JsonResponse({'success': False, 'error': 'El nombre es obligatorio'})
-            
-            requisito = Requisito.objects.create(
-                nombre=nombre,
-                descripcion=descripcion
-            )
-            
-            return JsonResponse({
-                'success': True,
-                'requisito': {
-                    'id': requisito.id,
-                    'nombre': requisito.nombre,
-                    'descripcion': requisito.descripcion
-                }
-            })
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
-    
-    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
 
 
 @login_required
@@ -4983,42 +5000,7 @@ def api_eliminar_requisito_pipeline(request, requisito_pipeline_id):
 
 
 @login_required
-@superuser_permission_required('workflow.change_requisitopipeline')
-def api_editar_requisito_pipeline(request, requisito_pipeline_id):
-    """API para editar un requisito de un pipeline"""
-    if request.method == 'POST':
-        try:
-            requisito_pipeline = get_object_or_404(RequisitoPipeline, id=requisito_pipeline_id)
-            
-            # Obtener datos del formulario
-            nombre = request.POST.get('nombre')
-            descripcion = request.POST.get('descripcion', '')
-            obligatorio = request.POST.get('obligatorio') == 'on'
-            tipo_prestamo_aplicable = request.POST.get('tipo_prestamo_aplicable', 'todos')
-            
-            # Validaciones
-            if not nombre:
-                return JsonResponse({
-                    'success': False, 
-                    'error': 'El nombre es obligatorio'
-                })
-            
-            # Actualizar el requisito base
-            requisito = requisito_pipeline.requisito
-            requisito.nombre = nombre
-            requisito.descripcion = descripcion
-            requisito.save()
-            
-            # Actualizar el requisito del pipeline
-            requisito_pipeline.obligatorio = obligatorio
-            requisito_pipeline.tipo_prestamo_aplicable = tipo_prestamo_aplicable
-            requisito_pipeline.save()
-            
-            return JsonResponse({'success': True})
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
-    
-    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
 
 
 @login_required

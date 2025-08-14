@@ -818,6 +818,14 @@
                             </select>
                             <small class="form-text text-muted">Determina para qué tipo de préstamo aplica este requisito</small>
                         </div>
+                        <div class="col-12">
+                            <label for="requisitoTipoEspecial" class="form-label fw-semibold">Tipo Especial</label>
+                            <select class="form-control form-control-custom" id="requisitoTipoEspecial" name="tipo_especial">
+                                <option value="">Sin tipo especial</option>
+                                <option value="agenda_firma">Agenda de Firma</option>
+                            </select>
+                            <small class="form-text text-muted">Tipo especial del requisito (ej: agenda de firma)</small>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -865,6 +873,14 @@
                                 <option value="auto">Solo préstamo de auto</option>
                             </select>
                             <small class="form-text text-muted">Determina para qué tipo de préstamo aplica este requisito</small>
+                        </div>
+                        <div class="col-12">
+                            <label for="editRequisitoTipoEspecial" class="form-label fw-semibold">Tipo Especial</label>
+                            <select class="form-control form-control-custom" id="editRequisitoTipoEspecial" name="tipo_especial">
+                                <option value="">Sin tipo especial</option>
+                                <option value="agenda_firma">Agenda de Firma</option>
+                            </select>
+                            <small class="form-text text-muted">Tipo especial del requisito (ej: agenda de firma)</small>
                         </div>
                     </div>
                 </div>
@@ -1660,10 +1676,11 @@ function cargarRequisitos(requisitos) {
                                 ${requisito.tipo_prestamo_aplicable === 'todos' ? 'Todos los préstamos' : 
                                   requisito.tipo_prestamo_aplicable === 'personal' ? 'Solo préstamo personal' : 
                                   'Solo préstamo de auto'}
+                                ${requisito.tipo_especial ? ` • Tipo: ${requisito.tipo_especial === 'agenda_firma' ? 'Agenda de Firma' : requisito.tipo_especial}` : ''}
                             </small>
                         </div>
                         <div class="btn-group btn-group-sm">
-                            <button type="button" class="btn btn-outline-primary" onclick="editarRequisitoPipeline(${requisito.id}, '${requisito.requisito_nombre}', ${requisito.obligatorio}, '${requisito.requisito_descripcion || ''}', '${requisito.tipo_prestamo_aplicable || 'todos'}')">
+                            <button type="button" class="btn btn-outline-primary" onclick="editarRequisitoPipeline(${requisito.id}, '${requisito.requisito_nombre}', ${requisito.obligatorio}, '${requisito.requisito_descripcion || ''}', '${requisito.tipo_prestamo_aplicable || 'todos'}', '${requisito.tipo_especial || ''}')">
                                 <i class="fas fa-edit"></i>
                             </button>
                             <button type="button" class="btn btn-outline-danger" onclick="eliminarRequisitoPipeline(${requisito.id})">
@@ -1901,13 +1918,14 @@ function nuevoRequisito() {
 }
 
 // Función para editar requisito
-function editarRequisitoPipeline(requisitoPipelineId, nombre, obligatorio, descripcion = '', tipoPrestamoAplicable = 'todos') {
+function editarRequisitoPipeline(requisitoPipelineId, nombre, obligatorio, descripcion = '', tipoPrestamoAplicable = 'todos', tipoEspecial = '') {
     // Llenar el formulario con los datos actuales
     document.getElementById('editRequisitoId').value = requisitoPipelineId;
     document.getElementById('editRequisitoNombre').value = nombre;
     document.getElementById('editRequisitoDescripcion').value = descripcion;
     document.getElementById('editRequisitoObligatorio').checked = obligatorio;
     document.getElementById('editTipoPrestamoAplicable').value = tipoPrestamoAplicable;
+    document.getElementById('editRequisitoTipoEspecial').value = tipoEspecial;
     
     const modal = new bootstrap.Modal(document.getElementById('editarRequisitoModal'));
     modal.show();
