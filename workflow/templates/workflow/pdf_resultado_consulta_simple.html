@@ -417,22 +417,18 @@
             <tr>
                 <td class="label">Oficial:</td>
                 <td class="value">
-                    {% if solicitud.asignada_a %}
-                        {{ solicitud.asignada_a.first_name }} {{ solicitud.asignada_a.last_name }}
+                    {% if solicitud.propietario %}
+                        {% if solicitud.propietario.first_name and solicitud.propietario.last_name %}
+                            {{ solicitud.propietario.first_name }} {{ solicitud.propietario.last_name }}
+                        {% else %}
+                            {{ solicitud.propietario.username }}
+                        {% endif %}
                     {% else %}
                         Sin asignar
                     {% endif %}
                 </td>
-                <td class="label">Pipeline:</td>
-                <td class="value">{{ solicitud.pipeline.nombre|default:"-" }}</td>
-            </tr>
-            
-            <!-- Fila 3: Etapa y Fecha -->
-            <tr>
-                <td class="label">Etapa:</td>
-                <td class="value">{{ solicitud.etapa_actual.nombre|default:"-" }}</td>
                 <td class="label">Fecha Consulta:</td>
-                <td class="value">{{ solicitud.fecha_creacion|date:"d/m/Y"|default:"-" }}</td>
+                <td class="value">{{ solicitud.fecha_creacion|date:"d/m/Y g:i A"|default:"-" }}</td>
             </tr>
             
             <!-- Separador visual -->
@@ -525,7 +521,14 @@
         <!-- Análisis del analista como párrafo principal -->
         {% if analyst_comment %}
         <div class="analysis-compact" style="margin-bottom: 6px; padding: 6px 8px; font-size: 9px; line-height: 1.4;">
-            <strong style="color: #009c3c; font-size: 9px;">Análisis del Analista:</strong> {{ analyst_comment|truncatewords:40 }}
+            <strong style="color: #009c3c; font-size: 9px;">Análisis del Analista:</strong> 
+            {% if analyst_user %}
+                <span style="color: #6b7280; font-size: 8px;">
+                    por {{ analyst_user.first_name }} {{ analyst_user.last_name }}
+                    {% if analyst_date %} - {{ analyst_date|date:"d/m/Y g:i A" }}{% endif %}
+                </span><br>
+            {% endif %}
+            {{ analyst_comment|truncatewords:40 }}
         </div>
         {% endif %}
         
@@ -605,7 +608,15 @@
         <div class="section-title">Análisis del Analista</div>
         
         {% if analyst_comment %}
-        <div class="analisis">{{ analyst_comment }}</div>
+        <div class="analisis">
+            {% if analyst_user %}
+                <div style="font-size: 8px; color: #6b7280; margin-bottom: 4px;">
+                    <strong>Analista:</strong> {{ analyst_user.first_name }} {{ analyst_user.last_name }}
+                    {% if analyst_date %} - {{ analyst_date|date:"d/m/Y g:i A" }}{% endif %}
+                </div>
+            {% endif %}
+            {{ analyst_comment }}
+        </div>
         {% endif %}
         
         <!-- Resultado de análisis -->

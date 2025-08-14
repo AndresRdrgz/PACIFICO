@@ -6533,6 +6533,8 @@ def enviar_correo_pdf_resultado_consulta(solicitud):
         # Obtener el comentario más reciente del analista
         # Priorizar CalificacionCampo con campo 'comentario_analista_credito'
         analyst_comment = ""
+        analyst_user = None
+        analyst_date = None
         
         # Primero, buscar en CalificacionCampo
         calificacion_analista = CalificacionCampo.objects.filter(
@@ -6542,11 +6544,15 @@ def enviar_correo_pdf_resultado_consulta(solicitud):
         
         if calificacion_analista and calificacion_analista.comentario:
             analyst_comment = calificacion_analista.comentario
+            analyst_user = calificacion_analista.usuario
+            analyst_date = calificacion_analista.fecha_modificacion
         elif comentarios_analista.exists():
             # Fallback a SolicitudComentario si no hay CalificacionCampo
             first_comment = comentarios_analista.first()
             if first_comment:
                 analyst_comment = first_comment.comentario
+                analyst_user = first_comment.usuario
+                analyst_date = first_comment.fecha_creacion
         
         # Obtener resultado de análisis
         # Priorizar solicitud.resultado_consulta sobre subestado_actual.nombre
@@ -6574,6 +6580,8 @@ def enviar_correo_pdf_resultado_consulta(solicitud):
             'calificaciones': calificaciones_with_values,
             'comentarios_analista': comentarios_analista,
             'analyst_comment': analyst_comment,
+            'analyst_user': analyst_user,
+            'analyst_date': analyst_date,
             'resultado_analisis': resultado_analisis,
             'field_values': {},  # Empty for email PDF
             'fecha_generacion': timezone.now(),
