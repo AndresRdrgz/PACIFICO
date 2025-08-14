@@ -6501,13 +6501,30 @@ def enviar_correo_pdf_resultado_consulta(solicitud):
             print(f"❌ No se puede enviar correo para solicitud {solicitud.codigo}: propietario sin email válido")
             return
 
-        # Generar el PDF usando la función optimizada con xhtml2pdf (en lugar de ReportLab)
+        # Generar el PDF usando la lógica del api_pdf_resultado_consulta directamente
+        from django.template.loader import render_to_string
+        from django.utils import timezone
+        from django.conf import settings
         from workflow.models import CalificacionCampo
         from workflow.modelsWorkflow import SolicitudComentario
-        from django.utils import timezone
+        import json
+        import io
+        import os
         
-        # Obtener datos para el PDF
+        # Check if xhtml2pdf is available
+        try:
+            from xhtml2pdf import pisa
+            XHTML2PDF_AVAILABLE = True
+        except ImportError:
+            XHTML2PDF_AVAILABLE = False
+            
+        if not XHTML2PDF_AVAILABLE:
+            raise Exception("xhtml2pdf library is not available. Please install it with: pip install xhtml2pdf")
+        
+        # Obtener calificaciones existentes de la base de datos
         calificaciones = CalificacionCampo.objects.filter(solicitud=solicitud)
+        
+        # Obtener comentarios de analista
         comentarios_analista = SolicitudComentario.objects.filter(
             solicitud=solicitud,
             tipo="analista_credito"
@@ -6539,24 +6556,48 @@ def enviar_correo_pdf_resultado_consulta(solicitud):
         elif solicitud.subestado_actual:
             resultado_analisis = solicitud.subestado_actual.nombre
         
-        # Preparar datos para el PDF
-        pdf_data = {
-            "solicitud": solicitud,
-            "calificaciones": calificaciones,
-            "comentarios_analista": comentarios_analista,
-            "analyst_comment": analyst_comment,
-            "resultado_analisis": resultado_analisis,
-            "usuario_generador": solicitud.propietario,
-            "fecha_generacion": timezone.now(),
+        # Crear lista enriquecida de calificaciones con valores vacíos
+        calificaciones_with_values = []
+        for cal in calificaciones:
+            cal_dict = {
+                'campo': cal.campo,
+                'campo_legible': getattr(cal, 'campo_legible', None),
+                'estado': cal.estado,
+                'comentario': cal.comentario,
+                'field_value': '',  # Empty for email PDF
+            }
+            calificaciones_with_values.append(cal_dict)
+        
+        # Preparar contexto para el template
+        context = {
+            'solicitud': solicitud,
+            'calificaciones': calificaciones_with_values,
+            'comentarios_analista': comentarios_analista,
+            'analyst_comment': analyst_comment,
+            'resultado_analisis': resultado_analisis,
+            'field_values': {},  # Empty for email PDF
+            'fecha_generacion': timezone.now(),
+            'logo_path': os.path.join(settings.BASE_DIR, 'static', 'images', 'logoBlanco.png'),
         }
         
-        # Generar PDF usando la función optimizada con xhtml2pdf
-        pdf_buffer = generar_pdf_resultado_consulta(pdf_data)
-        if not pdf_buffer:
-            raise Exception("No se pudo generar el PDF con xhtml2pdf")
-            
+        # Renderizar HTML usando el template optimizado
+        html_string = render_to_string('workflow/pdf_resultado_consulta_simple.html', context)
+        
+        # Generar PDF con xhtml2pdf
+        pdf_buffer = io.BytesIO()
+        pisa_status = pisa.pisaDocument(io.StringIO(html_string), pdf_buffer)
+        
+        if pisa_status.err:
+            raise Exception("Error al generar PDF con xhtml2pdf")
+        
+        # Obtener contenido del PDF
         pdf_content = pdf_buffer.getvalue()
-        print(f"📊 PDF generado para email con xhtml2pdf: {len(pdf_content)} bytes")
+        pdf_buffer.close()
+        
+        if not pdf_content:
+            raise Exception("PDF generado está vacío")
+            
+        print(f"📊 PDF generado para email usando lógica de api_pdf_resultado_consulta: {len(pdf_content)} bytes")
 
         # Determinar colores basados en el subestado
         subestado_nombre = solicitud.subestado_actual.nombre.lower() if solicitud.subestado_actual else ""
@@ -17503,6 +17544,10 @@ def api_pdf_resultado_consulta(request, solicitud_id):
     API para generar PDF con el resultado de la consulta de análisis usando xhtml2pdf
     """
     try:
+        # Import required modules
+        from django.conf import settings
+        import os
+        
         # Check if xhtml2pdf is available
         if not XHTML2PDF_AVAILABLE:
             return JsonResponse({
@@ -17580,6 +17625,7 @@ def api_pdf_resultado_consulta(request, solicitud_id):
             'resultado_analisis': resultado_analisis,
             'field_values': field_values,  # Keep for backward compatibility
             'fecha_generacion': timezone.now(),
+            'logo_path': os.path.join(settings.BASE_DIR, 'static', 'images', 'logoBlanco.png'),
         }
         
         # Renderizar HTML usando el template optimizado
@@ -17609,6 +17655,7 @@ def api_pdf_resultado_consulta(request, solicitud_id):
         response = HttpResponse(pdf_content, content_type="application/pdf")
         filename = f"Resultado_Consulta_{solicitud.codigo}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
         response["Content-Disposition"] = f"attachment; filename=\"{filename}\""
+        print(f"✅ PDF generado exitosamente para solicitud {solicitud.codigo}")
         
         return response
         
