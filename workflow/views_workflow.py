@@ -855,13 +855,13 @@ def detalle_solicitud(request, solicitud_id):
 
                 # Lógica especial para requisito de agenda de firma
                 if req_sol.requisito.tipo_especial == 'agenda_firma':
-                    # ✅ Para agenda de firma, obtener información pero no marcar como faltante
+                    # ✅ Para agenda de firma, obtener información y marcar como cumplido solo si hay cita real
                     from .modelsWorkflow import AgendaFirma
                     agenda_firma = AgendaFirma.objects.filter(solicitud=solicitud).first()
                     
                     requisitos_necesarios[req_id]['archivo_actual'] = req_sol
-                    # Siempre marcar como cumplido para que no bloquee el proceso
-                    requisitos_necesarios[req_id]['esta_cumplido'] = True  
+                    # Solo marcar como cumplido si realmente hay una cita agendada
+                    requisitos_necesarios[req_id]['esta_cumplido'] = bool(agenda_firma)
                     requisitos_necesarios[req_id]['agenda_firma'] = agenda_firma
                     requisitos_necesarios[req_id]['es_agenda_firma'] = True
                     # Agregar info adicional para el template
@@ -882,8 +882,8 @@ def detalle_solicitud(request, solicitud_id):
                 from .modelsWorkflow import AgendaFirma
                 agenda_firma = AgendaFirma.objects.filter(solicitud=solicitud).first()
                 req_data['agenda_firma'] = agenda_firma
-                # Siempre marcar como cumplido para que no bloquee el proceso
-                req_data['esta_cumplido'] = True
+                # Solo marcar como cumplido si realmente hay una cita agendada
+                req_data['esta_cumplido'] = bool(agenda_firma)
                 # Agregar info adicional para el template
                 req_data['tiene_cita_real'] = bool(agenda_firma)
         
@@ -2105,13 +2105,20 @@ def api_crear_requisito(request):
         try:
             nombre = request.POST.get('nombre')
             descripcion = request.POST.get('descripcion', '')
+            tipo_especial = request.POST.get('tipo_especial', '')  # Nuevo campo
             
             if not nombre:
                 return JsonResponse({'success': False, 'error': 'El nombre es obligatorio'})
             
+            # Validar tipo_especial si se proporciona
+            if tipo_especial and tipo_especial not in ['agenda_firma']:
+                return JsonResponse({'success': False, 'error': 'Tipo especial no válido'})
+            
+            # Crear el requisito con el tipo especial
             requisito = Requisito.objects.create(
                 nombre=nombre,
-                descripcion=descripcion
+                descripcion=descripcion,
+                tipo_especial=tipo_especial if tipo_especial else None
             )
             
             return JsonResponse({
@@ -2119,7 +2126,8 @@ def api_crear_requisito(request):
                 'requisito': {
                     'id': requisito.id,
                     'nombre': requisito.nombre,
-                    'descripcion': requisito.descripcion
+                    'descripcion': requisito.descripcion,
+                    'tipo_especial': requisito.tipo_especial
                 }
             })
         except Exception as e:
@@ -2335,6 +2343,7 @@ def api_editar_requisito_pipeline(request, requisito_pipeline_id):
             descripcion = request.POST.get('descripcion', '')
             obligatorio = request.POST.get('obligatorio') == 'on'
             tipo_prestamo_aplicable = request.POST.get('tipo_prestamo_aplicable', 'todos')
+            tipo_especial = request.POST.get('tipo_especial', '')  # Nuevo campo
             
             # Validaciones
             if not nombre:
@@ -2343,10 +2352,15 @@ def api_editar_requisito_pipeline(request, requisito_pipeline_id):
                     'error': 'El nombre es obligatorio'
                 })
             
+            # Validar tipo_especial si se proporciona
+            if tipo_especial and tipo_especial not in ['agenda_firma']:
+                return JsonResponse({'success': False, 'error': 'Tipo especial no válido'})
+            
             # Actualizar el requisito base
             requisito = requisito_pipeline.requisito
             requisito.nombre = nombre
             requisito.descripcion = descripcion
+            requisito.tipo_especial = tipo_especial if tipo_especial else None
             requisito.save()
             
             # Actualizar el requisito del pipeline
@@ -2427,6 +2441,7 @@ def api_obtener_datos_pipeline(request, pipeline_id):
                 'id': req_pipeline.id,
                 'requisito_nombre': req_pipeline.requisito.nombre,
                 'requisito_descripcion': req_pipeline.requisito.descripcion or '',
+                'requisito_tipo_especial': req_pipeline.requisito.tipo_especial or '',
                 'obligatorio': req_pipeline.obligatorio,
                 'tipo_prestamo_aplicable': req_pipeline.tipo_prestamo_aplicable
             })
@@ -4431,13 +4446,20 @@ def api_crear_requisito(request):
         try:
             nombre = request.POST.get('nombre')
             descripcion = request.POST.get('descripcion', '')
+            tipo_especial = request.POST.get('tipo_especial', '')  # Nuevo campo
             
             if not nombre:
                 return JsonResponse({'success': False, 'error': 'El nombre es obligatorio'})
             
+            # Validar tipo_especial si se proporciona
+            if tipo_especial and tipo_especial not in ['agenda_firma']:
+                return JsonResponse({'success': False, 'error': 'Tipo especial no válido'})
+            
+            # Crear el requisito con el tipo especial
             requisito = Requisito.objects.create(
                 nombre=nombre,
-                descripcion=descripcion
+                descripcion=descripcion,
+                tipo_especial=tipo_especial if tipo_especial else None
             )
             
             return JsonResponse({
@@ -4445,7 +4467,8 @@ def api_crear_requisito(request):
                 'requisito': {
                     'id': requisito.id,
                     'nombre': requisito.nombre,
-                    'descripcion': requisito.descripcion
+                    'descripcion': requisito.descripcion,
+                    'tipo_especial': requisito.tipo_especial
                 }
             })
         except Exception as e:
@@ -4661,6 +4684,7 @@ def api_editar_requisito_pipeline(request, requisito_pipeline_id):
             descripcion = request.POST.get('descripcion', '')
             obligatorio = request.POST.get('obligatorio') == 'on'
             tipo_prestamo_aplicable = request.POST.get('tipo_prestamo_aplicable', 'todos')
+            tipo_especial = request.POST.get('tipo_especial', '')  # Nuevo campo
             
             # Validaciones
             if not nombre:
@@ -4669,10 +4693,15 @@ def api_editar_requisito_pipeline(request, requisito_pipeline_id):
                     'error': 'El nombre es obligatorio'
                 })
             
+            # Validar tipo_especial si se proporciona
+            if tipo_especial and tipo_especial not in ['agenda_firma']:
+                return JsonResponse({'success': False, 'error': 'Tipo especial no válido'})
+            
             # Actualizar el requisito base
             requisito = requisito_pipeline.requisito
             requisito.nombre = nombre
             requisito.descripcion = descripcion
+            requisito.tipo_especial = tipo_especial if tipo_especial else None
             requisito.save()
             
             # Actualizar el requisito del pipeline
