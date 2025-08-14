@@ -20,14 +20,20 @@ def obtener_usuarios_supervisados_por_usuario(usuario):
     Retorna todos los usuarios que están en grupos supervisados por el usuario dado
     """
     grupos_supervisados = obtener_grupos_supervisados_por_usuario(usuario)
-    usuarios_supervisados = User.objects.none()
+    
+    # En lugar de usar union(), vamos a usar una lista de IDs y luego hacer un filter
+    usuarios_supervisados_ids = set()
     
     for grupo_profile in grupos_supervisados:
         # Obtener miembros del grupo
         miembros = grupo_profile.group.user_set.all()
-        usuarios_supervisados = usuarios_supervisados.union(miembros)
+        usuarios_supervisados_ids.update(miembros.values_list('id', flat=True))
     
-    return usuarios_supervisados
+    # Retornar queryset con los IDs únicos
+    if usuarios_supervisados_ids:
+        return User.objects.filter(id__in=usuarios_supervisados_ids)
+    else:
+        return User.objects.none()
 
 
 def puede_ver_solicitudes_de_grupo(usuario, grupo):
@@ -84,12 +90,17 @@ def obtener_solicitudes_visibles_para_usuario(usuario, modelo_solicitud):
         # Si es supervisor, agregar solicitudes de usuarios supervisados
         if user_profile.rol in ['Supervisor', 'Asistente']:
             usuarios_supervisados = obtener_usuarios_supervisados_por_usuario(usuario)
-            solicitudes_supervisadas = modelo_solicitud.objects.filter(
-                usuario__in=usuarios_supervisados
-            )
-            
-            # Combinar solicitudes propias y supervisadas
-            return solicitudes_propias.union(solicitudes_supervisadas)
+            if usuarios_supervisados.exists():
+                # Usar Q objects en lugar de union() para evitar problemas de columnas
+                from django.db.models import Q
+                solicitudes_supervisadas = modelo_solicitud.objects.filter(
+                    Q(usuario__in=usuarios_supervisados)
+                )
+                
+                # Combinar usando Q objects en lugar de union()
+                return modelo_solicitud.objects.filter(
+                    Q(usuario=usuario) | Q(usuario__in=usuarios_supervisados)
+                )
         
         # Para otros roles, solo sus propias solicitudes
         return solicitudes_propias
@@ -167,8 +178,11 @@ def obtener_todos_los_datos_visibles_para_usuario(usuario, modelo):
         if es_supervisor_efectivo(usuario):
             usuarios_supervisados = obtener_usuarios_supervisados_por_usuario(usuario)
             if usuarios_supervisados.exists():
-                datos_supervisados = modelo.objects.filter(propietario__in=usuarios_supervisados)
-                return datos_propios.union(datos_supervisados)
+                # Usar Q objects en lugar de union() para evitar problemas de columnas
+                from django.db.models import Q
+                return modelo.objects.filter(
+                    Q(propietario=usuario) | Q(propietario__in=usuarios_supervisados)
+                )
         
         # Para otros casos, solo sus propios datos
         return datos_propios
