@@ -508,7 +508,7 @@ def api_procesar_reconsideracion_analista(request, solicitud_id):
         return JsonResponse({
             'success': True,
             'message': f'Reconsideración procesada: {decision}',
-            'redirect_url': '/bandeja-mixta/'
+            'redirect_url': 'workflow/bandeja-mixta/'
         })
         
     except Exception as e:
