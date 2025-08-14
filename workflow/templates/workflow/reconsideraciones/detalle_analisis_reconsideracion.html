@@ -1182,6 +1182,81 @@
         background: #a8a8a8;
     }
     
+    /* Historial de reconsideraciones specific styles */
+    .table-success {
+        background-color: rgba(22, 163, 74, 0.1) !important;
+    }
+    
+    .table-danger {
+        background-color: rgba(220, 38, 38, 0.1) !important;
+    }
+    
+    .table-warning {
+        background-color: rgba(245, 158, 11, 0.1) !important;
+    }
+    
+    .motivo-preview, .comentario-preview {
+        line-height: 1.4;
+        font-size: 0.875rem;
+    }
+    
+    .motivo-preview span, .comentario-preview span {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #374151;
+    }
+    
+    .badge-success {
+        background-color: #16a34a !important;
+        color: white !important;
+    }
+    
+    .badge-danger {
+        background-color: #dc2626 !important;
+        color: white !important;
+    }
+    
+    .badge-warning {
+        background-color: #d97706 !important;
+        color: white !important;
+    }
+    
+    .badge-info {
+        background-color: #0369a1 !important;
+        color: white !important;
+    }
+    
+    .badge-secondary {
+        background-color: #6b7280 !important;
+        color: white !important;
+    }
+    
+    /* Statistics cards */
+    .card {
+        transition: all 0.2s ease;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .card.border-success {
+        border-color: #22c55e !important;
+    }
+    
+    .card.border-danger {
+        border-color: #ef4444 !important;
+    }
+    
+    .card.border-warning {
+        border-color: #f59e0b !important;
+    }
+    
+    .card.border-info {
+        border-color: #3b82f6 !important;
+    }
+    
     /* Info row styling to match analysis template with compliance status */
     .info-row-with-status {
         display: flex;
@@ -1591,6 +1666,166 @@
                                     </small>
                                 </td>
                             </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Historial de Reconsideraciones Anteriores -->
+    {% if historial_reconsideraciones and historial_reconsideraciones|length > 1 %}
+    <div class="comite-section">
+        <div class="comite-header">
+            <h5 class="mb-0">
+                <i class="fas fa-history"></i>
+                Historial de Reconsideraciones Anteriores
+            </h5>
+            <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#historialReconsideraciones" aria-expanded="true">
+                <i class="fas fa-eye"></i>
+                Ver/Ocultar
+            </button>
+        </div>
+        <div class="collapse show" id="historialReconsideraciones">
+            <div class="comite-content">
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Total de reconsideraciones:</strong> {{ historial_reconsideraciones|length }}
+                    <span class="ms-2">|</span>
+                    <strong class="ms-2">Reconsideración actual:</strong> #{{ reconsideracion_actual.numero_reconsideracion }}
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th><i class="fas fa-hashtag"></i> #</th>
+                                <th><i class="fas fa-calendar"></i> Fecha Solicitud</th>
+                                <th><i class="fas fa-user"></i> Solicitada Por</th>
+                                <th><i class="fas fa-comment-alt"></i> Motivo</th>
+                                <th><i class="fas fa-user-tie"></i> Analizada Por</th>
+                                <th><i class="fas fa-calendar-check"></i> Fecha Análisis</th>
+                                <th><i class="fas fa-clipboard-check"></i> Estado</th>
+                                <th><i class="fas fa-comment-dots"></i> Comentario Análisis</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for reconsideracion in historial_reconsideraciones %}
+                            {% if reconsideracion != reconsideracion_actual %}
+                            <tr class="{% if reconsideracion.estado == 'aprobada' %}table-success{% elif reconsideracion.estado == 'rechazada' %}table-danger{% elif reconsideracion.estado == 'enviada_comite' %}table-warning{% endif %}">
+                                <td>
+                                    <span class="badge badge-primary fs-6">
+                                        #{{ reconsideracion.numero_reconsideracion }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock"></i>
+                                        {{ reconsideracion.fecha_solicitud|date:"d/m/Y H:i" }}
+                                    </small>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-sm me-2">
+                                            <i class="fas fa-user-circle"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold text-dark">{{ reconsideracion.solicitada_por.get_full_name|default:reconsideracion.solicitada_por.username }}</div>
+                                            <div class="text-muted small">{{ reconsideracion.solicitada_por.email|default:"Sin email" }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="motivo-preview" style="max-width: 200px;">
+                                        {% if reconsideracion.motivo|length > 100 %}
+                                            <span>{{ reconsideracion.motivo|truncatewords:15 }}</span>
+                                            <br>
+                                            <a href="#" onclick="mostrarComentarioCompleto('{{ reconsideracion.motivo|escapejs }}')" class="btn btn-sm btn-outline-info mt-1">
+                                                <i class="fas fa-expand-alt"></i>
+                                                Ver completo
+                                            </a>
+                                        {% else %}
+                                            <span>{{ reconsideracion.motivo }}</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if reconsideracion.analizada_por %}
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm me-2">
+                                                <i class="fas fa-user-tie"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold text-dark">{{ reconsideracion.analizada_por.get_full_name|default:reconsideracion.analizada_por.username }}</div>
+                                                <div class="text-muted small">{{ reconsideracion.analizada_por.email|default:"Sin email" }}</div>
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">
+                                            <i class="fas fa-hourglass-half"></i>
+                                            Pendiente
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if reconsideracion.fecha_analisis %}
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar-check"></i>
+                                            {{ reconsideracion.fecha_analisis|date:"d/m/Y H:i" }}
+                                        </small>
+                                    {% else %}
+                                        <span class="text-muted">
+                                            <i class="fas fa-minus"></i>
+                                            No analizada
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge 
+                                        {% if reconsideracion.estado == 'aprobada' %}badge-success
+                                        {% elif reconsideracion.estado == 'rechazada' %}badge-danger
+                                        {% elif reconsideracion.estado == 'enviada_comite' %}badge-warning
+                                        {% elif reconsideracion.estado == 'en_revision' %}badge-info
+                                        {% else %}badge-secondary
+                                        {% endif %}">
+                                        {% if reconsideracion.estado == 'aprobada' %}
+                                            <i class="fas fa-check"></i> Aprobada
+                                        {% elif reconsideracion.estado == 'rechazada' %}
+                                            <i class="fas fa-times"></i> Rechazada
+                                        {% elif reconsideracion.estado == 'enviada_comite' %}
+                                            <i class="fas fa-users"></i> Enviada a Comité
+                                        {% elif reconsideracion.estado == 'en_revision' %}
+                                            <i class="fas fa-search"></i> En Revisión
+                                        {% else %}
+                                            <i class="fas fa-paper-plane"></i> {{ reconsideracion.get_estado_display }}
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if reconsideracion.comentario_analisis %}
+                                        <div class="comentario-preview" style="max-width: 250px;">
+                                            {% if reconsideracion.comentario_analisis|length > 150 %}
+                                                <span>{{ reconsideracion.comentario_analisis|truncatewords:20 }}</span>
+                                                <br>
+                                                <a href="#" onclick="mostrarComentarioCompleto('{{ reconsideracion.comentario_analisis|escapejs }}')" class="btn btn-sm btn-outline-info mt-1">
+                                                    <i class="fas fa-expand-alt"></i>
+                                                    Ver análisis completo
+                                                </a>
+                                            {% else %}
+                                                <span>{{ reconsideracion.comentario_analisis }}</span>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">
+                                            <i class="fas fa-comment-slash"></i>
+                                            Sin comentarios
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endif %}
                             {% endfor %}
                         </tbody>
                     </table>

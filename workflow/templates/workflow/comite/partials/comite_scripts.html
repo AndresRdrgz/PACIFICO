@@ -134,17 +134,34 @@ document.addEventListener('DOMContentLoaded', function() {
                     const cardsFragment = document.createDocumentFragment();
                     
                     data.solicitudes.forEach(solicitud => {
+                        // Generar indicador de reconsideración
+                        let reconsideracionIndicator = '';
+                        if (solicitud.es_reconsideracion || solicitud.tiene_reconsideraciones) {
+                            reconsideracionIndicator = `
+                                <span class="badge bg-warning text-dark ms-2" title="Solicitud de Reconsideración">
+                                    <i class="fas fa-redo me-1"></i>
+                                    Reconsideración
+                                    ${solicitud.numero_reconsideraciones > 0 ? `(#${solicitud.numero_reconsideraciones})` : ''}
+                                </span>
+                            `;
+                        }
+                        
                         // Crear fila de tabla
                         const row = document.createElement('tr');
                         row.style.cursor = 'pointer';
                         row.setAttribute('data-solicitud-id', solicitud.id);
                         row.innerHTML = `
                             <td>
-                                <div class="text-primary fw-bold">
-                                    ${solicitud.cliente_nombre || 'Sin nombre'}
+                                <div class="d-flex align-items-center">
+                                    <div>
+                                        <div class="text-primary fw-bold">
+                                            ${solicitud.cliente_nombre || 'Sin nombre'}
+                                        </div>
+                                        <div class="text-muted small">${solicitud.cliente_cedula || 'Sin cédula'}</div>
+                                        ${solicitud.marca_modelo ? `<div class="text-vehicle small"><i class="fas fa-car me-1"></i>${solicitud.marca_modelo}</div>` : ''}
+                                    </div>
+                                    ${reconsideracionIndicator}
                                 </div>
-                                <div class="text-muted small">${solicitud.cliente_cedula || 'Sin cédula'}</div>
-                                ${solicitud.marca_modelo ? `<div class="text-vehicle small"><i class="fas fa-car me-1"></i>${solicitud.marca_modelo}</div>` : ''}
                             </td>
                             <td>
                                 <div class="fw-bold">${solicitud.monto_formateado}</div>
@@ -184,8 +201,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         cardCol.innerHTML = `
                             <div class="solicitud-card" data-solicitud-id="${solicitud.id}" style="cursor: pointer;">
                                 <div class="card-header">
-                                    <div class="cliente-name">
-                                        ${solicitud.cliente_nombre || 'Sin nombre'}
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="cliente-name">
+                                            ${solicitud.cliente_nombre || 'Sin nombre'}
+                                        </div>
+                                        ${reconsideracionIndicator ? `<div class="ms-2">${reconsideracionIndicator}</div>` : ''}
                                     </div>
                                 </div>
                                 <div class="card-body">

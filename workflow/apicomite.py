@@ -1,11 +1,17 @@
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q, Prefetch, Count
 from django.core.paginator import Paginator
 from django.utils import timezone
+from django.db import transaction
 from .modelsWorkflow import Solicitud, Etapa, ParticipacionComite, NivelComite, UsuarioNivelComite, SolicitudEscalamientoComite, HistorialSolicitud, SolicitudComentario, CalificacionCampo
 from django.contrib.auth.models import User
+import json
+import logging
+
+logger = logging.getLogger(__name__)
 import json
 
 def obtener_analista_revisor(solicitud):
@@ -169,6 +175,10 @@ def api_solicitudes_comite(request):
                 'fecha': analista_info['fecha'],
                 'etapa': analista_info['etapa']
             },
+            # Agregar información de reconsideración
+            'es_reconsideracion': getattr(sol, 'es_reconsideracion', False),
+            'tiene_reconsideraciones': hasattr(sol, 'reconsideraciones') and sol.reconsideraciones.exists(),
+            'numero_reconsideraciones': sol.reconsideraciones.count() if hasattr(sol, 'reconsideraciones') else 0,
         })
 
     return JsonResponse({
@@ -181,38 +191,203 @@ def api_solicitudes_comite(request):
 
 @login_required
 @require_http_methods(["POST"])
+@csrf_exempt
 def api_participar_comite(request, solicitud_id):
     """
     API para registrar la participación de un usuario en una solicitud del comité.
+    Maneja tanto JSON como FormData para compatibilidad con reconsideraciones.
     """
     try:
-        data = json.loads(request.body)
+        logger.info(f"=== API Participar Comité START ===")
+        logger.info(f"Solicitud ID: {solicitud_id}")
+        logger.info(f"User: {request.user.username}")
+        logger.info(f"Content-Type: {request.content_type}")
+        
+        # Handle both JSON and FormData
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+        else:
+            # Handle FormData
+            data = {
+                'resultado': request.POST.get('resultado'),
+                'comentario': request.POST.get('comentario'),
+                'nivel_id': request.POST.get('nivel_id'),
+                'es_reconsideracion': request.POST.get('es_reconsideracion'),
+                'reconsideracion_id': request.POST.get('reconsideracion_id'),
+            }
+        
+        logger.info(f"Parsed data: {data}")
+        
         resultado = data.get('resultado')
         comentario = data.get('comentario')
         nivel_id = data.get('nivel_id')
+        es_reconsideracion = data.get('es_reconsideracion') == 'true'
+        reconsideracion_id = data.get('reconsideracion_id')
 
-        solicitud = Solicitud.objects.get(id=solicitud_id)
-        nivel = NivelComite.objects.get(id=nivel_id)
-        
-        # Validar que el usuario pertenezca al nivel
-        if not UsuarioNivelComite.objects.filter(usuario=request.user, nivel=nivel, activo=True).exists() and not request.user.is_superuser:
-            return JsonResponse({'success': False, 'error': 'No tienes permiso para participar en este nivel.'}, status=403)
+        # Validar datos básicos
+        if not resultado:
+            return JsonResponse({'success': False, 'error': 'Debe seleccionar un resultado.'}, status=400)
             
-        participacion, created = ParticipacionComite.objects.update_or_create(
-            solicitud=solicitud,
-            nivel=nivel,
-            usuario=request.user,
-            defaults={'resultado': resultado, 'comentario': comentario}
-        )
+        if not comentario or len(comentario.strip()) < 10:
+            return JsonResponse({'success': False, 'error': 'El comentario debe tener al menos 10 caracteres.'}, status=400)
+
+        # Obtener la solicitud
+        solicitud = Solicitud.objects.get(id=solicitud_id)
+        logger.info(f"Solicitud encontrada: {solicitud.codigo}")
         
-        return JsonResponse({'success': True, 'message': 'Participación registrada exitosamente.'})
+        # Para reconsideraciones, manejar lógica especial
+        if es_reconsideracion:
+            logger.info(f"Processing reconsideration with ID: {reconsideracion_id}")
+            
+            # Si es una reconsideración, buscar el primer nivel disponible o usar superuser logic
+            if request.user.is_superuser:
+                # Superuser puede participar en cualquier nivel, usar el primero disponible
+                nivel = NivelComite.objects.order_by('orden').first()
+                if not nivel:
+                    return JsonResponse({'success': False, 'error': 'No hay niveles de comité configurados.'}, status=400)
+                logger.info(f"Superuser using first available level: {nivel.nombre}")
+            else:
+                # Buscar nivel del usuario
+                usuario_nivel = UsuarioNivelComite.objects.filter(
+                    usuario=request.user, 
+                    activo=True
+                ).first()
+                
+                if not usuario_nivel:
+                    return JsonResponse({'success': False, 'error': 'No tienes asignado ningún nivel de comité.'}, status=403)
+                
+                nivel = usuario_nivel.nivel
+                logger.info(f"User level found: {nivel.nombre}")
+        else:
+            # Para solicitudes normales, necesitamos nivel_id
+            if not nivel_id:
+                return JsonResponse({'success': False, 'error': 'Nivel de comité requerido.'}, status=400)
+                
+            try:
+                nivel = NivelComite.objects.get(id=nivel_id)
+            except NivelComite.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Nivel de comité no encontrado.'}, status=404)
+            
+            # Validar que el usuario pertenezca al nivel
+            if not request.user.is_superuser:
+                if not UsuarioNivelComite.objects.filter(usuario=request.user, nivel=nivel, activo=True).exists():
+                    return JsonResponse({'success': False, 'error': 'No tienes permiso para participar en este nivel.'}, status=403)
+        
+        # Crear o actualizar participación
+        with transaction.atomic():
+            participacion, created = ParticipacionComite.objects.update_or_create(
+                solicitud=solicitud,
+                nivel=nivel,
+                usuario=request.user,
+                defaults={
+                    'resultado': resultado,
+                    'comentario': comentario.strip(),
+                    'fecha_modificacion': timezone.now()
+                }
+            )
+            
+            logger.info(f"Participation {'created' if created else 'updated'}: {participacion}")
+            
+            # Move solicitud to "Resultado Consulta" stage after committee decision
+            try:
+                # Get "Resultado Consulta" stage
+                resultado_consulta_etapa = Etapa.objects.filter(
+                    nombre__icontains='Resultado Consulta'
+                ).first()
+                
+                if resultado_consulta_etapa:
+                    logger.info(f"Moving solicitud to Resultado Consulta stage")
+                    
+                    # Create new history entry
+                    HistorialSolicitud.objects.create(
+                        solicitud=solicitud,
+                        etapa=resultado_consulta_etapa,
+                        subestado=None,  # Will be set based on committee decision
+                        usuario_responsable=request.user,
+                        fecha_inicio=timezone.now()
+                    )
+                    
+                    # Update current stage
+                    solicitud.etapa_actual = resultado_consulta_etapa
+                    
+                    # Set appropriate subestado based on committee decision
+                    from .modelsWorkflow import SubEstado
+                    subestado_consulta = None
+                    
+                    if resultado.lower() == 'aprobado':
+                        subestado_consulta = SubEstado.objects.filter(
+                            etapa=resultado_consulta_etapa,
+                            nombre__icontains='Aprobado'
+                        ).first()
+                        solicitud.resultado_consulta = 'Aprobado'
+                    elif resultado.lower() == 'rechazado':
+                        subestado_consulta = SubEstado.objects.filter(
+                            etapa=resultado_consulta_etapa,
+                            nombre__icontains='Rechazado'
+                        ).first()
+                        solicitud.resultado_consulta = 'Rechazado'
+                    else:
+                        # For other decisions (like "Solicitar Observaciones" if it exists)
+                        subestado_consulta = SubEstado.objects.filter(
+                            etapa=resultado_consulta_etapa
+                        ).first()
+                        solicitud.resultado_consulta = resultado
+                    
+                    if subestado_consulta:
+                        solicitud.subestado_actual = subestado_consulta
+                        logger.info(f"Set subestado to: {subestado_consulta.nombre}")
+                    
+                    solicitud.save()
+                    logger.info(f"Solicitud moved to Resultado Consulta stage")
+                else:
+                    logger.warning("Resultado Consulta stage not found")
+                    
+            except Exception as e:
+                logger.error(f"Error moving solicitud to Resultado Consulta: {str(e)}")
+                # Don't fail the participation for this
+            
+            # Si es reconsideración, actualizar el estado de la reconsideración
+            if es_reconsideracion and reconsideracion_id:
+                try:
+                    from .modelsWorkflow import ReconsideracionSolicitud
+                    reconsideracion = ReconsideracionSolicitud.objects.get(id=reconsideracion_id)
+                    
+                    # Actualizar estado según el resultado
+                    if resultado.lower() == 'aprobado':
+                        reconsideracion.estado = 'aprobada'
+                    elif resultado.lower() == 'rechazado':
+                        reconsideracion.estado = 'rechazada'
+                        
+                    reconsideracion.save()
+                    logger.info(f"Reconsideration state updated to: {reconsideracion.estado}")
+                    
+                except Exception as e:
+                    logger.error(f"Error updating reconsideration: {str(e)}")
+                    # No fallar la participación por esto
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Participación registrada exitosamente.',
+            'participacion': {
+                'resultado': participacion.resultado,
+                'comentario': participacion.comentario,
+                'usuario': request.user.get_full_name() or request.user.username,
+                'nivel': nivel.nombre,
+                'fecha': participacion.fecha_modificacion.strftime('%d-%m-%Y %H:%M')
+            }
+        })
 
     except Solicitud.DoesNotExist:
+        logger.error(f"Solicitud {solicitud_id} not found")
         return JsonResponse({'success': False, 'error': 'Solicitud no encontrada.'}, status=404)
-    except NivelComite.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Nivel de comité no encontrado.'}, status=404)
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Datos JSON inválidos.'}, status=400)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        logger.error(f"Error in api_participar_comite: {str(e)}")
+        return JsonResponse({'success': False, 'error': f'Error interno: {str(e)}'}, status=500)
+    finally:
+        logger.info(f"=== API Participar Comité END ===")
 
 @login_required
 def api_niveles_usuario_comite(request):
