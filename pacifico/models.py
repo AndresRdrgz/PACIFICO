@@ -246,10 +246,11 @@ class GroupProfile(models.Model):
         Retorna todos los usuarios que tienen acceso a las solicitudes del grupo
         (miembros del grupo + supervisores)
         """
-        miembros = self.group.user_set.all()
-        supervisores = self.supervisores.all()
-        # Usar union para evitar duplicados si un supervisor también es miembro
-        return miembros.union(supervisores)
+        # En lugar de union(), usar Q objects para evitar problemas de columnas
+        from django.db.models import Q
+        return User.objects.filter(
+            Q(groups=self.group) | Q(id__in=self.supervisores.values_list('id', flat=True))
+        ).distinct()
 
 
 class UserProfile(models.Model):

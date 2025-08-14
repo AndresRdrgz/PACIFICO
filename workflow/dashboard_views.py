@@ -1257,12 +1257,33 @@ def dashboard_router(request):
     if user.groups.filter(name__icontains='Comité').exists() or user.groups.filter(name__icontains='Comite').exists():
         return dashboard_comite(request)
     
-    # Verificar si tiene acceso a bandejas grupales
-    bandeja_permisos = PermisoBandeja.objects.filter(
+    # === NUEVA LÓGICA: Verificar acceso a bandejas grupales incluyendo SUPERVISIÓN ===
+    bandeja_permisos = False
+    
+    # 1. Verificar permisos directos (MANTENER LÓGICA EXISTENTE)
+    if PermisoBandeja.objects.filter(
         Q(usuario=user) | Q(grupo__in=user.groups.all()),
         etapa__es_bandeja_grupal=True,
         puede_ver=True
-    ).exists()
+    ).exists():
+        bandeja_permisos = True
+    
+    # 2. Verificar permisos por supervisión (NUEVA FUNCIONALIDAD)
+    if not bandeja_permisos:
+        try:
+            from pacifico.utils_grupos import obtener_grupos_supervisados_por_usuario
+            
+            grupos_supervisados = obtener_grupos_supervisados_por_usuario(user)
+            
+            if grupos_supervisados.exists():
+                print(f"🔍 DEBUG: Usuario {user.username} es supervisor de {grupos_supervisados.count()} grupos")
+                # Si es supervisor de algún grupo, tiene acceso a bandejas grupales
+                bandeja_permisos = True
+                print(f"✅ DEBUG: Usuario {user.username} tiene acceso por supervisión")
+                
+        except ImportError as e:
+            print(f"⚠️ DEBUG: No se pudo importar utils_grupos: {e}")
+            pass
     
     if bandeja_permisos:
         return dashboard_bandeja_trabajo(request)
@@ -1282,12 +1303,35 @@ def dashboard_negocios(request):
     """
     user = request.user
     
-    # Verificar permisos (excepto superuser)
-    if not user.is_superuser and not (
+    # === VERIFICAR PERMISOS INCLUYENDO SUPERVISIÓN ===
+    tiene_acceso = False
+    
+    # 1. Verificar permisos directos (MANTENER LÓGICA EXISTENTE)
+    if user.is_superuser or (
         user.groups.filter(name='Oficial de Negocio').exists() or 
         user.groups.filter(name='NEGOCIOS').exists() or
         (hasattr(user, 'userprofile') and user.userprofile.rol == 'Asistente')
     ):
+        tiene_acceso = True
+        print(f"✅ DEBUG: Usuario {user.username} tiene acceso directo al dashboard de negocios")
+    
+    # 2. Verificar permisos por supervisión (NUEVA FUNCIONALIDAD)
+    if not tiene_acceso:
+        try:
+            from pacifico.utils_grupos import obtener_grupos_supervisados_por_usuario
+            grupos_supervisados = obtener_grupos_supervisados_por_usuario(user)
+            
+            if grupos_supervisados.exists():
+                print(f"🔍 DEBUG: Usuario {user.username} es supervisor de {grupos_supervisados.count()} grupos")
+                # Si es supervisor de algún grupo, tiene acceso al dashboard de negocios
+                tiene_acceso = True
+                print(f"✅ DEBUG: Usuario {user.username} tiene acceso por supervisión al dashboard de negocios")
+                
+        except ImportError as e:
+            print(f"⚠️ DEBUG: No se pudo importar utils_grupos: {e}")
+            pass
+    
+    if not tiene_acceso:
         # Redirigir al dashboard apropiado
         return dashboard_router(request)
     
@@ -1295,15 +1339,47 @@ def dashboard_negocios(request):
     fecha_inicio = request.GET.get('fecha_inicio')
     fecha_fin = request.GET.get('fecha_fin')
     
-    # Base queryset - solicitudes creadas por el usuario
+    # === OBTENER SOLICITUDES Y COTIZACIONES INCLUYENDO SUPERVISIÓN ===
+    
+    # 1. Solicitudes y cotizaciones propias (MANTENER LÓGICA EXISTENTE)
     queryset_solicitudes = Solicitud.objects.filter(
         creada_por=user
     ).select_related('pipeline', 'etapa_actual', 'cliente', 'cotizacion')
     
-    # Base queryset - cotizaciones creadas por el usuario
     queryset_cotizaciones = Cotizacion.objects.filter(
         added_by=user
     ).select_related('cliente')
+    
+    # 2. Solicitudes y cotizaciones de grupos supervisados (NUEVA FUNCIONALIDAD)
+    try:
+        from pacifico.utils_grupos import obtener_grupos_supervisados_por_usuario
+        grupos_supervisados = obtener_grupos_supervisados_por_usuario(user)
+        
+        if grupos_supervisados.exists():
+            print(f"🔍 DEBUG: Usuario {user.username} es supervisor de {grupos_supervisados.count()} grupos")
+            grupos_supervisados_ids = [gp.group.id for gp in grupos_supervisados]
+            
+            # Obtener solicitudes de grupos supervisados usando Q objects en lugar de union()
+            from django.db.models import Q
+            solicitudes_supervision_q = Q(creada_por__groups__id__in=grupos_supervisados_ids) & ~Q(creada_por=user)
+            
+            # Obtener cotizaciones de grupos supervisados usando Q objects
+            cotizaciones_supervision_q = Q(added_by__groups__id__in=grupos_supervisados_ids) & ~Q(added_by=user)
+            
+            # Aplicar filtros usando Q objects en lugar de union()
+            queryset_solicitudes = Solicitud.objects.filter(
+                Q(creada_por=user) | solicitudes_supervision_q
+            ).select_related('pipeline', 'etapa_actual', 'cliente', 'cotizacion')
+            
+            queryset_cotizaciones = Cotizacion.objects.filter(
+                Q(added_by=user) | cotizaciones_supervision_q
+            ).select_related('cliente')
+            
+            print(f"✅ DEBUG: Usuario {user.username} tiene acceso a solicitudes de grupos supervisados")
+            
+    except ImportError as e:
+        print(f"⚠️ DEBUG: No se pudo importar utils_grupos: {e}")
+        pass
     
     # Aplicar filtros de fecha
     if fecha_inicio:
@@ -1446,15 +1522,49 @@ def dashboard_bandeja_trabajo(request):
     """
     user = request.user
     
-    # Obtener etapas a las que el usuario tiene acceso
+    # === OBTENER ETAPAS CON ACCESO INCLUYENDO SUPERVISIÓN ===
+    etapas_acceso = []
+    
+    # 1. Para superusers (MANTENER LÓGICA EXISTENTE)
     if user.is_superuser:
         etapas_acceso = Etapa.objects.filter(es_bandeja_grupal=True)
+        print(f"✅ DEBUG: Usuario {user.username} es superuser, acceso completo a {len(etapas_acceso)} etapas")
+    
     else:
-        etapas_acceso = Etapa.objects.filter(
+        # 2. Obtener etapas por permisos directos (MANTENER LÓGICA EXISTENTE)
+        etapas_directas = Etapa.objects.filter(
             Q(permisos_bandeja__usuario=user) | Q(permisos_bandeja__grupo__in=user.groups.all()),
             es_bandeja_grupal=True,
             permisos_bandeja__puede_ver=True
         ).distinct()
+        
+        # 3. Obtener etapas por supervisión (NUEVA FUNCIONALIDAD)
+        etapas_supervision = []
+        try:
+            from pacifico.utils_grupos import obtener_grupos_supervisados_por_usuario
+            grupos_supervisados = obtener_grupos_supervisados_por_usuario(user)
+            
+            if grupos_supervisados.exists():
+                print(f"🔍 DEBUG: Usuario {user.username} es supervisor de {grupos_supervisados.count()} grupos")
+                # Si es supervisor, puede ver todas las etapas de bandeja grupal
+                etapas_supervision = Etapa.objects.filter(es_bandeja_grupal=True).distinct()
+                print(f"✅ DEBUG: Usuario {user.username} tiene acceso por supervisión a {len(etapas_supervision)} etapas")
+                
+        except ImportError as e:
+            print(f"⚠️ DEBUG: No se pudo importar utils_grupos: {e}")
+            pass
+        
+        # 4. Combinar y eliminar duplicados
+        todas_etapas = list(etapas_directas) + list(etapas_supervision)
+        seen_ids = set()
+        etapas_unicas = []
+        for etapa in todas_etapas:
+            if etapa.id not in seen_ids:
+                seen_ids.add(etapa.id)
+                etapas_unicas.append(etapa)
+        etapas_acceso = etapas_unicas
+        
+        print(f"✅ DEBUG: Usuario {user.username} tiene acceso a {len(etapas_acceso)} etapas totales")
     
     # Filtros
     fecha_inicio = request.GET.get('fecha_inicio')

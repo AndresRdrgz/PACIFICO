@@ -520,12 +520,18 @@ def cotizacionDetail(request, pk):
 
 
 
+@login_required
 def download_cotizaciones_excel(request):
-    cotizaciones = Cotizacion.objects.all()
-
-    # Filter cotizaciones by addedBy current user
-    if request.user.is_authenticated and not request.user.is_staff:
-        cotizaciones = cotizaciones.filter(added_by=request.user)
+    # Usar la función helper para obtener cotizaciones con supervisión
+    try:
+        from pacifico.utils_cotizaciones import obtener_cotizaciones_para_usuario
+        cotizaciones = obtener_cotizaciones_para_usuario(request.user)
+    except ImportError:
+        # Fallback: solo cotizaciones propias
+        if request.user.is_authenticated and not request.user.is_staff:
+            cotizaciones = Cotizacion.objects.filter(added_by=request.user)
+        else:
+            cotizaciones = Cotizacion.objects.all()
         
     cotizaciones = cotizaciones.order_by('-created_at')
 
@@ -599,12 +605,18 @@ def download_cotizaciones_excel(request):
     return response
 
 
+@login_required
 def download_cotizaciones_json(request):
-    cotizaciones = Cotizacion.objects.all()
-
-    # Filter cotizaciones by addedBy current user
-    if request.user.is_authenticated and not request.user.is_staff:
-        cotizaciones = cotizaciones.filter(added_by=request.user)
+    # Usar la función helper para obtener cotizaciones con supervisión
+    try:
+        from pacifico.utils_cotizaciones import obtener_cotizaciones_para_usuario
+        cotizaciones = obtener_cotizaciones_para_usuario(request.user)
+    except ImportError:
+        # Fallback: solo cotizaciones propias
+        if request.user.is_authenticated and not request.user.is_staff:
+            cotizaciones = Cotizacion.objects.filter(added_by=request.user)
+        else:
+            cotizaciones = Cotizacion.objects.all()
         
     cotizaciones = cotizaciones.order_by('-created_at')
 

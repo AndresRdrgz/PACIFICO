@@ -2372,44 +2372,24 @@ def api_crear_requisito(request):
         try:
             nombre = request.POST.get('nombre')
             descripcion = request.POST.get('descripcion', '')
-            tipo_especial = request.POST.get('tipo_especial', '')
-            
-            # DEBUG: Imprimir los datos recibidos
-            print(f"🔍 DEBUG api_crear_requisito:")
-            print(f"   nombre: {nombre}")
-            print(f"   descripcion: {descripcion}")
-            print(f"   tipo_especial: {tipo_especial}")
-            print(f"   tipo_especial type: {type(tipo_especial)}")
-            print(f"   request.POST completo: {dict(request.POST)}")
             
             if not nombre:
                 return JsonResponse({'success': False, 'error': 'El nombre es obligatorio'})
             
             requisito = Requisito.objects.create(
                 nombre=nombre,
-                descripcion=descripcion,
-                tipo_especial=tipo_especial if tipo_especial else None
+                descripcion=descripcion
             )
-            
-            # DEBUG: Imprimir el objeto creado
-            print(f"✅ DEBUG: Requisito creado exitosamente:")
-            print(f"   id: {requisito.id}")
-            print(f"   nombre: {requisito.nombre}")
-            print(f"   descripcion: {requisito.descripcion}")
-            print(f"   tipo_especial: {requisito.tipo_especial}")
-            print(f"   tipo_especial en BD: {requisito.tipo_especial}")
             
             return JsonResponse({
                 'success': True,
                 'requisito': {
                     'id': requisito.id,
                     'nombre': requisito.nombre,
-                    'descripcion': requisito.descripcion,
-                    'tipo_especial': requisito.tipo_especial
+                    'descripcion': requisito.descripcion
                 }
             })
         except Exception as e:
-            print(f"❌ ERROR en api_crear_requisito: {str(e)}")
             return JsonResponse({'success': False, 'error': str(e)})
     
     return JsonResponse({'success': False, 'error': 'Método no permitido'})
@@ -2622,17 +2602,6 @@ def api_editar_requisito_pipeline(request, requisito_pipeline_id):
             descripcion = request.POST.get('descripcion', '')
             obligatorio = request.POST.get('obligatorio') == 'on'
             tipo_prestamo_aplicable = request.POST.get('tipo_prestamo_aplicable', 'todos')
-            tipo_especial = request.POST.get('tipo_especial', '')
-            
-            # DEBUG: Imprimir los datos recibidos
-            print(f"🔍 DEBUG api_editar_requisito_pipeline:")
-            print(f"   requisito_pipeline_id: {requisito_pipeline_id}")
-            print(f"   nombre: {nombre}")
-            print(f"   descripcion: {descripcion}")
-            print(f"   obligatorio: {obligatorio}")
-            print(f"   tipo_prestamo_aplicable: {tipo_prestamo_aplicable}")
-            print(f"   tipo_especial: {tipo_especial}")
-            print(f"   request.POST completo: {dict(request.POST)}")
             
             # Validaciones
             if not nombre:
@@ -2643,21 +2612,9 @@ def api_editar_requisito_pipeline(request, requisito_pipeline_id):
             
             # Actualizar el requisito base
             requisito = requisito_pipeline.requisito
-            print(f"🔍 DEBUG: Requisito actual antes de actualizar:")
-            print(f"   id: {requisito.id}")
-            print(f"   nombre: {requisito.nombre}")
-            print(f"   descripcion: {requisito.descripcion}")
-            print(f"   tipo_especial: {requisito.tipo_especial}")
-            
             requisito.nombre = nombre
             requisito.descripcion = descripcion
-            requisito.tipo_especial = tipo_especial if tipo_especial else None
             requisito.save()
-            
-            print(f"✅ DEBUG: Requisito actualizado exitosamente:")
-            print(f"   nombre: {requisito.nombre}")
-            print(f"   descripcion: {requisito.descripcion}")
-            print(f"   tipo_especial: {requisito.tipo_especial}")
             
             # Actualizar el requisito del pipeline
             requisito_pipeline.obligatorio = obligatorio
@@ -2666,7 +2623,6 @@ def api_editar_requisito_pipeline(request, requisito_pipeline_id):
             
             return JsonResponse({'success': True})
         except Exception as e:
-            print(f"❌ ERROR en api_editar_requisito_pipeline: {str(e)}")
             return JsonResponse({'success': False, 'error': str(e)})
     
     return JsonResponse({'success': False, 'error': 'Método no permitido'})
@@ -2739,8 +2695,7 @@ def api_obtener_datos_pipeline(request, pipeline_id):
                 'requisito_nombre': req_pipeline.requisito.nombre,
                 'requisito_descripcion': req_pipeline.requisito.descripcion or '',
                 'obligatorio': req_pipeline.obligatorio,
-                'tipo_prestamo_aplicable': req_pipeline.tipo_prestamo_aplicable,
-                'tipo_especial': req_pipeline.requisito.tipo_especial or ''
+                'tipo_prestamo_aplicable': req_pipeline.tipo_prestamo_aplicable
             })
         
         # Campos personalizados
@@ -3021,88 +2976,48 @@ def api_buscar_cotizaciones_drawer(request):
         if not query:
             return JsonResponse({'success': True, 'cotizaciones': []})
         
-        try:
-            # Base query - PRÉSTAMOS DE AUTO Y PERSONAL
-            cotizaciones = Cotizacion.objects.filter(
-                Q(nombreCliente__icontains=query) | 
-                Q(cedulaCliente__icontains=query) |
-                Q(id__icontains=query)
-            ).filter(
-                Q(tipoPrestamo='auto') | Q(tipoPrestamo='personal')  # Incluir ambos tipos
-            )
-            
-            # Filtrar por permisos de usuario
-            if not (request.user.is_superuser or request.user.is_staff):
-                # Usuarios regulares: ver sus propias cotizaciones + cotizaciones de grupos supervisados
-                
-                # Cotizaciones propias
-                cotizaciones_propias = cotizaciones.filter(added_by=request.user)
-                
-                # Verificar si es supervisor de grupo
-                cotizaciones_supervisadas = Cotizacion.objects.none()
-                try:
-                    from pacifico.utils_grupos import obtener_grupos_supervisados_por_usuario
-                    grupos_supervisados = obtener_grupos_supervisados_por_usuario(request.user)
-                    
-                    if grupos_supervisados.exists():
-                        print(f"🔍 DEBUG: Usuario {request.user.username} es supervisor de {grupos_supervisados.count()} grupos")
-                        
-                        # Obtener usuarios supervisados
-                        usuarios_supervisados = []
-                        for grupo_profile in grupos_supervisados:
-                            miembros = grupo_profile.group.user_set.all()
-                            usuarios_supervisados.extend(miembros)
-                        
-                        print(f"🔍 DEBUG: Usuarios supervisados encontrados: {len(usuarios_supervisados)}")
-                        
-                        # Filtrar cotizaciones de usuarios supervisados
-                        if usuarios_supervisados:
-                            cotizaciones_supervisadas = cotizaciones.filter(
-                                added_by__in=usuarios_supervisados
-                            )
-                            print(f"🔍 DEBUG: Cotizaciones supervisadas encontradas: {cotizaciones_supervisadas.count()}")
-                except ImportError as e:
-                    print(f"⚠️ DEBUG: No se pudo importar utils_grupos: {e}")
-                    pass  # Si no existe el módulo, continuar sin supervisión
-                
-                # Combinar cotizaciones propias y supervisadas
-                cotizaciones = cotizaciones_propias | cotizaciones_supervisadas
-                print(f"🔍 DEBUG: Total cotizaciones (propias + supervisadas): {cotizaciones.count()}")
-            
-            # Ordenar y limitar resultados
-            cotizaciones = cotizaciones.order_by('-created_at')[:limit]
-            
-            # Serializar resultados
-            resultados = []
-            for cotizacion in cotizaciones:
-                resultado = {
-                    'id': cotizacion.id,
-                    'nombreCliente': cotizacion.nombreCliente or 'Sin nombre',
-                    'cedulaCliente': cotizacion.cedulaCliente or 'Sin cédula',
-                    'tipoPrestamo': cotizacion.tipoPrestamo or 'Sin tipo',
-                    'montoFinanciado': float(cotizacion.auxMonto2) if cotizacion.auxMonto2 else 0,  # Monto Financiado
-                    'oficial': cotizacion.oficial or 'Sin oficial',
-                    'observaciones': cotizacion.observaciones or '',  # Campo observaciones
-                    'created_at': cotizacion.created_at.isoformat() if cotizacion.created_at else None,
-                    # Vehicle data for SURA auto-population
-                    'valorAuto': float(cotizacion.valorAuto) if cotizacion.valorAuto else None,
-                    'yearCarro': cotizacion.yearCarro,
-                    'marca': cotizacion.marca or '',
-                    'modelo': cotizacion.modelo or '',
-                    'tipoDocumento': cotizacion.tipoDocumento or 'CEDULA'
-                }
-                print(f"🔧 DEBUG: Cotización {cotizacion.id} observaciones: '{cotizacion.observaciones}'")
-                print(f"🔧 DEBUG: Cotización {cotizacion.id} vehicle data: valorAuto={cotizacion.valorAuto}, yearCarro={cotizacion.yearCarro}, marca={cotizacion.marca}, modelo={cotizacion.modelo}")
-                resultados.append(resultado)
-            
-            print(f"🔍 DEBUG: Total resultados serializados: {len(resultados)}")
-            return JsonResponse({'success': True, 'cotizaciones': resultados})
-            
-        except Exception as e:
-            print(f"❌ ERROR en api_buscar_cotizaciones_drawer: {e}")
-            import traceback
-            traceback.print_exc()
-            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        # Base query - PRÉSTAMOS DE AUTO Y PERSONAL
+        cotizaciones = Cotizacion.objects.filter(
+            Q(nombreCliente__icontains=query) | 
+            Q(cedulaCliente__icontains=query) |
+            Q(id__icontains=query),
+            Q(tipoPrestamo='auto') | Q(tipoPrestamo='personal')  # Incluir ambos tipos
+        )
+        
+        # Filtrar por permisos de usuario
+        if not (request.user.is_superuser or request.user.is_staff):
+            # Usuarios regulares solo ven sus propias cotizaciones
+            cotizaciones = cotizaciones.filter(added_by=request.user)
+        
+        # Ordenar y limitar resultados
+        cotizaciones = cotizaciones.order_by('-created_at')[:limit]
+        
+        # Serializar resultados
+        resultados = []
+        for cotizacion in cotizaciones:
+            resultado = {
+                'id': cotizacion.id,
+                'nombreCliente': cotizacion.nombreCliente or 'Sin nombre',
+                'cedulaCliente': cotizacion.cedulaCliente or 'Sin cédula',
+                'tipoPrestamo': cotizacion.tipoPrestamo or 'Sin tipo',
+                'montoFinanciado': float(cotizacion.auxMonto2) if cotizacion.auxMonto2 else 0,  # Monto Financiado
+                'oficial': cotizacion.oficial or 'Sin oficial',
+                'observaciones': cotizacion.observaciones or '',  # Campo observaciones
+                'created_at': cotizacion.created_at.isoformat() if cotizacion.created_at else None,
+                # Vehicle data for SURA auto-population
+                'valorAuto': float(cotizacion.valorAuto) if cotizacion.valorAuto else None,
+                'yearCarro': cotizacion.yearCarro,
+                'marca': cotizacion.marca or '',
+                'modelo': cotizacion.modelo or '',
+                'tipoDocumento': cotizacion.tipoDocumento or 'CEDULA'
+            }
+            print(f"🔧 DEBUG: Cotización {cotizacion.id} observaciones: '{cotizacion.observaciones}'")
+            print(f"🔧 DEBUG: Cotización {cotizacion.id} observaciones type: {type(cotizacion.observaciones)}")
+            print(f"🔧 DEBUG: Cotización {cotizacion.id} observaciones length: {len(cotizacion.observaciones) if cotizacion.observaciones else 0}")
+            print(f"🔧 DEBUG: Cotización {cotizacion.id} vehicle data: valorAuto={cotizacion.valorAuto}, yearCarro={cotizacion.yearCarro}, marca={cotizacion.marca}, modelo={cotizacion.modelo}")
+            resultados.append(resultado)
+        
+        return JsonResponse({'success': True, 'cotizaciones': resultados})
     
     return JsonResponse({'success': False, 'error': 'Método no permitido'})
 
@@ -4802,7 +4717,35 @@ def api_crear_transicion(request, pipeline_id):
     return JsonResponse({'success': False, 'error': 'Método no permitido'})
 
 
-
+@login_required
+@superuser_permission_required('workflow.add_requisito')
+def api_crear_requisito(request):
+    """API para crear un requisito"""
+    if request.method == 'POST':
+        try:
+            nombre = request.POST.get('nombre')
+            descripcion = request.POST.get('descripcion', '')
+            
+            if not nombre:
+                return JsonResponse({'success': False, 'error': 'El nombre es obligatorio'})
+            
+            requisito = Requisito.objects.create(
+                nombre=nombre,
+                descripcion=descripcion
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'requisito': {
+                    'id': requisito.id,
+                    'nombre': requisito.nombre,
+                    'descripcion': requisito.descripcion
+                }
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
 
 
 @login_required
@@ -5000,7 +4943,42 @@ def api_eliminar_requisito_pipeline(request, requisito_pipeline_id):
 
 
 @login_required
-
+@superuser_permission_required('workflow.change_requisitopipeline')
+def api_editar_requisito_pipeline(request, requisito_pipeline_id):
+    """API para editar un requisito de un pipeline"""
+    if request.method == 'POST':
+        try:
+            requisito_pipeline = get_object_or_404(RequisitoPipeline, id=requisito_pipeline_id)
+            
+            # Obtener datos del formulario
+            nombre = request.POST.get('nombre')
+            descripcion = request.POST.get('descripcion', '')
+            obligatorio = request.POST.get('obligatorio') == 'on'
+            tipo_prestamo_aplicable = request.POST.get('tipo_prestamo_aplicable', 'todos')
+            
+            # Validaciones
+            if not nombre:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'El nombre es obligatorio'
+                })
+            
+            # Actualizar el requisito base
+            requisito = requisito_pipeline.requisito
+            requisito.nombre = nombre
+            requisito.descripcion = descripcion
+            requisito.save()
+            
+            # Actualizar el requisito del pipeline
+            requisito_pipeline.obligatorio = obligatorio
+            requisito_pipeline.tipo_prestamo_aplicable = tipo_prestamo_aplicable
+            requisito_pipeline.save()
+            
+            return JsonResponse({'success': True})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
 
 
 @login_required
@@ -5288,7 +5266,60 @@ def api_buscar_cotizaciones(request):
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 
-
+@login_required
+def api_buscar_cotizaciones_drawer(request):
+    """API para buscar cotizaciones en el drawer - Préstamos de Auto y Personal"""
+    if request.method == 'GET':
+        query = request.GET.get('q', '').strip()
+        limit = int(request.GET.get('limit', 10))
+        
+        if not query:
+            return JsonResponse({'success': True, 'cotizaciones': []})
+        
+        # Base query - PRÉSTAMOS DE AUTO Y PERSONAL
+        cotizaciones = Cotizacion.objects.filter(
+            Q(nombreCliente__icontains=query) | 
+            Q(cedulaCliente__icontains=query) |
+            Q(id__icontains=query),
+            Q(tipoPrestamo='auto') | Q(tipoPrestamo='personal')  # Incluir ambos tipos
+        )
+        
+        # Filtrar por permisos de usuario
+        if not (request.user.is_superuser or request.user.is_staff):
+            # Usuarios regulares solo ven sus propias cotizaciones
+            cotizaciones = cotizaciones.filter(added_by=request.user)
+        
+        # Ordenar y limitar resultados
+        cotizaciones = cotizaciones.order_by('-created_at')[:limit]
+        
+        # Serializar resultados
+        resultados = []
+        for cotizacion in cotizaciones:
+            resultado = {
+                'id': cotizacion.id,
+                'nombreCliente': cotizacion.nombreCliente or 'Sin nombre',
+                'cedulaCliente': cotizacion.cedulaCliente or 'Sin cédula',
+                'tipoPrestamo': cotizacion.tipoPrestamo or 'Sin tipo',
+                'montoFinanciado': float(cotizacion.auxMonto2) if cotizacion.auxMonto2 else 0,  # Monto Financiado
+                'oficial': cotizacion.oficial or 'Sin oficial',
+                'observaciones': cotizacion.observaciones or '',  # Campo observaciones
+                'created_at': cotizacion.created_at.isoformat() if cotizacion.created_at else None,
+                # Vehicle data for SURA auto-population
+                'valorAuto': float(cotizacion.valorAuto) if cotizacion.valorAuto else None,
+                'yearCarro': cotizacion.yearCarro,
+                'marca': cotizacion.marca or '',
+                'modelo': cotizacion.modelo or '',
+                'tipoDocumento': cotizacion.tipoDocumento or 'CEDULA'
+            }
+            print(f"🔧 DEBUG: Cotización {cotizacion.id} observaciones: '{cotizacion.observaciones}'")
+            print(f"🔧 DEBUG: Cotización {cotizacion.id} observaciones type: {type(cotizacion.observaciones)}")
+            print(f"🔧 DEBUG: Cotización {cotizacion.id} observaciones length: {len(cotizacion.observaciones) if cotizacion.observaciones else 0}")
+            print(f"🔧 DEBUG: Cotización {cotizacion.id} vehicle data: valorAuto={cotizacion.valorAuto}, yearCarro={cotizacion.yearCarro}, marca={cotizacion.marca}, modelo={cotizacion.modelo}")
+            resultados.append(resultado)
+        
+        return JsonResponse({'success': True, 'cotizaciones': resultados})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
 
 
 @login_required
