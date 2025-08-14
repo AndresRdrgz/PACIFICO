@@ -1,15 +1,17 @@
 from django.contrib.auth.models import Group
-from .models import Etapa, PermisoBandeja
+from .models import Etapa, PermisoBandeja, PermisoPipeline
+from pacifico.models import UserProfile
 
 def user_navigation_permissions(request):
     """
-    Context processor para proporcionar permisos de navegación del usuario.
+    Context processor para proporcionar permisos de navegación del usuario basado en roles.
     """
     context = {
         'can_access_comite': False,
         'can_access_bandejas_trabajo': False,
         'can_access_canal_digital': False,
         'can_access_pendientes_errores': False,
+        'can_access_negocios': False,
     }
     
     if not request.user.is_authenticated:
@@ -22,57 +24,58 @@ def user_navigation_permissions(request):
             'can_access_bandejas_trabajo': True,
             'can_access_canal_digital': True,
             'can_access_pendientes_errores': True,
+            'can_access_negocios': True,
         })
         return context
     
-    # Verificar acceso al Comité de Crédito
+    # Obtener el rol del usuario
     try:
-        if request.user.groups.filter(name="Comité de Crédito").exists():
-            context['can_access_comite'] = True
-    except:
-        pass
+        user_profile = UserProfile.objects.get(user=request.user)
+        user_role = user_profile.rol
+    except UserProfile.DoesNotExist:
+        user_role = None
     
-    # Verificar acceso a Bandejas de Trabajo (si tiene acceso a alguna etapa de bandeja grupal)
-    try:
-        # Obtener todas las etapas que son bandejas grupales
-        etapas_grupales = Etapa.objects.filter(es_bandeja_grupal=True)
-        
-        # Verificar si el usuario tiene permisos en alguna de estas etapas
-        user_groups = request.user.groups.all()
-        
-        for etapa in etapas_grupales:
-            # Verificar permisos por grupo
-            if PermisoBandeja.objects.filter(
-                etapa=etapa,
-                grupo__in=user_groups,
-                puede_ver=True
-            ).exists():
-                context['can_access_bandejas_trabajo'] = True
-                break
-            
+    # Verificar acceso basado en rol y permisos configurados
+    
+    # Acceso a Negocios: Oficial de Negocio, Asistente, Supervisor, Administrador
+    if user_role in ['Oficial', 'Asistente', 'Supervisor', 'Administrador']:
+        context['can_access_negocios'] = True
+    
+    # Acceso a Comité: Roles que pueden participar en comité + usuarios con permisos específicos
+    if user_role in ['Supervisor', 'Administrador']:
+        context['can_access_comite'] = True
+    
+    # Acceso a Bandejas de Trabajo: Analistas y Back Office siempre pueden ver, otros según permisos
+    if user_role in ['Analista', 'Back Office']:
+        context['can_access_bandejas_trabajo'] = True
+    else:
+        try:
             # Verificar permisos directos por usuario
             if PermisoBandeja.objects.filter(
-                etapa=etapa,
                 usuario=request.user,
                 puede_ver=True
             ).exists():
                 context['can_access_bandejas_trabajo'] = True
-                break
-    except:
-        pass
+            
+            # Verificar permisos por grupos (si los tiene)
+            user_groups = request.user.groups.all()
+            if user_groups.exists() and PermisoBandeja.objects.filter(
+                grupo__in=user_groups,
+                puede_ver=True
+            ).exists():
+                context['can_access_bandejas_trabajo'] = True
+        except:
+            pass
     
-    # Verificar acceso al Canal Digital
+    # Acceso al Canal Digital: Verificar grupo específico
     try:
         if request.user.groups.filter(name="Canal Digital").exists():
             context['can_access_canal_digital'] = True
     except:
         pass
     
-    # Verificar acceso a Pendientes y Errores
-    try:
-        if request.user.groups.filter(name__in=["NEGOCIOS", "BACK OFFICE"]).exists():
-            context['can_access_pendientes_errores'] = True
-    except:
-        pass
+    # Acceso a Pendientes y Errores: Roles administrativos y Back Office
+    if user_role in ['Supervisor', 'Administrador', 'Back Office']:
+        context['can_access_pendientes_errores'] = True
     
     return context

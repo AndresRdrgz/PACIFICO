@@ -844,6 +844,8 @@
                     <div class="user-role">
                         {% if user.is_superuser %}
                             Administrador
+                        {% elif user.userprofile.rol %}
+                            {{ user.userprofile.rol }}
                         {% elif user.groups.all %}
                             {{ user.groups.first.name }}
                         {% else %}
@@ -886,6 +888,7 @@
             </div>
 
             <!-- Negocios -->
+            {% if can_access_negocios %}
             <div class="nav-section">
                 <div class="nav-section-title">Negocios</div>
                 <a class="nav-link {% if request.resolver_match.url_name == 'negocios' %}active{% endif %}" 
@@ -899,21 +902,32 @@
                     <span>Cotizaciones</span>
                 </a>
                 
+                <a class="nav-link" href="/entrevistas/" target="_blank" rel="noopener noreferrer">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Formularios</span>
+                </a>
+                
                 <a class="nav-link {% if request.resolver_match.url_name == 'agenda_firma' %}active{% endif %}" 
                    href="{% url 'workflow:agenda_firma' %}">
                     <i class="fas fa-calendar-alt"></i>
                     <span>Agenda de Firma</span>
                 </a>
                 
-                {% if can_access_pendientes_errores %}
+               
+            </div>
+            {% endif %}
+
+            <!-- Pendientes y Errores -->
+            {% if can_access_pendientes_errores %}
+            <div class="nav-section">
+                <div class="nav-section-title">Gestión</div>
                 <a class="nav-link {% if request.resolver_match.url_name == 'pendientes_errores' %}active{% endif %}" 
                    href="{% url 'workflow:pendientes_errores' %}">
                     <i class="fas fa-exclamation-triangle"></i>
                     <span>Pendientes y errores</span>
                 </a>
-                {% endif %}
-               
             </div>
+            {% endif %}
 
             <!-- Administration -->
             {% if user.is_superuser %}

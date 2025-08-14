@@ -636,7 +636,34 @@ def bandeja_trabajo(request):
     if request.user.is_superuser:
         cotizaciones = Cotizacion.objects.all().order_by('-created_at')[:100]  # Últimas 100 cotizaciones
     else:
-        cotizaciones = Cotizacion.objects.filter(added_by=request.user).order_by('-created_at')[:100]
+        # Usuario normal: ver sus propias cotizaciones
+        cotizaciones_propias = Cotizacion.objects.filter(added_by=request.user).order_by('-created_at')[:100]
+        
+        # Verificar si es supervisor de grupo
+        cotizaciones_supervisadas = Cotizacion.objects.none()
+        try:
+            from pacifico.utils_grupos import obtener_grupos_supervisados_por_usuario
+            grupos_supervisados = obtener_grupos_supervisados_por_usuario(request.user)
+            
+            if grupos_supervisados.exists():
+                # Obtener usuarios supervisados
+                usuarios_supervisados = []
+                for grupo_profile in grupos_supervisados:
+                    miembros = grupo_profile.group.user_set.all()
+                    usuarios_supervisados.extend(miembros)
+                
+                # Filtrar cotizaciones de usuarios supervisados
+                if usuarios_supervisados:
+                    cotizaciones_supervisadas = Cotizacion.objects.filter(
+                        added_by__in=usuarios_supervisados
+                    ).order_by('-created_at')[:100]
+        except ImportError:
+            pass  # Si no existe el módulo, continuar sin supervisión
+        
+        # Combinar cotizaciones propias + supervisadas y tomar las últimas 100
+        cotizaciones = list(cotizaciones_propias) + list(cotizaciones_supervisadas)
+        cotizaciones.sort(key=lambda x: x.created_at, reverse=True)
+        cotizaciones = cotizaciones[:100]
     
     context = {
         'pipelines': Pipeline.objects.all(),
@@ -855,13 +882,13 @@ def detalle_solicitud(request, solicitud_id):
 
                 # Lógica especial para requisito de agenda de firma
                 if req_sol.requisito.tipo_especial == 'agenda_firma':
-                    # ✅ Para agenda de firma, obtener información pero no marcar como faltante
+                    # ✅ Para agenda de firma, verificar si realmente existe una cita agendada
                     from .modelsWorkflow import AgendaFirma
                     agenda_firma = AgendaFirma.objects.filter(solicitud=solicitud).first()
                     
                     requisitos_necesarios[req_id]['archivo_actual'] = req_sol
-                    # Siempre marcar como cumplido para que no bloquee el proceso
-                    requisitos_necesarios[req_id]['esta_cumplido'] = True  
+                    # Solo marcar como cumplido si realmente existe una cita agendada
+                    requisitos_necesarios[req_id]['esta_cumplido'] = bool(agenda_firma)
                     requisitos_necesarios[req_id]['agenda_firma'] = agenda_firma
                     requisitos_necesarios[req_id]['es_agenda_firma'] = True
                     # Agregar info adicional para el template
@@ -882,8 +909,8 @@ def detalle_solicitud(request, solicitud_id):
                 from .modelsWorkflow import AgendaFirma
                 agenda_firma = AgendaFirma.objects.filter(solicitud=solicitud).first()
                 req_data['agenda_firma'] = agenda_firma
-                # Siempre marcar como cumplido para que no bloquee el proceso
-                req_data['esta_cumplido'] = True
+                # Solo marcar como cumplido si realmente existe una cita agendada
+                req_data['esta_cumplido'] = bool(agenda_firma)
                 # Agregar info adicional para el template
                 req_data['tiene_cita_real'] = bool(agenda_firma)
         
@@ -3399,7 +3426,34 @@ def nueva_solicitud(request):
     if request.user.is_superuser:
         cotizaciones = Cotizacion.objects.all().order_by('-created_at')[:100]  # Últimas 100 cotizaciones
     else:
-        cotizaciones = Cotizacion.objects.filter(added_by=request.user).order_by('-created_at')[:100]
+        # Usuario normal: ver sus propias cotizaciones
+        cotizaciones_propias = Cotizacion.objects.filter(added_by=request.user).order_by('-created_at')[:100]
+        
+        # Verificar si es supervisor de grupo
+        cotizaciones_supervisadas = Cotizacion.objects.none()
+        try:
+            from pacifico.utils_grupos import obtener_grupos_supervisados_por_usuario
+            grupos_supervisados = obtener_grupos_supervisados_por_usuario(request.user)
+            
+            if grupos_supervisados.exists():
+                # Obtener usuarios supervisados
+                usuarios_supervisados = []
+                for grupo_profile in grupos_supervisados:
+                    miembros = grupo_profile.group.user_set.all()
+                    usuarios_supervisados.extend(miembros)
+                
+                # Filtrar cotizaciones de usuarios supervisados
+                if usuarios_supervisados:
+                    cotizaciones_supervisadas = Cotizacion.objects.filter(
+                        added_by__in=usuarios_supervisados
+                    ).order_by('-created_at')[:100]
+        except ImportError:
+            pass  # Si no existe el módulo, continuar sin supervisión
+        
+        # Combinar cotizaciones propias + supervisadas y tomar las últimas 100
+        cotizaciones = list(cotizaciones_propias) + list(cotizaciones_supervisadas)
+        cotizaciones.sort(key=lambda x: x.created_at, reverse=True)
+        cotizaciones = cotizaciones[:100]
     
     context = {
         'pipelines': Pipeline.objects.all(),
@@ -8415,7 +8469,10 @@ def verificar_requisitos_transicion(solicitud, transicion):
         if req_transicion.requisito.tipo_especial == 'agenda_firma':
             # ✅ IMPORTANTE: Agenda de firma NO bloquea transiciones en Back Office
             # Es un requisito informativo que no impide el avance del proceso
-            esta_cumplido = True  # Siempre considerar como cumplido para no bloquear
+            # Pero solo se considera cumplido si realmente existe una cita agendada
+            from .modelsWorkflow import AgendaFirma
+            agenda_firma = AgendaFirma.objects.filter(solicitud=solicitud).first()
+            esta_cumplido = bool(agenda_firma)  # Solo cumplido si existe cita
         else:
             # Considerar un requisito como cumplido si:
             # 1. Existe el RequisitoSolicitud Y
@@ -8597,25 +8654,52 @@ def vista_mixta_bandejas(request):
             ).order_by('-fecha_ultima_actualizacion')
     else:
         # Usuarios regulares - permisos normales
-        grupos_usuario = request.user.groups.all()
+        from django.db.models import Q
+        from pacifico.models import UserProfile
+        
+        # Obtener el rol del usuario
+        try:
+            user_profile = UserProfile.objects.get(user=request.user)
+            user_role = user_profile.rol
+        except UserProfile.DoesNotExist:
+            user_role = None
         
         # === BANDEJA GRUPAL ===
         # Obtener etapas grupales donde el usuario tiene permisos
-        if etapa_seleccionada:
-            # Si hay etapa seleccionada, verificar que el usuario tenga permisos para esa etapa específica
-            etapas_grupales = Etapa.objects.filter(
-                id=etapa_seleccionada.id,
-                es_bandeja_grupal=True,
-                permisos__grupo__in=grupos_usuario,
-                permisos__puede_autoasignar=True
-            ).distinct()
+        grupos_usuario = request.user.groups.all()
+        
+        if user_role in ['Analista', 'Back Office']:
+            # Los analistas y Back Office SOLO ven las bandejas donde tienen PermisoBandeja específico
+            if etapa_seleccionada:
+                # Si hay etapa seleccionada, verificar que tenga permisos para esa etapa específica
+                etapas_grupales = Etapa.objects.filter(
+                    id=etapa_seleccionada.id,
+                    es_bandeja_grupal=True,
+                    permisos_bandeja__usuario=request.user,
+                    permisos_bandeja__puede_ver=True
+                ).distinct()
+            else:
+                # Si no hay etapa seleccionada, mostrar SOLO las etapas donde tiene permisos directos
+                etapas_grupales = Etapa.objects.filter(
+                    es_bandeja_grupal=True,
+                    permisos_bandeja__usuario=request.user,
+                    permisos_bandeja__puede_ver=True
+                ).exclude(nombre__iexact="Comité de Crédito").distinct()
         else:
-            # Si no hay etapa seleccionada, mostrar todas las etapas donde tiene permisos excepto Comité de Crédito
-            etapas_grupales = Etapa.objects.filter(
-                es_bandeja_grupal=True,
-                permisos__grupo__in=grupos_usuario,
-                permisos__puede_autoasignar=True
-            ).exclude(nombre__iexact="Comité de Crédito").distinct()
+            # Otros roles: filtro normal por grupos
+            if etapa_seleccionada:
+                etapas_grupales = Etapa.objects.filter(
+                    id=etapa_seleccionada.id,
+                    es_bandeja_grupal=True,
+                    permisos__grupo__in=grupos_usuario,
+                    permisos__puede_autoasignar=True
+                ).distinct()
+            else:
+                etapas_grupales = Etapa.objects.filter(
+                    es_bandeja_grupal=True,
+                    permisos__grupo__in=grupos_usuario,
+                    permisos__puede_autoasignar=True
+                ).exclude(nombre__iexact="Comité de Crédito").distinct()
         
         # Solicitudes grupales (sin asignar)
         solicitudes_grupales = Solicitud.objects.filter(
@@ -8807,7 +8891,32 @@ def vista_mixta_bandejas(request):
     etapas_unicas = sorted(list(etapas_unicas))
     
     # Obtener todas las etapas con bandeja habilitada (para el dropdown) excepto Comité de Crédito
-    etapas_con_bandeja = Etapa.objects.filter(es_bandeja_grupal=True).exclude(nombre__iexact="Comité de Crédito").select_related('pipeline')
+    # Etapas con bandeja - solo las que el usuario puede ver
+    if request.user.is_superuser or request.user.is_staff:
+        etapas_con_bandeja = Etapa.objects.filter(es_bandeja_grupal=True).exclude(nombre__iexact="Comité de Crédito").select_related('pipeline')
+    else:
+        # Para usuarios regulares, solo mostrar etapas donde tienen permisos
+        try:
+            user_profile = UserProfile.objects.get(user=request.user)
+            user_role = user_profile.rol
+        except UserProfile.DoesNotExist:
+            user_role = None
+        
+        if user_role in ['Analista', 'Back Office']:
+            # Los analistas y Back Office solo ven etapas donde tienen PermisoBandeja específico
+            etapas_con_bandeja = Etapa.objects.filter(
+                es_bandeja_grupal=True,
+                permisos_bandeja__usuario=request.user,
+                permisos_bandeja__puede_ver=True
+            ).exclude(nombre__iexact="Comité de Crédito").select_related('pipeline').distinct()
+        else:
+            # Otros roles: filtro por grupos
+            grupos_usuario = request.user.groups.all()
+            etapas_con_bandeja = Etapa.objects.filter(
+                es_bandeja_grupal=True,
+                permisos__grupo__in=grupos_usuario,
+                permisos__puede_autoasignar=True
+            ).exclude(nombre__iexact="Comité de Crédito").select_related('pipeline').distinct()
     
     context = {
         'solicitudes_grupales': solicitudes_grupales,
@@ -8848,19 +8957,39 @@ def api_tomar_solicitud(request, solicitud_id):
                 'error': 'Esta solicitud no está disponible para tomar.'
             })
         
-        # === SISTEMA DE PERMISOS SUPER STAFF ===
+        # === SISTEMA DE PERMISOS INTEGRADO ===
         # Los usuarios super staff (is_staff=True) pueden tomar cualquier solicitud
         if request.user.is_staff:
             # Super staff tiene permisos completos
             tiene_permiso = True
         else:
             # Verificar permisos regulares para usuarios normales
+            tiene_permiso = False
+            
+            # 1. Verificar permisos por grupos (PermisoEtapa)
             grupos_usuario = request.user.groups.all()
-            tiene_permiso = PermisoEtapa.objects.filter(
-                etapa=solicitud.etapa_actual,
-                grupo__in=grupos_usuario,
-                puede_autoasignar=True
-            ).exists()
+            if grupos_usuario.exists():
+                tiene_permiso = PermisoEtapa.objects.filter(
+                    etapa=solicitud.etapa_actual,
+                    grupo__in=grupos_usuario,
+                    puede_autoasignar=True
+                ).exists()
+            
+            # 2. Si no tiene permisos por grupo, verificar permisos individuales (PermisoBandeja)
+            if not tiene_permiso:
+                # Verificar si el usuario tiene rol "Back Office" o "Analista"
+                try:
+                    from pacifico.models import UserProfile
+                    user_profile = UserProfile.objects.get(user=request.user)
+                    if user_profile.rol in ['Back Office', 'Analista']:
+                        # Verificar permisos específicos de bandeja
+                        tiene_permiso = PermisoBandeja.objects.filter(
+                            etapa=solicitud.etapa_actual,
+                            usuario=request.user,
+                            puede_tomar=True
+                        ).exists()
+                except (UserProfile.DoesNotExist, ImportError):
+                    pass
         
         if not tiene_permiso:
             return JsonResponse({
@@ -11132,8 +11261,8 @@ def api_obtener_requisitos_faltantes_detallado(request, solicitud_id):
                 # Verificar si existe una cita agendada para mostrar el estado correcto en la UI
                 from workflow.modelsWorkflow import AgendaFirma
                 tiene_cita_agendada = AgendaFirma.objects.filter(solicitud=solicitud).exists()
-                # Para efectos de conteo y validación, siempre considerarlo completo
-                esta_completo = True  # No cuenta como faltante para validaciones
+                # Para efectos de conteo y validación, solo considerarlo completo si tiene cita
+                esta_completo = tiene_cita_agendada  # Solo completo si existe cita agendada
             else:
                 # Determinar si está completo - considerar archivos subidos desde drawer
                 # Un requisito está completo si:
@@ -11755,7 +11884,7 @@ def api_obtener_grupos(request):
 
 @login_required
 def detalle_solicitud_analisis(request, solicitud_id):
-    """Vista especializada para análisis de solicitudes por parte de analistas"""
+    """Vista especializada para análisis de solicitudes por parte de analistas y Back Office"""
     
     solicitud = get_object_or_404(Solicitud, id=solicitud_id)
     
