@@ -5,17 +5,23 @@ from django.db import migrations, models, connection
 
 
 def check_column_exists(table_name, column_name):
-    """Check if a column exists in a table using PostgreSQL-compatible syntax."""
+    """Check if a column exists in a table using SQLite-compatible syntax."""
     with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT EXISTS (
-                SELECT FROM information_schema.columns 
-                WHERE table_schema = 'public' 
-                AND table_name = %s
-                AND column_name = %s
-            );
-        """, [table_name, column_name])
-        return cursor.fetchone()[0]
+        try:
+            # SQLite doesn't have information_schema, so we use pragma
+            cursor.execute("PRAGMA table_info(%s)", [table_name])
+            columns = cursor.fetchall()
+            # pragma returns: (cid, name, type, notnull, dflt_value, pk)
+            return any(column[1] == column_name for column in columns)
+        except Exception:
+            # Fallback: try to describe the table
+            try:
+                cursor.execute("SELECT * FROM %s LIMIT 0" % table_name)
+                # If we get here, table exists, now check if column exists
+                cursor.execute("SELECT %s FROM %s LIMIT 1" % (column_name, table_name))
+                return True
+            except Exception:
+                return False
 
 
 def add_empresa_field_if_not_exists(apps, schema_editor):

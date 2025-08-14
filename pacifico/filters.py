@@ -40,20 +40,11 @@ class CotizacionFilter(django_filters.FilterSet):
         )
     )
     
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Poblar las opciones dinámicamente
-        try:
-            oficiales = Cotizacion.objects.values_list('oficial', flat=True).distinct()
-            self.filters['oficial'].extra['choices'] = [(oficial, oficial) for oficial in oficiales if oficial]
-        except Exception:
-            # Si hay error de conexión, usar lista vacía
-            self.filters['oficial'].extra['choices'] = []
     marca = django_filters.ChoiceFilter(
         field_name='marca',
         lookup_expr='exact',
         label='Marca',
-        choices=[(marca, marca) for marca in Cotizacion.objects.values_list('marca', flat=True).distinct()],
+        choices=[],  # Se poblarán dinámicamente
         empty_label='TODAS',
         widget=forms.Select(
             attrs={
@@ -62,6 +53,7 @@ class CotizacionFilter(django_filters.FilterSet):
             }
         )
     )
+    
     tipoPrestamo = django_filters.ChoiceFilter(
         field_name='tipoPrestamo',
         lookup_expr='exact',
@@ -75,6 +67,20 @@ class CotizacionFilter(django_filters.FilterSet):
             }
         )
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Poblar las opciones dinámicamente
+        try:
+            oficiales = Cotizacion.objects.values_list('oficial', flat=True).distinct()
+            self.filters['oficial'].extra['choices'] = [(oficial, oficial) for oficial in oficiales if oficial]
+            
+            marcas = Cotizacion.objects.values_list('marca', flat=True).distinct()
+            self.filters['marca'].extra['choices'] = [(marca, marca) for marca in marcas if marca]
+        except Exception:
+            # Si hay error de conexión, usar lista vacía
+            self.filters['oficial'].extra['choices'] = []
+            self.filters['marca'].extra['choices'] = []
 
     class Meta:
         model = Cotizacion

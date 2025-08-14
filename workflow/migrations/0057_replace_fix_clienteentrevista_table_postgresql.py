@@ -22,13 +22,19 @@ def create_table_if_not_exists_postgresql(apps, schema_editor):
             """)
             table_exists = cursor.fetchone()[0]
     elif 'sqlite' in connection.settings_dict['ENGINE']:
-        # SQLite - usar sqlite_master
+        # SQLite - usar PRAGMA table_info
         with connection.cursor() as cursor:
-            cursor.execute("""
-                SELECT COUNT(*) FROM sqlite_master 
-                WHERE type='table' AND name='workflow_clienteentrevista';
-            """)
-            table_exists = cursor.fetchone()[0] > 0
+            try:
+                cursor.execute("PRAGMA table_info(workflow_clienteentrevista)")
+                columns = cursor.fetchall()
+                table_exists = len(columns) > 0
+            except Exception:
+                # Fallback: intentar seleccionar de la tabla
+                try:
+                    cursor.execute("SELECT * FROM workflow_clienteentrevista LIMIT 1")
+                    table_exists = True
+                except Exception:
+                    table_exists = False
     else:
         # Para otras bases de datos, intentar crear la tabla directamente
         table_exists = False

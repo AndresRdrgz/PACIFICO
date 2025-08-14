@@ -17,13 +17,18 @@ def fix_clienteentrevista_table(apps, schema_editor):
     with transaction.atomic():
         try:
             with connection.cursor() as cursor:
-                # Check if table exists by querying information_schema (PostgreSQL)
-                cursor.execute("""
-                    SELECT COUNT(*) 
-                    FROM information_schema.tables 
-                    WHERE table_name = %s AND table_schema = 'public'
-                """, [table_name])
-                table_exists = cursor.fetchone()[0] > 0
+                # Check if table exists using SQLite-compatible syntax
+                try:
+                    cursor.execute("PRAGMA table_info(%s)" % table_name)
+                    columns = cursor.fetchall()
+                    table_exists = len(columns) > 0
+                except Exception:
+                    # Fallback: try to select from the table
+                    try:
+                        cursor.execute("SELECT * FROM %s LIMIT 1" % table_name)
+                        table_exists = True
+                    except Exception:
+                        table_exists = False
         except Exception as e:
             print(f"Error checking table existence: {e}")
             table_exists = False
@@ -48,7 +53,7 @@ def fix_clienteentrevista_table(apps, schema_editor):
         with transaction.atomic():
             try:
                 with connection.cursor() as cursor:
-                    cursor.execute(f"DROP TABLE IF EXISTS {table_name} CASCADE")
+                    cursor.execute(f"DROP TABLE IF EXISTS {table_name}")
                 print(f"✅ Dropped existing table {table_name}")
             except Exception as e:
                 print(f"Error dropping table: {e}")
@@ -62,6 +67,10 @@ def fix_clienteentrevista_table(apps, schema_editor):
         print(f"✅ Created table {table_name} with correct structure")
     except Exception as e:
         print(f"Error creating table: {e}")
+        # If table already exists, just log it and continue
+        if "already exists" in str(e):
+            print(f"ℹ️  Table {table_name} already exists - skipping creation")
+            return
         raise
 
 
