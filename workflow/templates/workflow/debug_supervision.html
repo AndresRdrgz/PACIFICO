@@ -1,0 +1,301 @@
+{% extends 'workflow/base.html' %}
+
+{% block title %}Debug Supervisión de Grupos{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-bug me-2"></i>
+                        Debug Supervisión de Grupos
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Información del Usuario -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>👤 Información del Usuario</h5>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Username:</strong></td>
+                                    <td>{{ usuario.username }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Nombre:</strong></td>
+                                    <td>{{ usuario.get_full_name|default:"No especificado" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Email:</strong></td>
+                                    <td>{{ usuario.email|default:"No especificado" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Rol:</strong></td>
+                                    <td>
+                                        {% if userprofile %}
+                                            <span class="badge bg-info">{{ userprofile.rol }}</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Sin UserProfile</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Superuser:</strong></td>
+                                    <td>
+                                        {% if usuario.is_superuser %}
+                                            <span class="badge bg-success">Sí</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">No</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Staff:</strong></td>
+                                    <td>
+                                        {% if usuario.is_staff %}
+                                            <span class="badge bg-success">Sí</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">No</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>📊 Resumen de Supervisión</h5>
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="card bg-primary text-white text-center">
+                                        <div class="card-body">
+                                            <h3>{{ grupos_supervisados.count }}</h3>
+                                            <p class="mb-0">Grupos Supervisados</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="card bg-success text-white text-center">
+                                        <div class="card-body">
+                                            <h3>{{ usuarios_supervisados.count }}</h3>
+                                            <p class="mb-0">Usuarios Supervisados</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-12">
+                                    <div class="card bg-info text-white text-center">
+                                        <div class="card-body">
+                                            <h3>{{ solicitudes_supervisadas.count }}</h3>
+                                            <p class="mb-0">Solicitudes Supervisadas</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Grupos Supervisados -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5>🏢 Grupos Supervisados</h5>
+                            {% if grupos_supervisados %}
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Nombre del Grupo</th>
+                                                <th>Descripción</th>
+                                                <th>Es Sucursal</th>
+                                                <th>Miembros</th>
+                                                <th>Activo</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for grupo_profile in grupos_supervisados %}
+                                            <tr>
+                                                <td><strong>{{ grupo_profile.group.name }}</strong></td>
+                                                <td>{{ grupo_profile.descripcion|default:"Sin descripción" }}</td>
+                                                <td>
+                                                    {% if grupo_profile.es_sucursal %}
+                                                        <span class="badge bg-success">Sí</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">No</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-info">{{ grupo_profile.group.user_set.count }}</span>
+                                                </td>
+                                                <td>
+                                                    {% if grupo_profile.activo %}
+                                                        <span class="badge bg-success">Activo</span>
+                                                    {% else %}
+                                                        <span class="badge bg-danger">Inactivo</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    No se encontraron grupos supervisados para este usuario.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Usuarios Supervisados -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5>👥 Usuarios Supervisados</h5>
+                            {% if usuarios_supervisados %}
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Username</th>
+                                                <th>Nombre Completo</th>
+                                                <th>Email</th>
+                                                <th>Rol</th>
+                                                <th>Activo</th>
+                                                <th>Último Login</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for usuario_sup in usuarios_supervisados %}
+                                            <tr>
+                                                <td><strong>{{ usuario_sup.username }}</strong></td>
+                                                <td>{{ usuario_sup.get_full_name|default:"No especificado" }}</td>
+                                                <td>{{ usuario_sup.email|default:"No especificado" }}</td>
+                                                <td>
+                                                    {% if usuario_sup.userprofile %}
+                                                        <span class="badge bg-info">{{ usuario_sup.userprofile.rol }}</span>
+                                                    {% else %}
+                                                        <span class="badge bg-warning">Sin perfil</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if usuario_sup.is_active %}
+                                                        <span class="badge bg-success">Activo</span>
+                                                    {% else %}
+                                                        <span class="badge bg-danger">Inactivo</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ usuario_sup.last_login|default:"Nunca" }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    No se encontraron usuarios supervisados para este usuario.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Solicitudes Supervisadas -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h5>📋 Solicitudes Supervisadas</h5>
+                            {% if solicitudes_supervisadas %}
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Código</th>
+                                                <th>Cliente</th>
+                                                <th>Pipeline</th>
+                                                <th>Etapa</th>
+                                                <th>Creada Por</th>
+                                                <th>Fecha Creación</th>
+                                                <th>Estado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for solicitud in solicitudes_supervisadas %}
+                                            <tr>
+                                                <td>
+                                                    <a href="{% url 'detalle_solicitud' solicitud.id %}" class="text-decoration-none">
+                                                        <strong>{{ solicitud.codigo }}</strong>
+                                                    </a>
+                                                </td>
+                                                <td>
+                                                    {% if solicitud.cliente %}
+                                                        {{ solicitud.cliente.nombre|default:"Sin cliente" }}
+                                                    {% else %}
+                                                        Sin cliente
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if solicitud.pipeline %}
+                                                        <span class="badge bg-primary">{{ solicitud.pipeline.nombre }}</span>
+                                                    {% else %}
+                                                        Sin pipeline
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if solicitud.etapa_actual %}
+                                                        <span class="badge bg-info">{{ solicitud.etapa_actual.nombre }}</span>
+                                                    {% else %}
+                                                        Sin etapa
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <span class="text-muted">{{ solicitud.creada_por.username }}</span>
+                                                </td>
+                                                <td>{{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                                                <td>
+                                                    {% if solicitud.estado == 'activa' %}
+                                                        <span class="badge bg-success">Activa</span>
+                                                    {% elif solicitud.estado == 'completada' %}
+                                                        <span class="badge bg-info">Completada</span>
+                                                    {% elif solicitud.estado == 'cancelada' %}
+                                                        <span class="badge bg-danger">Cancelada</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">{{ solicitud.estado|default:"Sin estado" }}</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    No se encontraron solicitudes supervisadas para este usuario.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Botones de Acción -->
+                    <div class="row">
+                        <div class="col-12 text-center">
+                            <a href="{% url 'dashboard' %}" class="btn btn-secondary me-2">
+                                <i class="fas fa-arrow-left me-2"></i>
+                                Volver al Dashboard
+                            </a>
+                            <a href="{% url 'vista_mixta_bandejas' %}" class="btn btn-primary me-2">
+                                <i class="fas fa-tasks me-2"></i>
+                                Ir a Bandejas
+                            </a>
+                            <button class="btn btn-success" onclick="location.reload()">
+                                <i class="fas fa-sync-alt me-2"></i>
+                                Actualizar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

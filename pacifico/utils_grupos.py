@@ -10,8 +10,16 @@ def obtener_grupos_supervisados_por_usuario(usuario):
     Retorna todos los grupos que el usuario supervisa
     """
     try:
-        return GroupProfile.objects.filter(supervisores=usuario)
-    except:
+        print(f"🔍 DEBUG GRUPOS: Buscando grupos supervisados por usuario {usuario.username}")
+        grupos_supervisados = GroupProfile.objects.filter(supervisores=usuario)
+        print(f"🔍 DEBUG GRUPOS: Encontrados {grupos_supervisados.count()} grupos supervisados")
+        
+        for grupo_profile in grupos_supervisados:
+            print(f"🔍 DEBUG GRUPOS: Usuario {usuario.username} supervisa grupo: {grupo_profile.group.name}")
+        
+        return grupos_supervisados
+    except Exception as e:
+        print(f"❌ DEBUG GRUPOS: Error obteniendo grupos supervisados: {e}")
         return GroupProfile.objects.none()
 
 
@@ -19,14 +27,17 @@ def obtener_usuarios_supervisados_por_usuario(usuario):
     """
     Retorna todos los usuarios que están en grupos supervisados por el usuario dado
     """
+    print(f"🔍 DEBUG USUARIOS: Obteniendo usuarios supervisados por {usuario.username}")
     grupos_supervisados = obtener_grupos_supervisados_por_usuario(usuario)
     usuarios_supervisados = User.objects.none()
     
     for grupo_profile in grupos_supervisados:
         # Obtener miembros del grupo
         miembros = grupo_profile.group.user_set.all()
+        print(f"🔍 DEBUG USUARIOS: Grupo {grupo_profile.group.name} tiene {miembros.count()} miembros")
         usuarios_supervisados = usuarios_supervisados.union(miembros)
     
+    print(f"🔍 DEBUG USUARIOS: Total usuarios supervisados: {usuarios_supervisados.count()}")
     return usuarios_supervisados
 
 

@@ -279,4 +279,7 @@ urlpatterns = [
     path('api/externa/solicitudes/', views_workflow.api_listar_solicitudes_externas, name='api_listar_solicitudes_externas'),
     path('api/externa/solicitudes/<int:solicitud_id>/', views_workflow.api_detalle_solicitud_externa, name='api_detalle_solicitud_externa'),
     path('api/externa/solicitudes/estadisticas/', views_workflow.api_estadisticas_solicitudes_externas, name='api_estadisticas_solicitudes_externas'),
+    
+    # Debug URLs
+    path('debug-supervision/', views_workflow.debug_supervision_grupos, name='debug_supervision_grupos'),
 ]

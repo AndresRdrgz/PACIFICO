@@ -121,6 +121,11 @@ def usuario_puede_modificar_solicitud(usuario, solicitud):
                     print(f"✅ DEBUG: Grupo supervisado tiene permiso de edición en pipeline {solicitud.pipeline.nombre}")
                     return True
 
+                # NUEVA LÓGICA: Si supervisa el grupo, dar acceso básico de visualización
+                print(f"🔍 DEBUG: Usuario {usuario.username} supervisa grupos pero no tiene permisos específicos")
+                print(f"🔍 DEBUG: Otorgando acceso básico por supervisión de grupo")
+                return True
+
             except Exception as e:
                 print(f"❌ DEBUG: Error verificando permisos de grupo: {e}")
                 import traceback
@@ -19125,4 +19130,67 @@ def api_estadisticas_solicitudes_externas(request):
         return JsonResponse({
             'error': f'Error interno del servidor: {str(e)}'
         }, status=500)
+
+
+# ==========================================
+# FUNCIÓN DE DEBUG PARA SUPERVISIÓN
+# ==========================================
+
+@login_required
+def debug_supervision_grupos(request):
+    """
+    Vista de debug para verificar la supervisión de grupos
+    """
+    try:
+        from pacifico.utils_grupos import (
+            obtener_grupos_supervisados_por_usuario,
+            obtener_usuarios_supervisados_por_usuario,
+        )
+        
+        usuario = request.user
+        print(f"🔍 DEBUG SUPERVISIÓN: Usuario actual: {usuario.username}")
+        
+        # Obtener información del perfil del usuario
+        try:
+            userprofile = usuario.userprofile
+            print(f"🔍 DEBUG SUPERVISIÓN: Rol del usuario: {userprofile.rol}")
+        except:
+            print(f"❌ DEBUG SUPERVISIÓN: Usuario no tiene UserProfile")
+            userprofile = None
+        
+        # Obtener grupos supervisados
+        grupos_supervisados = obtener_grupos_supervisados_por_usuario(usuario)
+        print(f"🔍 DEBUG SUPERVISIÓN: Grupos supervisados: {grupos_supervisados.count()}")
+        
+        # Obtener usuarios supervisados
+        usuarios_supervisados = obtener_usuarios_supervisados_por_usuario(usuario)
+        print(f"🔍 DEBUG SUPERVISIÓN: Usuarios supervisados: {usuarios_supervisados.count()}")
+        
+        # Obtener solicitudes de usuarios supervisados
+        from .modelsWorkflow import Solicitud
+        solicitudes_supervisadas = Solicitud.objects.filter(
+            creada_por__in=usuarios_supervisados
+        ).select_related('creada_por', 'pipeline', 'etapa_actual')
+        
+        print(f"🔍 DEBUG SUPERVISIÓN: Solicitudes de usuarios supervisados: {solicitudes_supervisadas.count()}")
+        
+        context = {
+            'usuario': usuario,
+            'userprofile': userprofile,
+            'grupos_supervisados': grupos_supervisados,
+            'usuarios_supervisados': usuarios_supervisados,
+            'solicitudes_supervisadas': solicitudes_supervisadas,
+        }
+        
+        return render(request, 'workflow/debug_supervision.html', context)
+        
+    except Exception as e:
+        print(f"❌ DEBUG SUPERVISIÓN: Error en debug: {e}")
+        import traceback
+        print(f"❌ DEBUG SUPERVISIÓN: Traceback: {traceback.format_exc()}")
+        
+        return JsonResponse({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        })
 
