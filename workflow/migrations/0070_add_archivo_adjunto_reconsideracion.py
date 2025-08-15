@@ -1,53 +1,17 @@
 # Generated migration for adding archivo_adjunto field to ReconsideracionSolicitud
-# NOTE: This migration checks if the field exists before trying to add it
+# NOTE: This migration does nothing because the field is already handled by migration 0046
 
-from django.db import migrations, models
-
-
-def add_archivo_adjunto_if_not_exists(apps, schema_editor):
-    """Add archivo_adjunto field only if it doesn't already exist."""
-    from django.db import connection
-    
-    with connection.cursor() as cursor:
-        # Check if the column already exists
-        cursor.execute("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = 'workflow_reconsideracionsolicitud' 
-            AND column_name = 'archivo_adjunto'
-        """)
-        
-        if not cursor.fetchone():
-            # Column doesn't exist, add it
-            cursor.execute("""
-                ALTER TABLE workflow_reconsideracionsolicitud 
-                ADD COLUMN archivo_adjunto VARCHAR(100) NULL
-            """)
-            print("✅ Added archivo_adjunto column to workflow_reconsideracionsolicitud")
-        else:
-            print("✅ Column archivo_adjunto already exists in workflow_reconsideracionsolicitud")
+from django.db import migrations
 
 
-def reverse_add_archivo_adjunto(apps, schema_editor):
-    """Remove archivo_adjunto field if it exists."""
-    from django.db import connection
-    
-    with connection.cursor() as cursor:
-        # Check if the column exists before trying to remove it
-        cursor.execute("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = 'workflow_reconsideracionsolicitud' 
-            AND column_name = 'archivo_adjunto'
-        """)
-        
-        if cursor.fetchone():
-            # Column exists, remove it
-            cursor.execute("""
-                ALTER TABLE workflow_reconsideracionsolicitud 
-                DROP COLUMN archivo_adjunto
-            """)
-            print("✅ Removed archivo_adjunto column from workflow_reconsideracionsolicitud")
+def noop_forward(apps, schema_editor):
+    """No operation - field already handled by migration 0046"""
+    print("✅ Migration 0070: archivo_adjunto field already handled by migration 0046")
+
+
+def noop_reverse(apps, schema_editor):
+    """No operation on reverse"""
+    pass
 
 
 class Migration(migrations.Migration):
@@ -58,7 +22,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunPython(
-            add_archivo_adjunto_if_not_exists,
-            reverse_add_archivo_adjunto
+            noop_forward,
+            noop_reverse
         ),
     ]
