@@ -37,14 +37,25 @@ def solicitar_reconsideracion(request, solicitud_id):
     """
     solicitud = get_object_or_404(Solicitud, id=solicitud_id)
     
-    # Verificar permisos - solo el propietario puede solicitar reconsideración
-    if solicitud.propietario != request.user:
-        messages.error(request, "Solo el propietario de la solicitud puede solicitar una reconsideración.")
+    # Verificar permisos ampliados - propietario, superuser, o asistente
+    es_propietario = solicitud.propietario == request.user
+    es_superuser = request.user.is_superuser
+    es_asistente = False
+    
+    # Verificar si el usuario tiene rol de Asistente
+    try:
+        es_asistente = hasattr(request.user, 'userprofile') and request.user.userprofile.rol == 'Asistente'
+    except:
+        pass
+    
+    if not (es_propietario or es_superuser or es_asistente):
+        messages.error(request, "Solo el propietario, administradores o asistentes pueden solicitar una reconsideración.")
         return redirect('workflow:detalle_solicitud', solicitud_id=solicitud.id)
     
-    # Verificar que la solicitud esté en estado rechazado o alternativa
-    if solicitud.resultado_consulta not in ['Rechazado', 'Alternativa']:
-        messages.error(request, "Solo se pueden reconsiderar solicitudes rechazadas o con resultado alternativo.")
+    # Verificar que la solicitud esté en etapa "Resultado Consulta"
+    etapa_actual = solicitud.etapa_actual.nombre if solicitud.etapa_actual else ''
+    if 'resultado' not in etapa_actual.lower() or 'consulta' not in etapa_actual.lower():
+        messages.error(request, "Solo se pueden reconsiderar solicitudes que estén en la etapa 'Resultado Consulta'.")
         return redirect('workflow:detalle_solicitud', solicitud_id=solicitud.id)
     
     # Obtener cotizaciones disponibles para el cliente
@@ -276,12 +287,16 @@ def detalle_reconsideracion_analista(request, solicitud_id):
     except ImportError:
         pass
     
+    # Obtener calificaciones de campos de compliance anteriores (del primer análisis)
+    calificaciones_anteriores = solicitud.calificaciones_campos.all().order_by('campo', '-fecha_creacion')
+    
     context = {
         'solicitud': solicitud,
         'reconsideracion_actual': reconsideracion_actual,
         'historial_reconsideraciones': historial_reconsideraciones,
         'analisis_anteriores': analisis_anteriores,
         'participaciones_comite': participaciones_comite,
+        'calificaciones_anteriores': calificaciones_anteriores,
         'es_vista_reconsideracion': True,
     }
     
@@ -366,6 +381,33 @@ def detalle_reconsideracion_comite(request, solicitud_id):
 # ==========================================
 # APIs PARA RECONSIDERACIONES
 # ==========================================
+
+@login_required
+@require_http_methods(["GET"])
+def api_puede_solicitar_reconsideracion(request, solicitud_id):
+    """
+    API para verificar si el usuario actual puede solicitar reconsideración para una solicitud
+    """
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        puede_solicitar, mensaje = puede_solicitar_reconsideracion(solicitud, request.user)
+        
+        return JsonResponse({
+            'success': True,
+            'puede_solicitar': puede_solicitar,
+            'mensaje': mensaje,
+            'es_propietario': solicitud.propietario == request.user,
+            'es_superuser': request.user.is_superuser,
+            'es_asistente': hasattr(request.user, 'userprofile') and request.user.userprofile.rol == 'Asistente'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error verificando permisos de reconsideración: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
 
 @login_required
 @require_http_methods(["POST"])
@@ -469,6 +511,32 @@ def api_procesar_reconsideracion_analista(request, solicitud_id):
                         fecha_inicio=timezone.now()
                     )
                 
+            elif decision == 'alternativa':
+                reconsideracion.estado = 'aprobada'  # Consider alternativa as approved with conditions
+                # Mover solicitud a "Resultado Consulta" etapa con subestado alternativa
+                etapa_resultado = Etapa.objects.filter(
+                    pipeline=solicitud.pipeline,
+                    nombre__icontains='resultado'
+                ).first()
+                
+                if etapa_resultado:
+                    solicitud.etapa_actual = etapa_resultado
+                    solicitud.subestado_actual = etapa_resultado.subestados.filter(
+                        nombre__icontains='alternativ'
+                    ).first() or etapa_resultado.subestados.first()
+                    solicitud.resultado_consulta = 'Alternativa'
+                    solicitud.asignada_a = None  # Liberar asignación
+                    solicitud.save()
+                    
+                    # Crear historial
+                    HistorialSolicitud.objects.create(
+                        solicitud=solicitud,
+                        etapa=etapa_resultado,
+                        subestado=solicitud.subestado_actual,
+                        usuario_responsable=request.user,
+                        fecha_inicio=timezone.now()
+                    )
+                
             elif decision == 'enviar_comite':
                 reconsideracion.estado = 'enviada_comite'
                 # Mover a etapa de comité
@@ -502,13 +570,23 @@ def api_procesar_reconsideracion_analista(request, solicitud_id):
                 tipo='analista_credito'
             )
             
+            # Send email notification for aprobar, alternativa, and rechazar decisions
+            if decision in ['aprobar', 'alternativa', 'rechazar']:
+                try:
+                    from .views_workflow import enviar_correo_pdf_resultado_consulta
+                    enviar_correo_pdf_resultado_consulta(solicitud)
+                    logger.info(f"Correo de resultado consulta enviado para reconsideración {decision} - Solicitud {solicitud.codigo}")
+                except Exception as email_error:
+                    logger.error(f"Error enviando correo para reconsideración {decision} - Solicitud {solicitud.codigo}: {str(email_error)}")
+                    # Don't fail the entire process if email fails
+            
             # Notificar cambio
             notify_solicitud_change(solicitud, f'reconsideracion_{decision}', request.user)
         
         return JsonResponse({
             'success': True,
             'message': f'Reconsideración procesada: {decision}',
-            'redirect_url': 'workflow/bandeja-mixta/'
+            'redirect_url': '/workflow/bandeja-mixta/'
         })
         
     except Exception as e:
@@ -870,31 +948,32 @@ def puede_solicitar_reconsideracion(solicitud, usuario):
     """
     Verifica si un usuario puede solicitar reconsideración para una solicitud
     """
-    # Solo el propietario puede solicitar
-    if solicitud.propietario != usuario:
-        return False, "Solo el propietario puede solicitar reconsideración"
+    # Verificar permisos ampliados: propietario, superuser, o asistente
+    es_propietario = solicitud.propietario == usuario
+    es_superuser = usuario.is_superuser
+    es_asistente = False
     
-    # Verificar estado de la solicitud - debe estar en Rechazado o tener resultado Alternativa
+    # Verificar si el usuario tiene rol de Asistente
+    try:
+        es_asistente = hasattr(usuario, 'userprofile') and usuario.userprofile.rol == 'Asistente'
+    except:
+        pass
+    
+    if not (es_propietario or es_superuser or es_asistente):
+        if es_superuser or es_asistente:
+            return False, "Asistentes y administradores pueden solicitar reconsideración para cualquier solicitud"
+        else:
+            return False, "Solo el propietario, administradores o asistentes pueden solicitar reconsideración"
+    
+    # Verificar estado de la solicitud - debe estar en etapa "Resultado Consulta"
     etapa_actual = solicitud.etapa_actual.nombre.lower() if solicitud.etapa_actual else ''
-    subestado_actual = solicitud.subestado_actual.nombre.lower() if solicitud.subestado_actual else ''
-    resultado_consulta = getattr(solicitud, 'resultado_consulta', '').lower()
     
-    # Condiciones para poder solicitar reconsideración:
-    # 1. Etapa "Rechazado" o etapa "Resultado Consulta" con subestado "Alternativa" o "Rechazado"
-    # 2. O resultado_consulta sea "Rechazado" o "Alternativa"
-    
-    es_elegible = (
-        # Etapa rechazado
-        ('rechazado' in etapa_actual) or 
-        # Etapa resultado consulta con subestados específicos
-        ('resultado' in etapa_actual and 'consulta' in etapa_actual and 
-         ('alternativa' in subestado_actual or 'rechazado' in subestado_actual)) or
-        # Por resultado de consulta
-        (resultado_consulta in ['rechazado', 'alternativa'])
-    )
+    # Condición simplificada para poder solicitar reconsideración:
+    # Debe estar en etapa "Resultado Consulta" (independientemente del subestado o resultado)
+    es_elegible = ('resultado' in etapa_actual and 'consulta' in etapa_actual)
     
     if not es_elegible:
-        return False, f"Solo se pueden reconsiderar solicitudes rechazadas o con alternativa. Estado actual: {solicitud.etapa_actual.nombre if solicitud.etapa_actual else 'Sin etapa'} - {solicitud.subestado_actual.nombre if solicitud.subestado_actual else 'Sin subestado'}"
+        return False, f"Solo se pueden reconsiderar solicitudes que estén en la etapa 'Resultado Consulta'. Estado actual: {solicitud.etapa_actual.nombre if solicitud.etapa_actual else 'Sin etapa'}"
     
     # Verificar si ya hay una reconsideración en proceso
     reconsideracion_activa = solicitud.reconsideraciones.filter(

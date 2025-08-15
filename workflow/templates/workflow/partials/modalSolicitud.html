@@ -10126,96 +10126,6 @@
 
     // ===== RECONSIDERACIÓN FUNCTIONALITY =====
 
-    // Function to check if solicitud can be reconsidered
-    function puedeSerReconsiderada(solicitud) {
-        if (!solicitud) {
-            console.log('❌ No solicitud data provided');
-            return { canRequest: false, reason: 'no_data', message: 'No hay datos de la solicitud' };
-        }
-        
-        console.log('🔍 Checking if solicitud can be reconsidered:', solicitud);
-        
-        // Get current stage and substage information
-        const etapaActual = (solicitud.etapa_actual || '').toLowerCase();
-        const subestadoActual = (solicitud.subestado_actual || '').toLowerCase();
-        const resultadoConsulta = (solicitud.resultado_consulta || '').toLowerCase();
-        
-        console.log('📊 Estado Analysis:');
-        console.log('   etapa_actual:', etapaActual);
-        console.log('   subestado_actual:', subestadoActual);
-        console.log('   resultado_consulta:', resultadoConsulta);
-        
-        // Apply the same logic as the backend:
-        // 1. Etapa "Rechazado" or etapa "Resultado Consulta" with subestado "Alternativa" or "Rechazado"
-        // 2. Or resultado_consulta is "Rechazado" or "Alternativa"
-        
-        const esElegible = (
-            // Etapa rechazado
-            etapaActual.includes('rechazado') || 
-            // Etapa resultado consulta with specific subestados
-            (etapaActual.includes('resultado') && etapaActual.includes('consulta') && 
-             (subestadoActual.includes('alternativa') || subestadoActual.includes('rechazado'))) ||
-            // By resultado_consulta
-            (resultadoConsulta === 'rechazado' || resultadoConsulta === 'alternativa')
-        );
-        
-        console.log('   ¿Estado es elegible?:', esElegible ? '✅' : '❌');
-        
-        // Extract estado for display purposes
-        let estadoExtraido = '';
-        if (resultadoConsulta) {
-            estadoExtraido = resultadoConsulta.charAt(0).toUpperCase() + resultadoConsulta.slice(1);
-        } else if (subestadoActual) {
-            estadoExtraido = subestadoActual.charAt(0).toUpperCase() + subestadoActual.slice(1);
-        } else if (etapaActual) {
-            estadoExtraido = etapaActual.charAt(0).toUpperCase() + etapaActual.slice(1);
-        } else {
-            estadoExtraido = 'No definido';
-        }
-        
-        // Check if user is the owner
-        const propietarioId = solicitud.propietario_id || solicitud.propietario?.id;
-        const currentUserId = parseInt(window.currentUserId || '0');
-        const esPropietario = propietarioId === currentUserId;
-        
-        console.log('👤 Ownership Analysis:');
-        console.log('   propietario_id:', propietarioId);
-        console.log('   current_user_id:', currentUserId);
-        console.log('   es_propietario:', esPropietario ? '✅' : '❌');
-        
-        // Check for active reconsideración - REMOVED old boolean flag logic
-        // We no longer check es_reconsideracion flag here since it stays true even after rejection
-        // The actual active reconsideración check is done later in configurarTabReconsideracion
-        const tieneReconsideracionActiva = false; // Always false here, real check is done via API
-        console.log('🔄 Reconsideración activa (ignoring boolean flag):', tieneReconsideracionActiva ? '✅' : '❌');
-        
-        // Determine result and reason
-        let canRequest = false;
-        let reason = '';
-        let message = '';
-        
-        if (!esPropietario) {
-            reason = 'no_propietario';
-            message = 'Solo el propietario de la solicitud puede solicitar una reconsideración';
-        } else if (!esElegible) {
-            reason = 'estado_no_reconsiderable';
-            message = `Solo se pueden reconsiderar solicitudes rechazadas o con alternativa. Estado actual: ${solicitud.etapa_actual || 'Sin etapa'} - ${solicitud.subestado_actual || 'Sin subestado'}`;
-        } else if (tieneReconsideracionActiva) {
-            reason = 'reconsideracion_activa';
-            message = 'Esta solicitud ya tiene una reconsideración en proceso';
-        } else {
-            canRequest = true;
-            reason = 'puede_reconsiderar';
-            message = 'Esta solicitud puede ser reconsiderada';
-        }
-        
-        console.log('🎯 Final Result:', canRequest ? '✅ PUEDE' : '❌ NO PUEDE');
-        console.log('📝 Reason:', reason);
-        console.log('💬 Message:', message);
-        
-        return { canRequest, reason, message, estadoExtraido };
-    }
-
     // Function to load reconsideraciones history
     // Add debounce mechanism to prevent duplicate API calls
     let cargarHistorialReconsideracionesInProgress = false;
@@ -10525,154 +10435,219 @@
             return;
         }
         
-        // Use enhanced logic with detailed feedback
-        const result = puedeSerReconsiderada(solicitud);
-        const { canRequest, reason, message, estadoExtraido } = result;
+        // Use enhanced API-based permission checking
+        verificarPermisosReconsideracionAPI(solicitudId, solicitud, statusText, statusDiv, btnSolicitar);
+    }
+    
+    // New function to check permissions via API for better accuracy
+    function verificarPermisosReconsideracionAPI(solicitudId, solicitud, statusText, statusDiv, btnSolicitar) {
+        // Show loading state while checking
+        statusText.innerHTML = `
+            <div class="d-flex align-items-center">
+                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                <span>Verificando permisos...</span>
+            </div>
+        `;
+        statusDiv.className = 'alert alert-info';
+        btnSolicitar.style.display = 'none';
         
-        console.log('📊 Enhanced reconsideración result:', result);
-        
-        if (canRequest) {
-            // Check for ACTIVE reconsideration (not rejected ones)
-            // We need to check the actual reconsideración history, not just the es_reconsideracion flag
-            console.log('🔄 Verificando reconsideración activa detallada...');
+        // Call the API to check permissions
+        fetch(`/workflow/api/solicitud/${solicitudId}/reconsideracion/puede-solicitar/`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('🔍 API response for reconsideración permissions:', data);
             
-            // Load and check actual reconsideración history to determine if there's an active one
-            verificarReconsideracionActiva(solicitudId, function(tieneReconsideracionActiva) {
-                if (tieneReconsideracionActiva) {
-                    statusText.innerHTML = `
-                        <strong><i class="fas fa-hourglass-half"></i> Reconsideración en Proceso</strong><br>
-                        Esta solicitud tiene una reconsideración actualmente en revisión.
-                        <br><small class="text-muted mt-1">
-                            <i class="fas fa-clock"></i> 
-                            Debe esperar a que se complete antes de solicitar una nueva.
-                        </small>
-                    `;
-                    statusDiv.className = 'alert alert-warning';
-                    btnSolicitar.style.display = 'none';
-                } else {
-                    statusText.innerHTML = `
-                        <strong><i class="fas fa-check-circle text-success"></i> Solicitud Elegible</strong><br>
-                        Esta solicitud puede ser reconsiderada porque está en estado "<strong>${estadoExtraido}</strong>" y usted es el propietario.
-                        <br><small class="text-muted mt-1">
+            if (!data.success) {
+                statusText.innerHTML = `
+                    <strong>Error al verificar permisos:</strong><br>
+                    ${data.error || 'Error desconocido'}
+                `;
+                statusDiv.className = 'alert alert-danger';
+                btnSolicitar.style.display = 'none';
+                return;
+            }
+            
+            const { puede_solicitar, mensaje, es_propietario, es_superuser, es_asistente } = data;
+            
+            if (puede_solicitar) {
+                // Check for ACTIVE reconsideration (not rejected ones)
+                console.log('🔄 Verificando reconsideración activa detallada...');
+                
+                // Check via API if there's an active reconsideración
+                fetch(`/workflow/api/solicitud/${solicitudId}/reconsideracion/historial/`)
+                .then(response => response.json())
+                .then(historialData => {
+                    console.log('📊 Historial de reconsideraciones obtenido:', historialData);
+                    
+                    let tieneReconsideracionActiva = false;
+                    
+                    if (historialData.success && historialData.reconsideraciones && historialData.reconsideraciones.length > 0) {
+                        // Check if there's any reconsideración in active states (not 'rechazada' or 'aprobada')
+                        const estadosActivos = ['enviada', 'en_revision', 'enviada_comite'];
+                        
+                        tieneReconsideracionActiva = historialData.reconsideraciones.some(recon => {
+                            const esActiva = estadosActivos.includes(recon.estado);
+                            console.log(`   - Reconsideración #${recon.numero || recon.id}: ${recon.estado} - ${esActiva ? 'ACTIVA' : 'INACTIVA'}`);
+                            return esActiva;
+                        });
+                    }
+                    
+                    console.log(`🎯 Resultado final: ${tieneReconsideracionActiva ? 'Tiene reconsideración ACTIVA' : 'NO tiene reconsideración activa'}`);
+                    
+                    if (tieneReconsideracionActiva) {
+                        statusText.innerHTML = `
+                            <strong><i class="fas fa-hourglass-half"></i> Reconsideración en Proceso</strong><br>
+                            Esta solicitud tiene una reconsideración actualmente en revisión.
+                            <br><small class="text-muted mt-1">
+                                <i class="fas fa-clock"></i> 
+                                Debe esperar a que se complete antes de solicitar una nueva.
+                            </small>
+                        `;
+                        statusDiv.className = 'alert alert-warning';
+                        btnSolicitar.style.display = 'none';
+                    } else {
+                        let successMessage = '';
+                        let successInfo = '';
+                        
+                        if (es_superuser) {
+                            successMessage = `
+                                <strong><i class="fas fa-crown text-warning"></i> Administrador</strong><br>
+                                Como administrador, puede solicitar reconsideración para cualquier solicitud.
+                            `;
+                            successInfo = `
+                                <i class="fas fa-shield-alt"></i> 
+                                Los administradores tienen permisos especiales para gestionar reconsideraciones.
+                            `;
+                        } else if (es_asistente) {
+                            successMessage = `
+                                <strong><i class="fas fa-user-tie text-primary"></i> Asistente</strong><br>
+                                Como asistente, puede solicitar reconsideración para cualquier solicitud.
+                            `;
+                            successInfo = `
+                                <i class="fas fa-handshake"></i> 
+                                Los asistentes pueden ayudar a procesar reconsideraciones en nombre del propietario.
+                            `;
+                        } else if (es_propietario) {
+                            successMessage = `
+                                <strong><i class="fas fa-check-circle text-success"></i> Solicitud Elegible</strong><br>
+                                Esta solicitud puede ser reconsiderada y usted es el propietario.
+                            `;
+                            successInfo = `
+                                <i class="fas fa-info-circle"></i> 
+                                Las reconsideraciones están disponibles para solicitudes en etapa "Resultado Consulta".
+                            `;
+                        } else {
+                            successMessage = `
+                                <strong><i class="fas fa-check-circle text-success"></i> Solicitud Elegible</strong><br>
+                                Esta solicitud puede ser reconsiderada.
+                            `;
+                            successInfo = `
+                                <i class="fas fa-info-circle"></i> 
+                                Las reconsideraciones están disponibles para solicitudes en etapa "Resultado Consulta".
+                            `;
+                        }
+                        
+                        statusText.innerHTML = `
+                            ${successMessage}
+                            <br><small class="text-muted mt-1">
+                                ${successInfo}
+                            </small>
+                        `;
+                        statusDiv.className = 'alert alert-success';
+                        btnSolicitar.style.display = 'inline-block';
+                    }
+                })
+                .catch(historialError => {
+                    console.error('❌ Error verificando reconsideración activa:', historialError);
+                    // En caso de error, asumimos que no hay reconsideración activa para permitir el intento
+                    let successMessage = '';
+                    let successInfo = '';
+                    
+                    if (es_superuser) {
+                        successMessage = `
+                            <strong><i class="fas fa-crown text-warning"></i> Administrador</strong><br>
+                            Como administrador, puede solicitar reconsideración para cualquier solicitud.
+                        `;
+                        successInfo = `
+                            <i class="fas fa-shield-alt"></i> 
+                            Los administradores tienen permisos especiales para gestionar reconsideraciones.
+                        `;
+                    } else if (es_asistente) {
+                        successMessage = `
+                            <strong><i class="fas fa-user-tie text-primary"></i> Asistente</strong><br>
+                            Como asistente, puede solicitar reconsideración para cualquier solicitud.
+                        `;
+                        successInfo = `
+                            <i class="fas fa-handshake"></i> 
+                            Los asistentes pueden ayudar a procesar reconsideraciones en nombre del propietario.
+                        `;
+                    } else if (es_propietario) {
+                        successMessage = `
+                            <strong><i class="fas fa-check-circle text-success"></i> Solicitud Elegible</strong><br>
+                            Esta solicitud puede ser reconsiderada y usted es el propietario.
+                        `;
+                        successInfo = `
                             <i class="fas fa-info-circle"></i> 
-                            Las reconsideraciones están disponibles para solicitudes "Rechazadas" o con "Alternativa".
+                            Las reconsideraciones están disponibles para solicitudes en etapa "Resultado Consulta".
+                        `;
+                    } else {
+                        successMessage = `
+                            <strong><i class="fas fa-check-circle text-success"></i> Solicitud Elegible</strong><br>
+                            Esta solicitud puede ser reconsiderada.
+                        `;
+                        successInfo = `
+                            <i class="fas fa-info-circle"></i> 
+                            Las reconsideraciones están disponibles para solicitudes en etapa "Resultado Consulta".
+                        `;
+                    }
+                    
+                    statusText.innerHTML = `
+                        ${successMessage}
+                        <br><small class="text-muted mt-1">
+                            ${successInfo}
                         </small>
                     `;
                     statusDiv.className = 'alert alert-success';
                     btnSolicitar.style.display = 'inline-block';
-                }
-            });
-        } else {
-            // Provide specific feedback based on the reason
-            let alertClass = 'alert alert-secondary';
-            let iconClass = 'fas fa-info-circle';
-            let detailedMessage = message;
-            
-            switch (reason) {
-                case 'estado_no_reconsiderable':
-                    alertClass = 'alert alert-info';
-                    iconClass = 'fas fa-exclamation-triangle text-warning';
-                    detailedMessage = `
-                        <strong>Estado No Elegible</strong><br>
-                        ${message}
-                        <br><small class="text-muted mt-1">
-                            <i class="fas fa-lightbulb"></i> 
-                            Las reconsideraciones solo están disponibles para solicitudes "Rechazadas" o con "Alternativa".
-                        </small>
-                    `;
-                    break;
-                    
-                case 'no_propietario':
-                    alertClass = 'alert alert-warning';
-                    iconClass = 'fas fa-user-times text-warning';
-                    detailedMessage = `
-                        <strong><i class="fas fa-lock"></i> Permisos Insuficientes</strong><br>
-                        ${message}
-                        <br><small class="text-muted mt-1">
-                            <i class="fas fa-info-circle"></i> 
-                            Solo el oficial que creó la solicitud puede solicitar una reconsideración.
-                        </small>
-                    `;
-                    break;
-                    
-                case 'reconsideracion_activa':
-                    alertClass = 'alert alert-warning';
-                    iconClass = 'fas fa-hourglass-half text-warning';
-                    detailedMessage = `
-                        <strong>Reconsideración en Proceso</strong><br>
-                        ${message}
-                        <br><small class="text-muted mt-1">
-                            <i class="fas fa-clock"></i> 
-                            Debe esperar a que se complete la reconsideración actual antes de solicitar una nueva.
-                        </small>
-                    `;
-                    break;
-                    
-                case 'no_data':
-                    alertClass = 'alert alert-danger';
-                    iconClass = 'fas fa-exclamation-triangle text-danger';
-                    detailedMessage = `
-                        <strong>Error de Datos</strong><br>
-                        ${message}
-                        <br><small class="text-muted mt-1">
-                            <i class="fas fa-refresh"></i> 
-                            Intente recargar la página o contacte al administrador.
-                        </small>
-                    `;
-                    break;
-                    
-                default:
-                    detailedMessage = `
-                        <strong>No Disponible</strong><br>
-                        ${message}
-                    `;
+                });
+            } else {
+                // Show appropriate error message based on permissions
+                let alertClass = 'alert alert-warning';
+                let iconClass = 'fas fa-user-times text-warning';
+                let detailedMessage = `
+                    <strong><i class="${iconClass}"></i> Permisos Insuficientes</strong><br>
+                    ${mensaje}
+                    <br><small class="text-muted mt-1">
+                        <i class="fas fa-info-circle"></i> 
+                        Solo el propietario, administradores o asistentes pueden solicitar una reconsideración.
+                    </small>
+                `;
+                
+                statusText.innerHTML = detailedMessage;
+                statusDiv.className = alertClass;
+                btnSolicitar.style.display = 'none';
             }
-            
-            statusText.innerHTML = detailedMessage;
-            statusDiv.className = alertClass;
+        })
+        .catch(error => {
+            console.error('❌ Error checking reconsideración permissions:', error);
+            statusText.innerHTML = `
+                <strong>Error de comunicación:</strong><br>
+                No se pudo verificar los permisos. Intente recargar la página.
+            `;
+            statusDiv.className = 'alert alert-danger';
             btnSolicitar.style.display = 'none';
-        }
+        });
         
         // Load history using the correct solicitud ID
         console.log('📚 Loading reconsideraciones history for solicitud:', solicitudId);
         cargarHistorialReconsideraciones(solicitudId);
-    }
-
-    // Function to verify if there's an ACTIVE reconsideración (not rejected)
-    function verificarReconsideracionActiva(solicitudId, callback) {
-        console.log('🔍 Verificando reconsideración activa para solicitud:', solicitudId);
-        
-        fetch(`/workflow/api/solicitud/${solicitudId}/reconsideracion/historial/`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`Error ${response.status}: ${response.statusText}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('📊 Historial de reconsideraciones obtenido:', data);
-            
-            let tieneReconsideracionActiva = false;
-            
-            if (data.success && data.reconsideraciones && data.reconsideraciones.length > 0) {
-                // Check if there's any reconsideración in active states (not 'rechazada' or 'aprobada')
-                const estadosActivos = ['enviada', 'en_revision', 'enviada_comite'];
-                
-                tieneReconsideracionActiva = data.reconsideraciones.some(recon => {
-                    const esActiva = estadosActivos.includes(recon.estado);
-                    console.log(`   - Reconsideración #${recon.numero || recon.id}: ${recon.estado} - ${esActiva ? 'ACTIVA' : 'INACTIVA'}`);
-                    return esActiva;
-                });
-            }
-            
-            console.log(`🎯 Resultado final: ${tieneReconsideracionActiva ? 'Tiene reconsideración ACTIVA' : 'NO tiene reconsideración activa'}`);
-            callback(tieneReconsideracionActiva);
-        })
-        .catch(error => {
-            console.error('❌ Error verificando reconsideración activa:', error);
-            // En caso de error, asumimos que no hay reconsideración activa para permitir el intento
-            callback(false);
-        });
     }
 
     // Function to request reconsideration

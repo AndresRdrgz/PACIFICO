@@ -658,20 +658,6 @@
             </tr>
         </table>
         
-        <!-- Comentarios recientes en tabla centrada -->
-        {% if comentarios_analista %}
-        <table class="comments-table" style="margin-top: 6px;">
-            <tr style="background: #f1f5f9;">
-                <td colspan="2" style="font-weight: bold; color: #009c3c; font-size: 8px; padding: 3px; text-align: center;">Comentarios Recientes</td>
-            </tr>
-            {% for comentario in comentarios_analista|slice:":3" %}
-            <tr>
-                <td class="comment-author" style="width: 30%;">{{ comentario.usuario.first_name }} {{ comentario.usuario.last_name }}</td>
-                <td class="comment-text">{{ comentario.contenido|truncatewords:12 }}</td>
-            </tr>
-            {% endfor %}
-        </table>
-        {% endif %}
     </div>
     {% else %}
     <!-- Solo análisis si no hay calificaciones -->
@@ -771,6 +757,244 @@
                 {% endfor %}
             {% endfor %}
         </table>
+    </div>
+    {% endif %}
+
+    <!-- Historial de Reconsideraciones - Mostrar todas cronológicamente -->
+    {% if reconsideraciones_data %}
+    <div class="comite-section">
+        <div class="comite-title">Historial de Reconsideraciones{% if is_preview_mode %} (Vista Previa){% endif %}</div>
+        
+        <!-- Summary information -->
+        <div style="margin-bottom: 8px; padding: 4px; background: #f0f9ff; border-radius: 4px; font-size: 8px; color: #374151;">
+            <strong>Total de reconsideraciones:</strong> {{ reconsideraciones_data|length }}
+            {% if reconsideraciones_data %}
+            {% with ultima_reconsideracion=reconsideraciones_data|last %}
+            • <strong>Más reciente:</strong> #{{ ultima_reconsideracion.numero_reconsideracion }}
+            {% endwith %}
+            {% endif %}
+        </div>
+        
+        <!-- Iterate through all reconsiderations -->
+        {% for reconsideracion in reconsideraciones_data %}
+        <div style="margin-bottom: 12px; border: 1px solid #e5e7eb; border-radius: 4px; background: {% if forloop.last %}#f0fdf4{% else %}#f8fafc{% endif %};">
+            <!-- Reconsideration header -->
+            <div style="padding: 4px 6px; background: {% if forloop.last %}#22c55e{% else %}#6b7280{% endif %}; color: white; border-radius: 4px 4px 0 0; font-size: 9px; font-weight: bold;">
+                Reconsideración #{{ reconsideracion.numero_reconsideracion }}
+                {% if forloop.last %} (Más Reciente){% endif %}
+                {% if reconsideracion.is_preview %} (Vista Previa){% endif %}
+            </div>
+            
+            <!-- Información básica de la reconsideración -->
+            <div style="padding: 6px; background: #f8fafc;">
+                <table class="info-table">
+                    <tr>
+                        <td class="label">Estado:</td>
+                        <td class="value" style="
+                            {% if reconsideracion.estado == 'aprobada' %}color: #22c55e; font-weight: bold;
+                            {% elif reconsideracion.estado == 'rechazada' %}color: #ef4444; font-weight: bold;
+                            {% elif reconsideracion.estado == 'alternativa' %}color: #f59e0b; font-weight: bold;
+                            {% else %}color: #6b7280;{% endif %}">
+                            {% if reconsideracion.estado == 'aprobada' %}✓ Aprobada
+                            {% elif reconsideracion.estado == 'rechazada' %}✗ Rechazada
+                            {% elif reconsideracion.estado == 'alternativa' %}⚠ Alternativa
+                            {% else %}{{ reconsideracion.estado|capfirst }}{% endif %}
+                        </td>
+                        <td class="label">Fecha Solicitud:</td>
+                        <td class="value">{{ reconsideracion.fecha_solicitud|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Solicitada Por:</td>
+                        <td class="value">{{ reconsideracion.solicitada_por_nombre }}</td>
+                        {% if reconsideracion.fecha_analisis %}
+                        <td class="label">Fecha Análisis:</td>
+                        <td class="value">{{ reconsideracion.fecha_analisis|date:"d/m/Y H:i" }}</td>
+                        {% else %}
+                        <td class="label">Estado Análisis:</td>
+                        <td class="value" style="color: #f59e0b; font-style: italic;">Pendiente</td>
+                        {% endif %}
+                    </tr>
+                    {% if reconsideracion.fecha_analisis %}
+                    <tr>
+                        <td class="label">Analizada Por:</td>
+                        <td class="value">{{ reconsideracion.analizada_por_nombre|default:"Sin analista" }}</td>
+                        <td class="label">Resultado Anterior:</td>
+                        <td class="value">{{ reconsideracion.resultado_consulta_anterior|default:"N/A" }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+            
+            <!-- Motivo de la reconsideración -->
+            {% if reconsideracion.motivo %}
+            <div style="margin: 6px; padding: 6px; background: #fff7ed; border-left: 3px solid #f59e0b; border-radius: 4px;">
+                <div style="font-size: 8px; color: #374151; line-height: 1.4;">
+                    <span style="font-weight: bold; color: #f59e0b; font-size: 9px;">Motivo:</span> {{ reconsideracion.motivo|truncatewords:30 }}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Comentario del análisis -->
+            {% if reconsideracion.comentario_analisis %}
+            <div style="margin: 6px; padding: 6px; background: #f0f9ff; border-left: 3px solid #3b82f6; border-radius: 4px;">
+                <div style="font-size: 8px; color: #374151; line-height: 1.4;">
+                    <span style="font-weight: bold; color: #3b82f6; font-size: 9px;">Análisis{% if reconsideracion.is_preview %} (Vista Previa){% endif %}:</span> {{ reconsideracion.comentario_analisis|truncatewords:30 }}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Decisión de la reconsideración (si está en modo vista previa) -->
+            {% if reconsideracion.decision_preview %}
+            <div style="margin: 6px; padding: 6px; background: #fef3c7; border-left: 3px solid #f59e0b; border-radius: 4px;">
+                <div style="font-weight: bold; color: #f59e0b; font-size: 9px; margin-bottom: 3px;">
+                    Decisión Propuesta (Vista Previa):
+                </div>
+                <div style="font-size: 8px; color: #374151; line-height: 1.4;">
+                    {% if reconsideracion.decision_preview == 'aprobar' %}✓ Aprobar - Aceptar la reconsideración y proceder con la nueva condición
+                    {% elif reconsideracion.decision_preview == 'rechazar' %}✗ Rechazar - Mantener la decisión anterior y rechazar la reconsideración
+                    {% elif reconsideracion.decision_preview == 'alternativa' %}↻ Alternativa - Proponer condiciones alternativas para la reconsideración
+                    {% elif reconsideracion.decision_preview == 'enviar_comite' %}👥 Enviar a Comité - Escalar la decisión al comité de crédito para evaluación
+                    {% else %}{{ reconsideracion.decision_preview|capfirst }}
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Información de cotización (solo si usa nueva cotización) -->
+            {% if not reconsideracion.usar_misma_cotizacion %}
+            <div style="margin: 6px;">
+                <div style="font-weight: bold; color: #009c3c; font-size: 8px; margin-bottom: 4px; border-bottom: 1px solid #e5e7eb; padding-bottom: 2px;">
+                    Nueva Cotización Utilizada
+                </div>
+                <table class="info-table" style="font-size: 7px;">
+                    <tr>
+                        {% if reconsideracion.cotizacion_original %}
+                        <td class="label">Cotización Original:</td>
+                        <td class="value">${{ reconsideracion.cotizacion_original.montoPrestamo|floatformat:0 }} - {{ reconsideracion.cotizacion_original.plazo }} meses</td>
+                        {% endif %}
+                        {% if reconsideracion.cotizacion_nueva %}
+                        <td class="label">Nueva Cotización:</td>
+                        <td class="value">${{ reconsideracion.cotizacion_nueva.montoPrestamo|floatformat:0 }} - {{ reconsideracion.cotizacion_nueva.plazo }} meses</td>
+                        {% endif %}
+                    </tr>
+                </table>
+            </div>
+            {% else %}
+            <div style="margin: 6px; padding: 4px; background: #f0fdf4; border-left: 3px solid #22c55e; border-radius: 4px;">
+                <div style="font-size: 8px; color: #166534; font-style: italic;">
+                    📋 Utilizó la misma cotización que el análisis original
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Backward compatibility: Single reconsideration section (only show if no multiple data) -->
+    {% elif reconsideracion_data %}
+    <div class="comite-section">
+        <div class="comite-title">Resultado de Reconsideración{% if is_preview_mode %} (Vista Previa){% endif %}</div>
+        
+        <!-- Información de la reconsideración -->
+        <div style="margin-bottom: 8px; padding: 6px; background: #f8fafc; border-radius: 4px;">
+            <table class="info-table">
+                <tr>
+                    <td class="label">Número Reconsideración:</td>
+                    <td class="value">#{{ reconsideracion_data.numero_reconsideracion }}</td>
+                    <td class="label">Estado:</td>
+                    <td class="value" style="
+                        {% if reconsideracion_data.estado == 'aprobada' %}color: #22c55e; font-weight: bold;
+                        {% elif reconsideracion_data.estado == 'rechazada' %}color: #ef4444; font-weight: bold;
+                        {% elif reconsideracion_data.estado == 'alternativa' %}color: #f59e0b; font-weight: bold;
+                        {% else %}color: #6b7280;{% endif %}">
+                        {% if reconsideracion_data.estado == 'aprobada' %}✓ Aprobada
+                        {% elif reconsideracion_data.estado == 'rechazada' %}✗ Rechazada
+                        {% elif reconsideracion_data.estado == 'alternativa' %}⚠ Alternativa
+                        {% else %}{{ reconsideracion_data.estado|capfirst }}{% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">Fecha Solicitud:</td>
+                    <td class="value">{{ reconsideracion_data.fecha_solicitud|date:"d/m/Y H:i" }}</td>
+                    <td class="label">Solicitada Por:</td>
+                    <td class="value">{{ reconsideracion_data.solicitada_por_nombre }}</td>
+                </tr>
+                {% if reconsideracion_data.fecha_analisis %}
+                <tr>
+                    <td class="label">Fecha Análisis:</td>
+                    <td class="value">{{ reconsideracion_data.fecha_analisis|date:"d/m/Y H:i" }}</td>
+                    <td class="label">Analizada Por:</td>
+                    <td class="value">{{ reconsideracion_data.analizada_por_nombre|default:"Sin analista" }}</td>
+                </tr>
+                {% endif %}
+            </table>
+        </div>
+        
+                <!-- Motivo de la reconsideración -->
+        {% if reconsideracion_data.motivo %}
+        <div style="margin-bottom: 8px; padding: 6px; background: #fff7ed; border-left: 3px solid #f59e0b; border-radius: 4px;">
+            <div style="font-size: 8px; color: #374151; line-height: 1.4;">
+                <span style="font-weight: bold; color: #f59e0b; font-size: 9px;">Motivo de la Reconsideración:</span> {{ reconsideracion_data.motivo|truncatewords:50 }}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Comentario del análisis -->
+        {% if reconsideracion_data.comentario_analisis %}
+        <div style="margin-bottom: 8px; padding: 6px; background: #f0f9ff; border-left: 3px solid #3b82f6; border-radius: 4px;">
+            <div style="font-size: 8px; color: #374151; line-height: 1.4;">
+                <span style="font-weight: bold; color: #3b82f6; font-size: 9px;">Análisis de la Reconsideración{% if reconsideracion_data.is_preview %} (Vista Previa){% endif %}:</span> {{ reconsideracion_data.comentario_analisis|truncatewords:50 }}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Decisión de la reconsideración (si está en modo vista previa) -->
+        {% if reconsideracion_data.decision_preview %}
+        <div style="margin-bottom: 8px; padding: 6px; background: #fef3c7; border-left: 3px solid #f59e0b; border-radius: 4px;">
+            <div style="font-weight: bold; color: #f59e0b; font-size: 9px; margin-bottom: 3px;">
+                Decisión Propuesta (Vista Previa):
+            </div>
+            <div style="font-size: 8px; color: #374151; line-height: 1.4;">
+                {% if reconsideracion_data.decision_preview == 'aprobar' %}✓ Aprobar - Aceptar la reconsideración y proceder con la nueva condición
+                {% elif reconsideracion_data.decision_preview == 'rechazar' %}✗ Rechazar - Mantener la decisión anterior y rechazar la reconsideración
+                {% elif reconsideracion_data.decision_preview == 'alternativa' %}↻ Alternativa - Proponer condiciones alternativas para la reconsideración
+                {% elif reconsideracion_data.decision_preview == 'enviar_comite' %}👥 Enviar a Comité - Escalar la decisión al comité de crédito para evaluación
+                {% else %}{{ reconsideracion_data.decision_preview|capfirst }}
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Información de cotización (solo si usa nueva cotización) -->
+        {% if not reconsideracion_data.usar_misma_cotizacion %}
+        <div style="margin-bottom: 8px;">
+            <div style="font-weight: bold; color: #009c3c; font-size: 9px; margin-bottom: 4px; border-bottom: 1px solid #e5e7eb; padding-bottom: 2px;">
+                Información de Nueva Cotización
+            </div>
+            <table class="info-table">
+                <tr>
+                    <td class="label">Cotización:</td>
+                    <td class="value">{{ reconsideracion_data.nueva_cotizacion.codigo|default:"N/A" }}</td>
+                    <td class="label">Fecha:</td>
+                    <td class="value">{{ reconsideracion_data.nueva_cotizacion.created_at|date:"d/m/Y"|default:"N/A" }}</td>
+                </tr>
+                {% if reconsideracion_data.nueva_cotizacion.valorVehiculo %}
+                <tr>
+                    <td class="label">Valor Vehículo:</td>
+                    <td class="value">${{ reconsideracion_data.nueva_cotizacion.valorVehiculo|floatformat:0 }}</td>
+                    <td class="label">Prima:</td>
+                    <td class="value">${{ reconsideracion_data.nueva_cotizacion.valorPrimaInicial|floatformat:0|default:"0" }}</td>
+                </tr>
+                {% endif %}
+            </table>
+        </div>
+        {% else %}
+        <div style="margin-bottom: 8px; padding: 6px; background: #f0fdf4; border-left: 3px solid #22c55e; border-radius: 4px;">
+            <div style="font-size: 8px; color: #166534; font-style: italic;">
+                📋 Utilizó la misma cotización que el análisis original
+            </div>
+        </div>
+        {% endif %}
     </div>
     {% endif %}
 

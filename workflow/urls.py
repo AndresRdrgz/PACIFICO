@@ -59,6 +59,7 @@ urlpatterns = [
     
     # Reconsideración URLs
     path('solicitud/<int:solicitud_id>/reconsideracion/solicitar/', views_reconsideraciones.solicitar_reconsideracion, name='solicitar_reconsideracion'),
+    path('api/solicitud/<int:solicitud_id>/reconsideracion/puede-solicitar/', views_reconsideraciones.api_puede_solicitar_reconsideracion, name='api_puede_solicitar_reconsideracion'),
     path('api/solicitud/<int:solicitud_id>/reconsideracion/solicitar/', views_reconsideraciones.api_solicitar_reconsideracion, name='api_solicitar_reconsideracion'),
     path('api/cotizaciones-cliente/<int:solicitud_id>/', views_reconsideraciones.api_cotizaciones_cliente, name='api_cotizaciones_cliente'),
     

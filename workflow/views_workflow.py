@@ -6610,6 +6610,69 @@ def enviar_correo_pdf_resultado_consulta(solicitud):
         
         print(f"📊 Including {participaciones_comite.count()} committee participations and {comentarios_sistema.count()} system comments in PDF for solicitud {solicitud.codigo}")
         
+        # Obtener TODAS las reconsideraciones (historial completo)
+        reconsideraciones_data = []
+        try:
+            from .modelsWorkflow import ReconsideracionSolicitud
+            # Obtener todas las reconsideraciones ordenadas cronológicamente
+            reconsideraciones = ReconsideracionSolicitud.objects.filter(
+                solicitud=solicitud
+            ).select_related(
+                'solicitada_por', 'analizada_por', 'cotizacion_original', 'cotizacion_nueva'
+            ).order_by('numero_reconsideracion')  # Chronological order
+            
+            if reconsideraciones.exists():
+                print(f"📊 Including {reconsideraciones.count()} reconsideraciones in email PDF")
+                
+                for reconsideracion in reconsideraciones:
+                    # Get solicitada_por name - prefer solicitud.propietario if available
+                    solicitada_por_nombre = 'Usuario desconocido'
+                    if solicitud.propietario:
+                        if solicitud.propietario.first_name and solicitud.propietario.last_name:
+                            solicitada_por_nombre = f"{solicitud.propietario.first_name} {solicitud.propietario.last_name}"
+                        else:
+                            solicitada_por_nombre = solicitud.propietario.username
+                    elif reconsideracion.solicitada_por:
+                        if reconsideracion.solicitada_por.first_name and reconsideracion.solicitada_por.last_name:
+                            solicitada_por_nombre = f"{reconsideracion.solicitada_por.first_name} {reconsideracion.solicitada_por.last_name}"
+                        else:
+                            solicitada_por_nombre = reconsideracion.solicitada_por.username
+                    
+                    # Get analizada_por name
+                    analizada_por_nombre = 'Sin analista'
+                    if reconsideracion.analizada_por:
+                        if reconsideracion.analizada_por.first_name and reconsideracion.analizada_por.last_name:
+                            analizada_por_nombre = f"{reconsideracion.analizada_por.first_name} {reconsideracion.analizada_por.last_name}"
+                        else:
+                            analizada_por_nombre = reconsideracion.analizada_por.username
+                    
+                    reconsideracion_item = {
+                        'numero_reconsideracion': reconsideracion.numero_reconsideracion,
+                        'estado': reconsideracion.estado,
+                        'motivo': reconsideracion.motivo,
+                        'fecha_solicitud': reconsideracion.fecha_solicitud,
+                        'fecha_analisis': reconsideracion.fecha_analisis,
+                        'comentario_analisis': reconsideracion.comentario_analisis,
+                        'decision_preview': None,  # No preview in email
+                        'usar_nueva_cotizacion': reconsideracion.usar_nueva_cotizacion,
+                        'usar_misma_cotizacion': not reconsideracion.usar_nueva_cotizacion,
+                        'resultado_consulta_anterior': reconsideracion.resultado_consulta_anterior,
+                        'comentario_consulta_anterior': reconsideracion.comentario_consulta_anterior,
+                        'solicitada_por_nombre': solicitada_por_nombre,
+                        'analizada_por_nombre': analizada_por_nombre,
+                        'cotizacion_original': reconsideracion.cotizacion_original,
+                        'cotizacion_nueva': reconsideracion.cotizacion_nueva,
+                        'is_preview': False,  # Not preview mode in email
+                    }
+                    reconsideraciones_data.append(reconsideracion_item)
+                    print(f"   ✅ Added reconsideración #{reconsideracion.numero_reconsideracion} to email PDF")
+        except Exception as e:
+            print(f"⚠️ Error obteniendo datos de reconsideraciones para email: {e}")
+            # Continue without reconsideration data
+        
+        # For backward compatibility, keep the single reconsideracion_data as the most recent
+        reconsideracion_data = reconsideraciones_data[-1] if reconsideraciones_data else None
+        
         # Preparar contexto para el template
         context = {
             'solicitud': solicitud,
@@ -6625,6 +6688,8 @@ def enviar_correo_pdf_resultado_consulta(solicitud):
             'fecha_consulta': fecha_consulta,  # Fecha real de consulta
             'logo_path': os.path.join(settings.BASE_DIR, 'static', 'images', 'logoBlanco.png'),
             'participaciones_comite': participaciones_comite,  # Add committee participations
+            'reconsideracion_data': reconsideracion_data,  # Add most recent reconsideration for backward compatibility
+            'reconsideraciones_data': reconsideraciones_data,  # Add ALL reconsiderations
         }
         
         # Renderizar HTML usando el template optimizado
@@ -17594,6 +17659,13 @@ def api_pdf_resultado_consulta(request, solicitud_id):
         # Import required modules
         from django.conf import settings
         import os
+        import json
+        import io
+        
+        # Debug information
+        print(f"🔍 PDF API called for solicitud_id: {solicitud_id}")
+        print(f"🔍 Request method: {request.method}")
+        print(f"🔍 Request body: {request.body}")
         
         # Check if xhtml2pdf is available
         if not XHTML2PDF_AVAILABLE:
@@ -17604,13 +17676,111 @@ def api_pdf_resultado_consulta(request, solicitud_id):
         
         # Obtener solicitud
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        print(f"🔍 Found solicitud: {solicitud.codigo}")
         
         # Parsear datos del request
         data = json.loads(request.body) if request.body else {}
+        print(f"🔍 Parsed data: {data}")
         
         # Check if this is a preview mode (from committee modal)
         is_preview_mode = data.get('preview_mode', False)
         current_participation = data.get('current_participation', {})
+        
+        # Check if this is reconsideration mode
+        is_reconsideration_mode = data.get('reconsideration_mode', False)
+        reconsideration_id = data.get('reconsideration_id')
+        print(f"🔍 Reconsideration mode: {is_reconsideration_mode}, ID: {reconsideration_id}")
+        
+        # Get ALL reconsiderations for this solicitud - this is the primary data source
+        reconsideracion_data = None
+        reconsideraciones_data = []
+        
+        try:
+            from .modelsWorkflow import ReconsideracionSolicitud
+            
+            # Always get ALL reconsiderations for the solicitud, ordered chronologically
+            reconsideraciones = ReconsideracionSolicitud.objects.filter(
+                solicitud=solicitud
+            ).select_related(
+                'solicitada_por', 'analizada_por', 'cotizacion_original', 'cotizacion_nueva'
+            ).order_by('numero_reconsideracion')  # Chronological order
+            
+            print(f"🔍 Found {reconsideraciones.count()} total reconsideraciones for solicitud {solicitud.codigo}")
+            
+            if reconsideraciones.exists():
+                for reconsideracion in reconsideraciones:
+                    # Determine if this is the preview reconsideration
+                    is_preview_reconsideration = (is_reconsideration_mode and 
+                                                reconsideration_id and 
+                                                str(reconsideracion.pk) == str(reconsideration_id))
+                    
+                    # Get preview values if this is the preview reconsideration
+                    comentario_preview = None
+                    decision_preview = None
+                    if is_preview_reconsideration:
+                        comentario_preview = data.get('comentario_analisis', '').strip()
+                        decision_preview = data.get('decision_preview', '').strip()
+                    
+                    # Get solicitada_por name - prefer solicitud.propietario/creada_por if available
+                    solicitada_por_nombre = 'Usuario desconocido'
+                    if solicitud.propietario:
+                        if solicitud.propietario.first_name and solicitud.propietario.last_name:
+                            solicitada_por_nombre = f"{solicitud.propietario.first_name} {solicitud.propietario.last_name}"
+                        else:
+                            solicitada_por_nombre = solicitud.propietario.username
+                    elif solicitud.creada_por:
+                        if solicitud.creada_por.first_name and solicitud.creada_por.last_name:
+                            solicitada_por_nombre = f"{solicitud.creada_por.first_name} {solicitud.creada_por.last_name}"
+                        else:
+                            solicitada_por_nombre = solicitud.creada_por.username
+                    elif reconsideracion.solicitada_por:
+                        if reconsideracion.solicitada_por.first_name and reconsideracion.solicitada_por.last_name:
+                            solicitada_por_nombre = f"{reconsideracion.solicitada_por.first_name} {reconsideracion.solicitada_por.last_name}"
+                        else:
+                            solicitada_por_nombre = reconsideracion.solicitada_por.username
+                    
+                    # Get analizada_por name
+                    analizada_por_nombre = 'Sin analista'
+                    if reconsideracion.analizada_por:
+                        if reconsideracion.analizada_por.first_name and reconsideracion.analizada_por.last_name:
+                            analizada_por_nombre = f"{reconsideracion.analizada_por.first_name} {reconsideracion.analizada_por.last_name}"
+                        else:
+                            analizada_por_nombre = reconsideracion.analizada_por.username
+                    
+                    reconsideracion_item = {
+                        'numero_reconsideracion': reconsideracion.numero_reconsideracion,
+                        'estado': reconsideracion.estado,
+                        'motivo': reconsideracion.motivo,
+                        'fecha_solicitud': reconsideracion.fecha_solicitud,
+                        'fecha_analisis': reconsideracion.fecha_analisis,
+                        # Use preview values if this is the preview reconsideration and preview values exist
+                        'comentario_analisis': (comentario_preview if comentario_preview 
+                                              else reconsideracion.comentario_analisis),
+                        'decision_preview': decision_preview if is_preview_reconsideration else None,
+                        'usar_nueva_cotizacion': reconsideracion.usar_nueva_cotizacion,
+                        'usar_misma_cotizacion': not reconsideracion.usar_nueva_cotizacion,
+                        'resultado_consulta_anterior': reconsideracion.resultado_consulta_anterior,
+                        'comentario_consulta_anterior': reconsideracion.comentario_consulta_anterior,
+                        'solicitada_por_nombre': solicitada_por_nombre,
+                        'analizada_por_nombre': analizada_por_nombre,
+                        'cotizacion_original': reconsideracion.cotizacion_original,
+                        'cotizacion_nueva': reconsideracion.cotizacion_nueva,
+                        'is_preview': is_preview_reconsideration and data.get('is_preview', False),
+                    }
+                    reconsideraciones_data.append(reconsideracion_item)
+                    print(f"   ✅ Added reconsideración #{reconsideracion.numero_reconsideracion} to PDF (Preview: {is_preview_reconsideration})")
+                
+                # For backward compatibility, keep the single reconsideracion_data as the most recent
+                reconsideracion_data = reconsideraciones_data[-1] if reconsideraciones_data else None
+                print(f"🔍 Total reconsideraciones included in PDF: {len(reconsideraciones_data)}")
+            else:
+                print(f"🔍 No reconsideraciones found for solicitud {solicitud.codigo}")
+                
+        except Exception as e:
+            print(f"⚠️ Error obteniendo datos de reconsideraciones: {e}")
+            import traceback
+            traceback.print_exc()
+            # Continue without reconsideration data
         
         # Import required modules
         from django.template.loader import render_to_string
@@ -17752,6 +17922,8 @@ def api_pdf_resultado_consulta(request, solicitud_id):
             'logo_path': os.path.join(settings.BASE_DIR, 'static', 'images', 'logoBlanco.png'),
             'participaciones_comite': participaciones_comite,  # Add committee participations
             'is_preview_mode': is_preview_mode,  # Add preview mode flag
+            'reconsideracion_data': reconsideracion_data,  # Add single reconsideration for backward compatibility
+            'reconsideraciones_data': reconsideraciones_data,  # Add ALL reconsiderations
         }
         
         # Renderizar HTML usando el template optimizado
