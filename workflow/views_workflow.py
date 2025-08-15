@@ -6574,6 +6574,26 @@ def enviar_correo_pdf_resultado_consulta(solicitud):
             }
             calificaciones_with_values.append(cal_dict)
         
+        # Obtener fecha de consulta (cuando la solicitud llegó a la etapa "Consulta")
+        fecha_consulta = solicitud.fecha_creacion  # Default fallback
+        try:
+            from workflow.modelsWorkflow import HistorialSolicitud, Etapa
+            
+            # Buscar el historial cuando llegó a la etapa "Consulta"
+            consulta_etapa = Etapa.objects.filter(nombre__icontains='Consulta').first()
+            if consulta_etapa:
+                historial_consulta = HistorialSolicitud.objects.filter(
+                    solicitud=solicitud,
+                    etapa=consulta_etapa
+                ).first()
+                
+                if historial_consulta:
+                    fecha_consulta = historial_consulta.fecha_inicio
+                    
+        except Exception as e:
+            print(f"⚠️ Error obteniendo fecha de consulta: {e}")
+            # Mantener fecha_creacion como fallback
+        
         # Preparar contexto para el template
         context = {
             'solicitud': solicitud,
@@ -6585,6 +6605,7 @@ def enviar_correo_pdf_resultado_consulta(solicitud):
             'resultado_analisis': resultado_analisis,
             'field_values': {},  # Empty for email PDF
             'fecha_generacion': timezone.now(),
+            'fecha_consulta': fecha_consulta,  # Fecha real de consulta
             'logo_path': os.path.join(settings.BASE_DIR, 'static', 'images', 'logoBlanco.png'),
         }
         
