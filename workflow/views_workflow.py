@@ -6398,6 +6398,7 @@ def enviar_correo_comite_credito(solicitud, etapa, request=None):
         
         # Obtener el analista revisor (último usuario que procesó la solicitud)
         analista_revisor = ""
+        analista_email = ""
         try:
             ultimo_historial = solicitud.historial.exclude(
                 etapa__nombre__iexact="Comité de Crédito"
@@ -6405,11 +6406,41 @@ def enviar_correo_comite_credito(solicitud, etapa, request=None):
             
             if ultimo_historial and ultimo_historial.usuario_responsable:
                 analista_revisor = ultimo_historial.usuario_responsable.get_full_name() or ultimo_historial.usuario_responsable.username
+                analista_email = ultimo_historial.usuario_responsable.email or ""
             else:
                 analista_revisor = "No asignado"
         except Exception as e:
             print(f"⚠️ Error obteniendo analista revisor: {e}")
             analista_revisor = "Error al obtener analista"
+
+        # Obtener el usuario que atendió la solicitud en comité (si existe)
+        usuario_comite_email = ""
+        try:
+            # Buscar en el historial si hay alguien que procesó la solicitud en etapa comité
+            historial_comite = solicitud.historial.filter(
+                etapa__nombre__iexact="Comité de Crédito"
+            ).order_by('-fecha_fin').first()
+            
+            if historial_comite and historial_comite.usuario_responsable:
+                usuario_comite_email = historial_comite.usuario_responsable.email or ""
+                print(f"📧 Usuario que atendió en comité: {historial_comite.usuario_responsable.username} ({usuario_comite_email})")
+            
+            # Si no hay historial, verificar si está asignada a alguien actualmente
+            if not usuario_comite_email and solicitud.asignada_a and solicitud.etapa_actual and solicitud.etapa_actual.nombre.lower() == "comité de crédito":
+                usuario_comite_email = solicitud.asignada_a.email or ""
+                print(f"📧 Usuario actualmente asignado en comité: {solicitud.asignada_a.username} ({usuario_comite_email})")
+                
+        except Exception as e:
+            print(f"⚠️ Error obteniendo usuario que atendió en comité: {e}")
+            
+        # Preparar lista de CCs (usuarios a copiar)
+        cc_emails = []
+        if analista_email and analista_email not in destinatarios:
+            cc_emails.append(analista_email)
+            print(f"📧 Agregando analista revisor en CC: {analista_email}")
+        if usuario_comite_email and usuario_comite_email not in destinatarios and usuario_comite_email != analista_email:
+            cc_emails.append(usuario_comite_email)
+            print(f"📧 Agregando usuario que atendió en comité en CC: {usuario_comite_email}")
         
         # Contexto para el template
         context = {
@@ -6425,8 +6456,8 @@ def enviar_correo_comite_credito(solicitud, etapa, request=None):
         # Cargar el template HTML específico del comité
         html_content = render_to_string('workflow/emails/comite_credito_notification.html', context)
         
-        # Crear el asunto específico del comité
-        subject = f"🏛️ Nueva Solicitud en Comité de Crédito - {solicitud.codigo}"
+        # Crear el asunto específico del comité con nombre del cliente
+        subject = f"🏛️ Nueva Solicitud en Comité de Crédito - {cliente_nombre} - {solicitud.codigo}"
         
         # Mensaje de texto plano como respaldo
         text_content = f"""
@@ -6456,12 +6487,13 @@ def enviar_correo_comite_credito(solicitud, etapa, request=None):
         Este es un correo automático, por favor no responder a esta dirección.
         """
         
-        # Crear el correo usando EmailMultiAlternatives
+        # Crear el correo usando EmailMultiAlternatives con CCs
         email = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
             from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'workflow@fpacifico.com'),
             to=destinatarios,
+            cc=cc_emails,  # Agregar los usuarios en copia
         )
         
         # Agregar el contenido HTML
@@ -6485,7 +6517,7 @@ def enviar_correo_comite_credito(solicitud, etapa, request=None):
             email.connection = connection
             email.send()
         
-        print(f"✅ Correo del comité enviado correctamente para solicitud {solicitud.codigo} - Enviado a {len(destinatarios)} miembro(s) del comité")
+        print(f"✅ Correo del comité enviado correctamente para solicitud {solicitud.codigo} - Enviado a {len(destinatarios)} miembro(s) del comité" + (f" - {len(cc_emails)} CC(s)" if cc_emails else ""))
         
     except Exception as e:
         # Registrar el error pero no romper el flujo
@@ -6676,8 +6708,9 @@ def enviar_correo_pdf_resultado_consulta(solicitud):
                 """
             comentarios_section += "</div>"
 
-        # Preparar el correo
-        asunto = f"Resultado Consulta - Solicitud {solicitud.codigo}"
+        # Preparar el correo con nombre del cliente en el asunto
+        cliente_nombre = solicitud.cliente_nombre or "Cliente"
+        asunto = f"Resultado Consulta - {cliente_nombre} - Solicitud {solicitud.codigo}"
         mensaje_html = f"""
         <html>
         <head>

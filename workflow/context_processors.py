@@ -44,6 +44,27 @@ def user_navigation_permissions(request):
     # Acceso a Comité: Roles que pueden participar en comité + usuarios con permisos específicos
     if user_role in ['Supervisor', 'Administrador']:
         context['can_access_comite'] = True
+    else:
+        # Verificar si el usuario tiene PermisoBandeja para la etapa "Comité de Crédito"
+        try:
+            # Verificar permisos directos por usuario para etapa Comité
+            if PermisoBandeja.objects.filter(
+                usuario=request.user,
+                etapa__nombre__iexact="Comité de Crédito",
+                puede_ver=True
+            ).exists():
+                context['can_access_comite'] = True
+            
+            # Verificar permisos por grupos para etapa Comité
+            user_groups = request.user.groups.all()
+            if user_groups.exists() and PermisoBandeja.objects.filter(
+                grupo__in=user_groups,
+                etapa__nombre__iexact="Comité de Crédito",
+                puede_ver=True
+            ).exists():
+                context['can_access_comite'] = True
+        except:
+            pass
     
     # Acceso a Bandejas de Trabajo: Analistas y Back Office siempre pueden ver, otros según permisos
     if user_role in ['Analista', 'Back Office']:
