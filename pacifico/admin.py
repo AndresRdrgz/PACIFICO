@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Cotizacion, PeriodoPago, Aseguradora, FormPago, PruebaDario, Cliente, UserProfile, CotizacionDocumento, DebidaDiligencia, GroupProfile, Sucursal
+from .models import Cotizacion, PeriodoPago, Aseguradora, FormPago, PruebaDario, Cliente, UserProfile, CotizacionDocumento, DebidaDiligencia, GroupProfile, Sucursal, MarcaAuto, ModeloAuto
 from django.contrib.auth.models import User, Group
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin, GroupAdmin as BaseGroupAdmin
 from .models import Politicas
@@ -47,6 +47,31 @@ class CotizacionAdmin(admin.ModelAdmin):
     list_filter = (
         'tipoPrestamo', 'oficial', 'sucursal', 'vendedorTipo', 'created_at',
     )
+    
+    # Protection against deletion
+    def has_delete_permission(self, request, obj=None):
+        """Prevent deletion of Cotizacion objects from admin"""
+        return False
+    
+    def get_actions(self, request):
+        """Remove bulk delete action"""
+        actions = super().get_actions(request)
+        if 'delete_selected' in actions:
+            del actions['delete_selected']
+        return actions
+    
+    def get_readonly_fields(self, request, obj=None):
+        """Make NumeroCotizacion readonly for existing objects"""
+        if obj:  # Editing an existing object
+            return ['NumeroCotizacion']
+        return []
+    
+    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+        """Add custom message about deletion protection"""
+        extra_context = extra_context or {}
+        if object_id:
+            extra_context['subtitle'] = 'Las cotizaciones no pueden ser eliminadas desde el panel de administración por seguridad.'
+        return super().changeform_view(request, object_id, form_url, extra_context)
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
@@ -247,3 +272,70 @@ class GroupProfileAdmin(admin.ModelAdmin):
 # Re-registrar Group con el nuevo admin
 admin.site.unregister(Group)
 admin.site.register(Group, GroupAdmin)
+
+
+# ===========================================
+# ADMINISTRACIÓN DE MARCAS Y MODELOS DE AUTO
+# ===========================================
+
+class ModeloAutoInline(admin.TabularInline):
+    """Inline para gestionar modelos desde la marca"""
+    model = ModeloAuto
+    extra = 1
+    fields = ('nombre',)
+    verbose_name = "Modelo"
+    verbose_name_plural = "Modelos"
+
+
+@admin.register(MarcaAuto)
+class MarcaAutoAdmin(admin.ModelAdmin):
+    """Administración de marcas de auto con gestión de modelos inline"""
+    list_display = ('id', 'nombre', 'modelos_count')
+    search_fields = ('nombre',)
+    list_filter = ('nombre',)
+    ordering = ('nombre',)
+    inlines = [ModeloAutoInline]
+    
+    fieldsets = (
+        ('Información de la Marca', {
+            'fields': ('nombre',),
+            'description': 'Ingrese el nombre de la marca de auto (ej: Toyota, Honda, Ford, etc.)'
+        }),
+    )
+    
+    def modelos_count(self, obj):
+        """Muestra la cantidad de modelos asociados a la marca"""
+        count = obj.modeloauto_set.count()
+        return f"{count} modelo{'s' if count != 1 else ''}"
+    modelos_count.short_description = "Modelos"
+    
+    def get_queryset(self, request):
+        """Optimizar consultas con prefetch_related"""
+        return super().get_queryset(request).prefetch_related('modeloauto_set')
+
+
+@admin.register(ModeloAuto)
+class ModeloAutoAdmin(admin.ModelAdmin):
+    """Administración de modelos de auto"""
+    list_display = ('id', 'marca', 'nombre')
+    search_fields = ('nombre', 'marca__nombre')
+    list_filter = ('marca',)
+    autocomplete_fields = ('marca',)
+    ordering = ('marca__nombre', 'nombre')
+    
+    fieldsets = (
+        ('Información del Modelo', {
+            'fields': ('marca', 'nombre'),
+            'description': 'Seleccione la marca y especifique el nombre del modelo (ej: Corolla, Civic, Focus, etc.)'
+        }),
+    )
+    
+    def get_queryset(self, request):
+        """Optimizar consultas con select_related"""
+        return super().get_queryset(request).select_related('marca')
+    
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        """Personalizar el campo de marca"""
+        if db_field.name == "marca":
+            kwargs["queryset"] = MarcaAuto.objects.all().order_by('nombre')
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)

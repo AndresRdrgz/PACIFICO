@@ -340,6 +340,29 @@ class Politicas(models.Model):
         return self.titulo
 
 
+class MarcaAuto(models.Model):
+    nombre = models.CharField(max_length=255, null=True, blank=True)
+
+    def __str__(self):
+        return self.nombre or 'Sin nombre'
+
+    class Meta:
+        verbose_name = "Marca de Auto"
+        verbose_name_plural = "Marcas de Auto"
+
+
+class ModeloAuto(models.Model):
+    marca = models.ForeignKey(MarcaAuto, on_delete=models.CASCADE, null=True, blank=True)
+    nombre = models.CharField(max_length=255, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.marca.nombre if self.marca else 'Sin marca'} - {self.nombre or 'Sin nombre'}"
+
+    class Meta:
+        verbose_name = "Modelo de Auto"
+        verbose_name_plural = "Modelos de Auto"
+
+
 class Cotizacion(models.Model):
     
    
@@ -811,6 +834,14 @@ class Cotizacion(models.Model):
         
             
         super(Cotizacion, self).save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """
+        Prevent deletion of Cotizacion objects.
+        This provides model-level protection in addition to admin-level protection.
+        """
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("Las cotizaciones no pueden ser eliminadas por seguridad del sistema.")
 
     def __str__(self):
         return f"{self.NumeroCotizacion} - {self.nombreCliente} - {self.cedulaCliente} - {self.tipoPrestamo} - {self.id}"
