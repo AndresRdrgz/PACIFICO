@@ -554,6 +554,14 @@ class ReconsideracionSolicitud(models.Model):
     resultado_consulta_anterior = models.CharField(max_length=100, blank=True, help_text="Resultado de la consulta anterior")
     comentario_consulta_anterior = models.TextField(blank=True, help_text="Comentario de la consulta anterior")
     
+    # Archivo adjunto
+    archivo_adjunto = models.FileField(
+        upload_to='reconsideraciones/',
+        null=True,
+        blank=True,
+        help_text="Archivo PDF adjunto a la reconsideración"
+    )
+    
     # Metadatos
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
