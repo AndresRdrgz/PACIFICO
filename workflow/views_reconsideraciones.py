@@ -573,6 +573,7 @@ def api_historial_reconsideraciones(request, solicitud_id):
                 'comentario_analisis': recon.comentario_analisis,
                 'resultado_anterior': recon.resultado_consulta_anterior,
                 'comentario_anterior': recon.comentario_consulta_anterior,
+                'archivo_adjunto': recon.archivo_adjunto.url if recon.archivo_adjunto else None,
                 'creado_en': recon.creado_en.isoformat() if hasattr(recon, 'creado_en') and recon.creado_en else recon.fecha_solicitud.isoformat(),
                 'actualizado_en': recon.actualizado_en.isoformat() if hasattr(recon, 'actualizado_en') and recon.actualizado_en else None,
             })
