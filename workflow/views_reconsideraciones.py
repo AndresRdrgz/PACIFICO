@@ -1,6 +1,7 @@
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -11,6 +12,8 @@ from django.template.loader import render_to_string
 from django.conf import settings
 from django.db.models import Q
 from django.urls import reverse
+import os
+import mimetypes
 import logging
 import json
 import json
@@ -74,6 +77,7 @@ def solicitar_reconsideracion(request, solicitud_id):
                 # Obtener datos del formulario
                 motivo = request.POST.get('motivo', '').strip()
                 cotizacion_id = request.POST.get('cotizacion_id')
+                pdf_consolidado = request.FILES.get('pdf_consolidado')
                 
                 if not motivo:
                     error_msg = "Debe proporcionar un motivo para la reconsideración."
@@ -81,6 +85,30 @@ def solicitar_reconsideracion(request, solicitud_id):
                         return JsonResponse({'success': False, 'message': error_msg})
                     messages.error(request, error_msg)
                     raise ValueError("Motivo requerido")
+
+                if not pdf_consolidado:
+                    error_msg = "Debe adjuntar el PDF consolidado."
+                    if is_ajax:
+                        return JsonResponse({'success': False, 'message': error_msg})
+                    messages.error(request, error_msg)
+                    raise ValueError("PDF consolidado requerido")
+
+                # Validar archivo PDF
+                if not pdf_consolidado.name.lower().endswith('.pdf'):
+                    error_msg = "Solo se permiten archivos PDF."
+                    if is_ajax:
+                        return JsonResponse({'success': False, 'message': error_msg})
+                    messages.error(request, error_msg)
+                    raise ValueError("Archivo debe ser PDF")
+
+                # Validar tamaño del archivo (10MB máximo)
+                max_size = 10 * 1024 * 1024  # 10MB
+                if pdf_consolidado.size > max_size:
+                    error_msg = "El archivo es demasiado grande. Máximo permitido: 10MB."
+                    if is_ajax:
+                        return JsonResponse({'success': False, 'message': error_msg})
+                    messages.error(request, error_msg)
+                    raise ValueError("Archivo demasiado grande")
                 
                 # Validar cotización seleccionada
                 nueva_cotizacion = None
@@ -122,6 +150,7 @@ def solicitar_reconsideracion(request, solicitud_id):
                     usar_nueva_cotizacion=usar_nueva_cotizacion,
                     resultado_consulta_anterior=resultado_anterior,
                     comentario_consulta_anterior=comentario_anterior,
+                    archivo_adjunto=pdf_consolidado,
                 )
                 
                 # Actualizar la cotización de la solicitud si se seleccionó una nueva
@@ -1145,3 +1174,57 @@ def enviar_notificacion_reconsideracion(reconsideracion):
         
     except Exception as e:
         logger.error(f"Error enviando email de reconsideración: {str(e)}")
+
+
+@login_required
+def descargar_pdf_consolidado(request, reconsideracion_id):
+    """
+    Vista para descargar el PDF consolidado de una reconsideración
+    """
+    reconsideracion = get_object_or_404(ReconsideracionSolicitud, id=reconsideracion_id)
+    
+    # Verificar permisos - superuser, propietario de la solicitud, o grupo consulta
+    es_superuser = request.user.is_superuser
+    es_propietario = reconsideracion.solicitud.propietario == request.user
+    es_grupo_consulta = request.user.groups.filter(name='consulta').exists()
+    
+    if not (es_superuser or es_propietario or es_grupo_consulta):
+        messages.error(request, "No tiene permisos para descargar este archivo.")
+        return redirect('workflow:detalle_solicitud', solicitud_id=reconsideracion.solicitud.id)
+    
+    # Verificar que el archivo existe
+    if not reconsideracion.archivo_adjunto:
+        messages.error(request, "No hay archivo PDF adjunto para esta reconsideración.")
+        return redirect('workflow:detalle_solicitud', solicitud_id=reconsideracion.solicitud.id)
+    
+    try:
+        # Preparar respuesta para descarga
+        file_path = reconsideracion.archivo_adjunto.path
+        
+        if not os.path.exists(file_path):
+            messages.error(request, "El archivo PDF no se encuentra disponible.")
+            return redirect('workflow:detalle_solicitud', solicitud_id=reconsideracion.solicitud.id)
+        
+        # Determinar content type
+        content_type, _ = mimetypes.guess_type(file_path)
+        if not content_type:
+            content_type = 'application/pdf'
+        
+        # Crear nombre de archivo descriptivo
+        filename = f"PDF_Consolidado_Reconsideracion_{reconsideracion.numero_reconsideracion}_{reconsideracion.solicitud.codigo}.pdf"
+        
+        # Leer archivo y preparar respuesta
+        with open(file_path, 'rb') as file:
+            response = HttpResponse(file.read(), content_type=content_type)
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            response['Content-Length'] = os.path.getsize(file_path)
+            
+            # Log de descarga
+            logger.info(f"Usuario {request.user.username} descargó PDF consolidado de reconsideración {reconsideracion_id}")
+            
+            return response
+            
+    except Exception as e:
+        logger.error(f"Error descargando PDF consolidado: {str(e)}")
+        messages.error(request, "Error al descargar el archivo. Intente nuevamente.")
+        return redirect('workflow:detalle_solicitud', solicitud_id=reconsideracion.solicitud.id)

@@ -1532,8 +1532,14 @@ def api_decision_final_comite(request):
                     nombre__icontains='Rechazado'
                 ).first()
                 solicitud.resultado_consulta = 'Rechazado'
+            elif decision_final.lower() == 'alternativa':
+                subestado_consulta = SubEstado.objects.filter(
+                    etapa=resultado_consulta_etapa,
+                    nombre__icontains='Alternativa'
+                ).first()
+                solicitud.resultado_consulta = 'Alternativa'
             else:
-                # For other decisions (like "Solicitar Observaciones")
+                # Fallback for any other decision
                 subestado_consulta = SubEstado.objects.filter(
                     etapa=resultado_consulta_etapa
                 ).first()

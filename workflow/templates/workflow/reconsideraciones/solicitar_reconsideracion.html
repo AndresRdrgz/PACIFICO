@@ -108,6 +108,56 @@
         font-weight: 600;
         margin-right: 10px;
     }
+
+    .file-upload-section {
+        border: 2px dashed #e3e6f0;
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+        transition: all 0.3s ease;
+        background: #fafbfc;
+    }
+
+    .file-upload-section:hover {
+        border-color: #4e73df;
+        background: #f8f9fc;
+    }
+
+    .file-upload-section.dragover {
+        border-color: #1cc88a;
+        background: #e8f5e8;
+    }
+
+    .file-upload-input {
+        display: none;
+    }
+
+    .file-upload-label {
+        cursor: pointer;
+        color: #5a5c69;
+    }
+
+    .file-upload-label:hover {
+        color: #4e73df;
+    }
+
+    .file-selected {
+        margin-top: 15px;
+        padding: 10px;
+        background: #e8f5e8;
+        border: 1px solid #1cc88a;
+        border-radius: 5px;
+        color: #155724;
+    }
+
+    .file-error {
+        margin-top: 15px;
+        padding: 10px;
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        border-radius: 5px;
+        color: #721c24;
+    }
 </style>
 {% endblock %}
 
@@ -130,7 +180,7 @@
                 <p class="mb-0"><strong>Motivo:</strong> Esta solicitud fue {{ solicitud.resultado_consulta|lower }} en la consulta anterior.</p>
             </div>
             
-            <form method="post" id="form-reconsideracion">
+            <form method="post" id="form-reconsideracion" enctype="multipart/form-data">
                 {% csrf_token %}
                 
                 <!-- Motivo de la reconsideración -->
@@ -151,6 +201,40 @@
                         <small class="form-text text-muted">
                             Incluya información sobre cambios en la situación del cliente, nueva documentación, modificaciones en la propuesta, etc.
                         </small>
+                    </div>
+                </div>
+
+                <!-- PDF Consolidado -->
+                <div class="form-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-file-pdf"></i>
+                        PDF Consolidado
+                    </h5>
+                    <div class="file-upload-section" id="file-upload-area">
+                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                        <p class="mb-3">
+                            <label for="pdf_consolidado" class="file-upload-label">
+                                <strong>Haga clic aquí para seleccionar el PDF consolidado</strong><br>
+                                <small class="text-muted">o arrastre y suelte el archivo</small>
+                            </label>
+                        </p>
+                        <input type="file" 
+                               id="pdf_consolidado" 
+                               name="pdf_consolidado" 
+                               class="file-upload-input" 
+                               accept=".pdf"
+                               required>
+                        <small class="form-text text-muted">
+                            Solo se permiten archivos PDF. Tamaño máximo: 10MB
+                        </small>
+                        <div id="file-selected" class="file-selected" style="display: none;">
+                            <i class="fas fa-check-circle"></i>
+                            <span id="file-name"></span>
+                            <button type="button" class="btn btn-sm btn-link text-danger" id="remove-file">
+                                <i class="fas fa-times"></i> Remover
+                            </button>
+                        </div>
+                        <div id="file-error" class="file-error" style="display: none;"></div>
                     </div>
                 </div>
                 
@@ -244,6 +328,88 @@
 {% block extra_js %}
 <script>
 $(document).ready(function() {
+    // File upload handling
+    const fileInput = $('#pdf_consolidado');
+    const fileUploadArea = $('#file-upload-area');
+    const fileSelected = $('#file-selected');
+    const fileName = $('#file-name');
+    const fileError = $('#file-error');
+    const removeFileBtn = $('#remove-file');
+
+    // File input change handler
+    fileInput.change(function() {
+        handleFileSelection(this.files[0]);
+    });
+
+    // Drag and drop handlers
+    fileUploadArea.on('dragover', function(e) {
+        e.preventDefault();
+        $(this).addClass('dragover');
+    });
+
+    fileUploadArea.on('dragleave', function(e) {
+        e.preventDefault();
+        $(this).removeClass('dragover');
+    });
+
+    fileUploadArea.on('drop', function(e) {
+        e.preventDefault();
+        $(this).removeClass('dragover');
+        const files = e.originalEvent.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput[0].files = files;
+            handleFileSelection(files[0]);
+        }
+    });
+
+    // Remove file handler
+    removeFileBtn.click(function() {
+        fileInput.val('');
+        fileSelected.hide();
+        fileError.hide();
+    });
+
+    function handleFileSelection(file) {
+        fileError.hide();
+        
+        if (!file) {
+            fileSelected.hide();
+            return;
+        }
+
+        // Validate file type
+        if (file.type !== 'application/pdf') {
+            showFileError('Solo se permiten archivos PDF.');
+            fileInput.val('');
+            return;
+        }
+
+        // Validate file size (10MB max)
+        const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+        if (file.size > maxSize) {
+            showFileError('El archivo es demasiado grande. Máximo permitido: 10MB.');
+            fileInput.val('');
+            return;
+        }
+
+        // Show selected file
+        fileName.text(file.name + ' (' + formatFileSize(file.size) + ')');
+        fileSelected.show();
+    }
+
+    function showFileError(message) {
+        fileError.text(message).show();
+        fileSelected.hide();
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
     // Manejar cambio entre cotización actual y nueva
     $('input[name="cotizacion_opcion"]').change(function() {
         if ($(this).val() === 'actual') {
@@ -275,11 +441,19 @@ $(document).ready(function() {
     // Validación del formulario
     $('#form-reconsideracion').submit(function(e) {
         var motivo = $('#motivo').val().trim();
+        var pdfFile = fileInput[0].files[0];
         
         if (!motivo) {
             e.preventDefault();
             alert('Debe proporcionar un motivo para la reconsideración.');
             $('#motivo').focus();
+            return false;
+        }
+
+        if (!pdfFile) {
+            e.preventDefault();
+            alert('Debe adjuntar el PDF consolidado.');
+            fileInput.focus();
             return false;
         }
         
@@ -294,6 +468,7 @@ $(document).ready(function() {
         // Debug: Log form data
         console.log('Form data being submitted:');
         console.log('Motivo:', motivo);
+        console.log('PDF File:', pdfFile ? pdfFile.name : 'No file');
         console.log('Cotización opción:', $('input[name="cotizacion_opcion"]:checked').val());
         console.log('Cotización ID seleccionada:', $('input[name="cotizacion_id"]:checked').val());
         

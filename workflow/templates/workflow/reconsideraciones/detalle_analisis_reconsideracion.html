@@ -1,6 +1,7 @@
 {% extends 'workflow/base.html' %}
 {% load static %}
 {% load file_icon_filters %}
+{% load humanize %}
 
 {% block title %}Análisis de Reconsideración - {{ solicitud.codigo }}{% endblock %}
 
@@ -1825,6 +1826,46 @@
             </div>
         </div>
 
+        <!-- PDF Consolidado Section -->
+        {% if reconsideracion_actual.archivo_adjunto %}
+        <div class="archivo-adjunto-section">
+            <div class="archivo-header">
+                <i class="fas fa-file-pdf"></i>
+                <h5 class="mb-0">PDF Consolidado</h5>
+            </div>
+            <div class="archivo-content">
+                <div class="archivo-item">
+                    <div class="archivo-icon">
+                        <i class="fas fa-file-pdf fa-2x text-danger"></i>
+                    </div>
+                    <div class="archivo-info">
+                        <div class="archivo-details">
+                            <div class="archivo-name">
+                                {{ reconsideracion_actual.archivo_adjunto.name|slice:"-50:" }}
+                            </div>
+                            <div class="archivo-size">
+                                {% load humanize %}
+                                {{ reconsideracion_actual.archivo_adjunto.size|filesizeformat }}
+                            </div>
+                            <div class="archivo-fecha">
+                                Adjuntado: {{ reconsideracion_actual.fecha_solicitud|date:"d/m/Y H:i" }}
+                            </div>
+                        </div>
+                        <div class="archivo-actions">
+                            <a href="{% url 'workflow:descargar_pdf_reconsideracion' reconsideracion_actual.id %}" 
+                               class="btn btn-primary btn-sm"
+                               target="_blank"
+                               title="Descargar PDF Consolidado">
+                                <i class="fas fa-download"></i>
+                                Descargar PDF
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Analysis Sections -->
         <div class="analysis-sections">
             <div class="sections-header">
@@ -2365,12 +2406,12 @@
                     </div>
                 </div>
                 <div class="archivo-actions">
-                    <a href="{{ reconsideracion_actual.archivo_adjunto.url }}" 
+                    <a href="{% url 'workflow:descargar_pdf_reconsideracion' reconsideracion_actual.id %}" 
                        target="_blank" 
                        class="btn btn-outline-primary btn-sm">
                         <i class="fas fa-eye me-1"></i>Ver
                     </a>
-                    <a href="{{ reconsideracion_actual.archivo_adjunto.url }}" 
+                    <a href="{% url 'workflow:descargar_pdf_reconsideracion' reconsideracion_actual.id %}" 
                        download 
                        class="btn btn-outline-secondary btn-sm">
                         <i class="fas fa-download me-1"></i>Descargar

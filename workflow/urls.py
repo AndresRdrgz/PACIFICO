@@ -62,6 +62,7 @@ urlpatterns = [
     path('api/solicitud/<int:solicitud_id>/reconsideracion/puede-solicitar/', views_reconsideraciones.api_puede_solicitar_reconsideracion, name='api_puede_solicitar_reconsideracion'),
     path('api/solicitud/<int:solicitud_id>/reconsideracion/solicitar/', views_reconsideraciones.api_solicitar_reconsideracion, name='api_solicitar_reconsideracion'),
     path('api/cotizaciones-cliente/<int:solicitud_id>/', views_reconsideraciones.api_cotizaciones_cliente, name='api_cotizaciones_cliente'),
+    path('reconsideracion/<int:reconsideracion_id>/descargar-pdf/', views_reconsideraciones.descargar_pdf_consolidado, name='descargar_pdf_reconsideracion'),
     
     # Admin URLs
     path('admin/pipelines/', views_workflow.administrar_pipelines, name='admin_pipelines'),
