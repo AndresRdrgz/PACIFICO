@@ -507,7 +507,7 @@
         
         {% if solicitud.motivo_consulta %}
         <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #e5e7eb; font-size: 9px;">
-            <span style="font-weight: bold; color: #009c3c;">Motivo:</span> {{ solicitud.motivo_consulta|truncatewords:30 }}
+            <span style="font-weight: bold; color: #009c3c;">Motivo:</span> {{ solicitud.motivo_consulta }}
         </div>
         {% endif %}
     </div>
@@ -520,7 +520,7 @@
         <!-- Análisis del analista como párrafo principal -->
         {% if analyst_comment %}
         <div class="analysis-compact" style="margin-bottom: 6px; padding: 6px 8px; font-size: 9px; line-height: 1.4;">
-            <strong style="color: #009c3c; font-size: 9px;">Análisis del Analista:</strong> 
+            <strong style="color: #009c3c; font-size: 9px;">Comentarios del Analista:</strong> 
             {% if analyst_user %}
                 <span style="color: #6b7280; font-size: 8px;">
                     por {{ analyst_user.first_name }} {{ analyst_user.last_name }}
@@ -721,7 +721,7 @@
     <!-- Participaciones del Comité - Solo mostrar si hay al menos 1 participación -->
     {% if participaciones_comite %}
     <div class="comite-section">
-        <div class="comite-title">Participaciones del Comité de Crédito</div>
+        <div class="comite-title">Participaciones del Comité de Crédito{% if is_preview_mode %} (Vista Previa){% endif %}</div>
         
         <table class="participacion-table">
             <!-- Header de la tabla -->
@@ -733,7 +733,7 @@
             </tr>
             
             <!-- Agrupar por nivel y mostrar participaciones -->
-            {% regroup participaciones_comite by nivel.nombre as participaciones_por_nivel %}
+            {% regroup participaciones_comite by nivel as participaciones_por_nivel %}
             {% for nivel in participaciones_por_nivel %}
                 <!-- Separador de nivel -->
                 <tr>
@@ -742,9 +742,9 @@
                 
                 <!-- Participaciones del nivel -->
                 {% for participacion in nivel.list %}
-                <tr>
+                <tr{% if participacion.is_preview %} style="background-color: #fff3cd; border: 1px dashed #856404;"{% endif %}>
                     <td class="participante">
-                        {{ participacion.usuario.first_name }} {{ participacion.usuario.last_name }}
+                        {{ participacion.usuario }}{% if participacion.is_preview %} (Borrador){% endif %}
                     </td>
                     <td class="resultado 
                         {% if participacion.resultado == 'APROBADO' %}resultado-aprobado
@@ -773,6 +773,8 @@
         </table>
     </div>
     {% endif %}
+
+   
 
     <!-- Footer Compacto -->
     <div class="footer">

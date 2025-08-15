@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.db import transaction
 from .modelsWorkflow import Solicitud, Etapa, ParticipacionComite, NivelComite, UsuarioNivelComite, SolicitudEscalamientoComite, HistorialSolicitud, SolicitudComentario, CalificacionCampo
 from django.contrib.auth.models import User
+from .views_workflow import enviar_correo_pdf_resultado_consulta
 import json
 import logging
 
@@ -288,63 +289,75 @@ def api_participar_comite(request, solicitud_id):
             
             logger.info(f"Participation {'created' if created else 'updated'}: {participacion}")
             
-            # Move solicitud to "Resultado Consulta" stage after committee decision
-            try:
-                # Get "Resultado Consulta" stage
-                resultado_consulta_etapa = Etapa.objects.filter(
-                    nombre__icontains='Resultado Consulta'
-                ).first()
-                
-                if resultado_consulta_etapa:
-                    logger.info(f"Moving solicitud to Resultado Consulta stage")
-                    
-                    # Create new history entry
-                    HistorialSolicitud.objects.create(
-                        solicitud=solicitud,
-                        etapa=resultado_consulta_etapa,
-                        subestado=None,  # Will be set based on committee decision
-                        usuario_responsable=request.user,
-                        fecha_inicio=timezone.now()
-                    )
-                    
-                    # Update current stage
-                    solicitud.etapa_actual = resultado_consulta_etapa
-                    
-                    # Set appropriate subestado based on committee decision
-                    from .modelsWorkflow import SubEstado
-                    subestado_consulta = None
-                    
-                    if resultado.lower() == 'aprobado':
-                        subestado_consulta = SubEstado.objects.filter(
-                            etapa=resultado_consulta_etapa,
-                            nombre__icontains='Aprobado'
-                        ).first()
-                        solicitud.resultado_consulta = 'Aprobado'
-                    elif resultado.lower() == 'rechazado':
-                        subestado_consulta = SubEstado.objects.filter(
-                            etapa=resultado_consulta_etapa,
-                            nombre__icontains='Rechazado'
-                        ).first()
-                        solicitud.resultado_consulta = 'Rechazado'
-                    else:
-                        # For other decisions (like "Solicitar Observaciones" if it exists)
-                        subestado_consulta = SubEstado.objects.filter(
-                            etapa=resultado_consulta_etapa
-                        ).first()
-                        solicitud.resultado_consulta = resultado
-                    
-                    if subestado_consulta:
-                        solicitud.subestado_actual = subestado_consulta
-                        logger.info(f"Set subestado to: {subestado_consulta.nombre}")
-                    
-                    solicitud.save()
-                    logger.info(f"Solicitud moved to Resultado Consulta stage")
-                else:
-                    logger.warning("Resultado Consulta stage not found")
-                    
-            except Exception as e:
-                logger.error(f"Error moving solicitud to Resultado Consulta: {str(e)}")
-                # Don't fail the participation for this
+            # NOTE: Automatic stage transition and email sending moved to separate "Enviar Resultado" action
+            # This allows committee members to save their participation without immediately sending the result
+            # 
+            # # Move solicitud to "Resultado Consulta" stage after committee decision
+            # try:
+            #     # Get "Resultado Consulta" stage
+            #     resultado_consulta_etapa = Etapa.objects.filter(
+            #         nombre__icontains='Resultado Consulta'
+            #     ).first()
+            #     
+            #     if resultado_consulta_etapa:
+            #         logger.info(f"Moving solicitud to Resultado Consulta stage")
+            #         
+            #         # Create new history entry
+            #         HistorialSolicitud.objects.create(
+            #             solicitud=solicitud,
+            #             etapa=resultado_consulta_etapa,
+            #             subestado=None,  # Will be set based on committee decision
+            #             usuario_responsable=request.user,
+            #             fecha_inicio=timezone.now()
+            #         )
+            #         
+            #         # Update current stage
+            #         solicitud.etapa_actual = resultado_consulta_etapa
+            #         
+            #         # Set appropriate subestado based on committee decision
+            #         from .modelsWorkflow import SubEstado
+            #         subestado_consulta = None
+            #         
+            #         if resultado.lower() == 'aprobado':
+            #             subestado_consulta = SubEstado.objects.filter(
+            #                 etapa=resultado_consulta_etapa,
+            #                 nombre__icontains='Aprobado'
+            #             ).first()
+            #             solicitud.resultado_consulta = 'Aprobado'
+            #         elif resultado.lower() == 'rechazado':
+            #             subestado_consulta = SubEstado.objects.filter(
+            #                 etapa=resultado_consulta_etapa,
+            #                 nombre__icontains='Rechazado'
+            #             ).first()
+            #             solicitud.resultado_consulta = 'Rechazado'
+            #         else:
+            #             # For other decisions (like "Solicitar Observaciones" if it exists)
+            #             subestado_consulta = SubEstado.objects.filter(
+            #                 etapa=resultado_consulta_etapa
+            #             ).first()
+            #             solicitud.resultado_consulta = resultado
+            #         
+            #         if subestado_consulta:
+            #             solicitud.subestado_actual = subestado_consulta
+            #             logger.info(f"Set subestado to: {subestado_consulta.nombre}")
+            #         
+            #         solicitud.save()
+            #         logger.info(f"Solicitud moved to Resultado Consulta stage")
+            #         
+            #         # Enviar correo de resultado consulta al propietario
+            #         try:
+            #             logger.info(f"Sending resultado consulta email to propietario for solicitud {solicitud_id}")
+            #             enviar_correo_pdf_resultado_consulta(solicitud)
+            #             logger.info(f"Email sent successfully to propietario")
+            #         except Exception as e:
+            #             logger.error(f"Error sending resultado consulta email: {str(e)}")
+            #             # No fallar la participación por esto
+            #     else:
+            #         logger.warning("Resultado Consulta stage not found")
+            #         
+            # except Exception as e:
+            #     logger.error(f"Error moving solicitud to Resultado Consulta: {str(e)}")
+            #     # Don't fail the participation for this
             
             # Si es reconsideración, actualizar el estado de la reconsideración
             if es_reconsideracion and reconsideracion_id:
@@ -1422,3 +1435,153 @@ def api_avanzar_etapa_comite(request, solicitud_id):
         import traceback
         print(f"Traceback: {traceback.format_exc()}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500) 
+
+
+@login_required
+@require_http_methods(["POST"])
+def api_decision_final_comite(request):
+    """
+    API endpoint para enviar la decisión final del comité.
+    Realiza las acciones que anteriormente se hacían automáticamente al guardar participación:
+    - Avanza la solicitud a "Resultado Consulta"
+    - Establece el subestado apropiado según la decisión
+    - Envía el correo al propietario
+    """
+    try:
+        data = json.loads(request.body)
+        solicitud_id = data.get('solicitud_id')
+        decision_final = data.get('decision_final')
+        comentario_final = data.get('comentario_final', '')
+        
+        if not solicitud_id or not decision_final:
+            return JsonResponse({
+                'success': False, 
+                'error': 'Faltan datos requeridos (solicitud_id, decision_final)'
+            }, status=400)
+        
+        logger.info(f"=== api_decision_final_comite START ===")
+        logger.info(f"User: {request.user}")
+        logger.info(f"Solicitud ID: {solicitud_id}")
+        logger.info(f"Decision final: {decision_final}")
+        logger.info(f"Comentario final: {comentario_final}")
+        
+        # Verificar que la solicitud existe
+        try:
+            solicitud = Solicitud.objects.get(id=solicitud_id)
+        except Solicitud.DoesNotExist:
+            return JsonResponse({
+                'success': False, 
+                'error': 'Solicitud no encontrada'
+            }, status=404)
+        
+        # Verificar que el usuario tiene permisos de comité
+        nivel_usuario = UsuarioNivelComite.objects.filter(usuario=request.user).first()
+        if not nivel_usuario:
+            return JsonResponse({
+                'success': False, 
+                'error': 'Usuario no tiene permisos de comité'
+            }, status=403)
+        
+        # Verificar que hay participaciones para esta solicitud
+        participaciones = ParticipacionComite.objects.filter(solicitud=solicitud)
+        if not participaciones.exists():
+            return JsonResponse({
+                'success': False, 
+                'error': 'No hay participaciones registradas para esta solicitud'
+            }, status=400)
+        
+        with transaction.atomic():
+            # Move solicitud to "Resultado Consulta" stage
+            resultado_consulta_etapa = Etapa.objects.filter(
+                nombre__icontains='Resultado Consulta'
+            ).first()
+            
+            if not resultado_consulta_etapa:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Etapa "Resultado Consulta" no encontrada'
+                }, status=500)
+            
+            logger.info(f"Moving solicitud to Resultado Consulta stage")
+            
+            # Create new history entry
+            HistorialSolicitud.objects.create(
+                solicitud=solicitud,
+                etapa=resultado_consulta_etapa,
+                subestado=None,  # Will be set based on committee decision
+                usuario_responsable=request.user,
+                fecha_inicio=timezone.now()
+            )
+            
+            # Update current stage
+            solicitud.etapa_actual = resultado_consulta_etapa
+            
+            # Set appropriate subestado based on committee decision
+            from .modelsWorkflow import SubEstado
+            subestado_consulta = None
+            
+            if decision_final.lower() == 'aprobado':
+                subestado_consulta = SubEstado.objects.filter(
+                    etapa=resultado_consulta_etapa,
+                    nombre__icontains='Aprobado'
+                ).first()
+                solicitud.resultado_consulta = 'Aprobado'
+            elif decision_final.lower() == 'rechazado':
+                subestado_consulta = SubEstado.objects.filter(
+                    etapa=resultado_consulta_etapa,
+                    nombre__icontains='Rechazado'
+                ).first()
+                solicitud.resultado_consulta = 'Rechazado'
+            else:
+                # For other decisions (like "Solicitar Observaciones")
+                subestado_consulta = SubEstado.objects.filter(
+                    etapa=resultado_consulta_etapa
+                ).first()
+                solicitud.resultado_consulta = decision_final
+            
+            if subestado_consulta:
+                solicitud.subestado_actual = subestado_consulta
+                logger.info(f"Set subestado to: {subestado_consulta.nombre}")
+            
+            solicitud.save()
+            logger.info(f"Solicitud moved to Resultado Consulta stage")
+            
+            # Si hay comentario final, agregarlo como comentario del sistema
+            if comentario_final.strip():
+                SolicitudComentario.objects.create(
+                    solicitud=solicitud,
+                    usuario=request.user,
+                    comentario=f"Comentario adicional de la decisión final del comité: {comentario_final.strip()}",
+                    tipo='sistema',
+                    fecha_creacion=timezone.now()
+                )
+            
+            # Enviar correo de resultado consulta al propietario
+            try:
+                logger.info(f"Sending resultado consulta email to propietario for solicitud {solicitud_id}")
+                enviar_correo_pdf_resultado_consulta(solicitud)
+                logger.info(f"Email sent successfully to propietario")
+            except Exception as e:
+                logger.error(f"Error sending resultado consulta email: {str(e)}")
+                # No fallar la operación por esto
+                
+        logger.info(f"=== api_decision_final_comite SUCCESS ===")
+        return JsonResponse({
+            'success': True,
+            'message': f'Decisión final enviada exitosamente. Solicitud movida a "Resultado Consulta" con resultado: {decision_final}'
+        })
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {e}")
+        return JsonResponse({
+            'success': False, 
+            'error': 'Datos JSON inválidos'
+        }, status=400)
+    except Exception as e:
+        logger.error(f"Unexpected error in api_decision_final_comite: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return JsonResponse({
+            'success': False, 
+            'error': str(e)
+        }, status=500)

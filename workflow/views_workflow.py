@@ -6530,6 +6530,12 @@ def enviar_correo_pdf_resultado_consulta(solicitud):
             tipo="analista_credito"
         ).order_by("-fecha_creacion")
         
+        # Obtener comentarios del sistema (incluye comentario final del comité)
+        comentarios_sistema = SolicitudComentario.objects.filter(
+            solicitud=solicitud,
+            tipo="sistema"
+        ).order_by("-fecha_creacion")
+        
         # Obtener el comentario más reciente del analista
         # Priorizar CalificacionCampo con campo 'comentario_analista_credito'
         analyst_comment = ""
@@ -6565,9 +6571,11 @@ def enviar_correo_pdf_resultado_consulta(solicitud):
         # Crear lista enriquecida de calificaciones con valores vacíos
         calificaciones_with_values = []
         for cal in calificaciones:
+            # Usar la función obtener_nombre_campo_legible para obtener el nombre legible
+            campo_legible = obtener_nombre_campo_legible(cal.campo, solicitud)
             cal_dict = {
                 'campo': cal.campo,
-                'campo_legible': getattr(cal, 'campo_legible', None),
+                'campo_legible': campo_legible,
                 'estado': cal.estado,
                 'comentario': cal.comentario,
                 'field_value': '',  # Empty for email PDF
@@ -6594,11 +6602,20 @@ def enviar_correo_pdf_resultado_consulta(solicitud):
             print(f"⚠️ Error obteniendo fecha de consulta: {e}")
             # Mantener fecha_creacion como fallback
         
+        # Obtener participaciones del comité
+        from .modelsWorkflow import ParticipacionComite
+        participaciones_comite = ParticipacionComite.objects.filter(
+            solicitud=solicitud
+        ).select_related('usuario', 'nivel').order_by('nivel__orden', 'fecha_modificacion')
+        
+        print(f"📊 Including {participaciones_comite.count()} committee participations and {comentarios_sistema.count()} system comments in PDF for solicitud {solicitud.codigo}")
+        
         # Preparar contexto para el template
         context = {
             'solicitud': solicitud,
             'calificaciones': calificaciones_with_values,
             'comentarios_analista': comentarios_analista,
+            'comentarios_sistema': comentarios_sistema,  # Add system comments (includes final committee comment)
             'analyst_comment': analyst_comment,
             'analyst_user': analyst_user,
             'analyst_date': analyst_date,
@@ -6607,6 +6624,7 @@ def enviar_correo_pdf_resultado_consulta(solicitud):
             'fecha_generacion': timezone.now(),
             'fecha_consulta': fecha_consulta,  # Fecha real de consulta
             'logo_path': os.path.join(settings.BASE_DIR, 'static', 'images', 'logoBlanco.png'),
+            'participaciones_comite': participaciones_comite,  # Add committee participations
         }
         
         # Renderizar HTML usando el template optimizado
@@ -17590,6 +17608,60 @@ def api_pdf_resultado_consulta(request, solicitud_id):
         # Parsear datos del request
         data = json.loads(request.body) if request.body else {}
         
+        # Check if this is a preview mode (from committee modal)
+        is_preview_mode = data.get('preview_mode', False)
+        current_participation = data.get('current_participation', {})
+        
+        # Import required modules
+        from django.template.loader import render_to_string
+        from django.utils import timezone
+        
+        # Obtener calificaciones existentes de la base de datos
+        calificaciones = CalificacionCampo.objects.filter(solicitud=solicitud)
+        
+        # Obtener participaciones existentes del comité
+        from .modelsWorkflow import ParticipacionComite, NivelComite
+        participaciones_existentes = ParticipacionComite.objects.filter(
+            solicitud=solicitud
+        ).select_related('usuario', 'nivel').order_by('nivel__orden', '-fecha_modificacion')
+        
+        # Preparar lista de participaciones para el PDF
+        participaciones_comite = []
+        for part in participaciones_existentes:
+            participaciones_comite.append({
+                'nivel': part.nivel.nombre if part.nivel else 'N/A',
+                'usuario': part.usuario.get_full_name() if part.usuario else 'N/A',
+                'resultado': part.resultado,
+                'comentario': part.comentario,
+                'fecha_modificacion': part.fecha_modificacion,
+                'is_preview': False
+            })
+        
+        # Si estamos en modo preview y hay datos de participación actual, agregarlos
+        if is_preview_mode and current_participation:
+            resultado_preview = current_participation.get('resultado', '')
+            comentario_preview = current_participation.get('comentario', '')
+            nivel_id_preview = current_participation.get('nivel_id')
+            usuario_nombre_preview = current_participation.get('usuario_nombre', request.user.get_full_name() or request.user.username)
+            
+            if resultado_preview and comentario_preview and nivel_id_preview:
+                try:
+                    nivel_preview = NivelComite.objects.get(id=nivel_id_preview)
+                    # Agregar la participación de preview
+                    participaciones_comite.append({
+                        'nivel': nivel_preview.nombre,
+                        'usuario': usuario_nombre_preview,
+                        'resultado': resultado_preview,
+                        'comentario': comentario_preview,
+                        'fecha_modificacion': timezone.now(),
+                        'is_preview': True
+                    })
+                except NivelComite.DoesNotExist:
+                    pass  # Continuar sin la participación de preview si el nivel no existe
+        
+        # Parsear datos del request
+        data = json.loads(request.body) if request.body else {}
+        
         # Import required modules
         from django.template.loader import render_to_string
         from django.utils import timezone
@@ -17636,14 +17708,36 @@ def api_pdf_resultado_consulta(request, solicitud_id):
         calificaciones_with_values = []
         for cal in calificaciones:
             field_value = field_values.get(cal.campo, '')
+            # Usar la función obtener_nombre_campo_legible para obtener el nombre legible
+            campo_legible = obtener_nombre_campo_legible(cal.campo, solicitud)
             cal_dict = {
                 'campo': cal.campo,
-                'campo_legible': getattr(cal, 'campo_legible', None),
+                'campo_legible': campo_legible,
                 'estado': cal.estado,
                 'comentario': cal.comentario,
                 'field_value': field_value,
             }
             calificaciones_with_values.append(cal_dict)
+        
+        # Obtener fecha de consulta (cuando la solicitud llegó a la etapa "Consulta")
+        fecha_consulta = solicitud.fecha_creacion  # Default fallback
+        try:
+            from workflow.modelsWorkflow import HistorialSolicitud, Etapa
+            
+            # Buscar el historial cuando llegó a la etapa "Consulta"
+            consulta_etapa = Etapa.objects.filter(nombre__icontains='Consulta').first()
+            if consulta_etapa:
+                historial_consulta = HistorialSolicitud.objects.filter(
+                    solicitud=solicitud,
+                    etapa=consulta_etapa
+                ).first()
+                
+                if historial_consulta:
+                    fecha_consulta = historial_consulta.fecha_inicio
+                    
+        except Exception as e:
+            print(f"⚠️ Error obteniendo fecha de consulta: {e}")
+            # Mantener fecha_creacion como fallback
         
         # Preparar contexto para el template
         context = {
@@ -17654,7 +17748,10 @@ def api_pdf_resultado_consulta(request, solicitud_id):
             'resultado_analisis': resultado_analisis,
             'field_values': field_values,  # Keep for backward compatibility
             'fecha_generacion': timezone.now(),
+            'fecha_consulta': fecha_consulta,  # Fecha real de consulta
             'logo_path': os.path.join(settings.BASE_DIR, 'static', 'images', 'logoBlanco.png'),
+            'participaciones_comite': participaciones_comite,  # Add committee participations
+            'is_preview_mode': is_preview_mode,  # Add preview mode flag
         }
         
         # Renderizar HTML usando el template optimizado
@@ -18021,14 +18118,36 @@ def api_pdf_resultado_comite(request, solicitud_id):
         calificaciones_with_values = []
         for cal in calificaciones:
             field_value = field_values.get(cal.campo, '')
+            # Usar la función obtener_nombre_campo_legible para obtener el nombre legible
+            campo_legible = obtener_nombre_campo_legible(cal.campo, solicitud)
             cal_dict = {
                 'campo': cal.campo,
-                'campo_legible': getattr(cal, 'campo_legible', None),
+                'campo_legible': campo_legible,
                 'estado': cal.estado,
                 'comentario': cal.comentario,
                 'field_value': field_value,
             }
             calificaciones_with_values.append(cal_dict)
+        
+        # Obtener fecha de consulta (cuando la solicitud llegó a la etapa "Consulta")
+        fecha_consulta = solicitud.fecha_creacion  # Default fallback
+        try:
+            from workflow.modelsWorkflow import HistorialSolicitud, Etapa
+            
+            # Buscar el historial cuando llegó a la etapa "Consulta"
+            consulta_etapa = Etapa.objects.filter(nombre__icontains='Consulta').first()
+            if consulta_etapa:
+                historial_consulta = HistorialSolicitud.objects.filter(
+                    solicitud=solicitud,
+                    etapa=consulta_etapa
+                ).first()
+                
+                if historial_consulta:
+                    fecha_consulta = historial_consulta.fecha_inicio
+                    
+        except Exception as e:
+            print(f"⚠️ Error obteniendo fecha de consulta: {e}")
+            # Mantener fecha_creacion como fallback
         
         # Preparar contexto para el template
         context = {
@@ -18043,6 +18162,7 @@ def api_pdf_resultado_comite(request, solicitud_id):
             'compliance_ratings': data.get('compliance_ratings', []),
             'usuario_generador': request.user,
             'fecha_generacion': timezone.now(),
+            'fecha_consulta': fecha_consulta,  # Fecha real de consulta
         }
         
         # Renderizar HTML usando el template simple (evita problemas con fuentes externas)

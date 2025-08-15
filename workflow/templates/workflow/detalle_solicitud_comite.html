@@ -997,6 +997,27 @@
                                     </div>
                                     <div class="info-row-with-status">
                                         <div class="info-data">
+                                            <span class="info-label">Monto en Letra:</span>
+                                            <span class="info-value">
+                                                {% if solicitud.cotizacion.wrkMontoLetra %}
+                                                    {{ solicitud.cotizacion.wrkMontoLetra }}
+                                                {% else %}
+                                                    Sin datos
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                        <div class="compliance-status">
+                                            {% for calificacion in solicitud.calificaciones_campos.all %}
+                                                {% if calificacion.campo == 'total_letra' %}
+                                                    <span class="status-badge status-{{ calificacion.estado }}" title="{{ calificacion.comentario|default:calificacion.get_estado_display }}">
+                                                        <i class="fas {{ calificacion.get_estado_icon }}"></i>
+                                                    </span>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    <div class="info-row-with-status">
+                                        <div class="info-data">
                                             <span class="info-label">Plazo:</span>
                                             <span class="info-value">
                                                 {% if solicitud.cotizacion.plazoPago %}
@@ -1009,27 +1030,6 @@
                                         <div class="compliance-status">
                                             {% for calificacion in solicitud.calificaciones_campos.all %}
                                                 {% if calificacion.campo == 'plazo' %}
-                                                    <span class="status-badge status-{{ calificacion.estado }}" title="{{ calificacion.comentario|default:calificacion.get_estado_display }}">
-                                                        <i class="fas {{ calificacion.get_estado_icon }}"></i>
-                                                    </span>
-                                                {% endif %}
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                    <div class="info-row-with-status">
-                                        <div class="info-data">
-                                            <span class="info-label">Cuota Mensual:</span>
-                                            <span class="info-value">
-                                                {% if solicitud.cotizacion.cuotaMensual %}
-                                                    B/. {{ solicitud.cotizacion.cuotaMensual|floatformat:2 }}
-                                                {% else %}
-                                                    Sin datos
-                                                {% endif %}
-                                            </span>
-                                        </div>
-                                        <div class="compliance-status">
-                                            {% for calificacion in solicitud.calificaciones_campos.all %}
-                                                {% if calificacion.campo == 'cuota_mensual' %}
                                                     <span class="status-badge status-{{ calificacion.estado }}" title="{{ calificacion.comentario|default:calificacion.get_estado_display }}">
                                                         <i class="fas {{ calificacion.get_estado_icon }}"></i>
                                                     </span>
@@ -1139,27 +1139,6 @@
                                         </div>
                                     </div>
                                     {% endif %}
-                                    <div class="info-row-with-status">
-                                        <div class="info-data">
-                                            <span class="info-label">Prima Inicial:</span>
-                                            <span class="info-value">
-                                                {% if solicitud.cotizacion.primaInicial %}
-                                                    B/. {{ solicitud.cotizacion.primaInicial|floatformat:2 }}
-                                                {% else %}
-                                                    Sin datos
-                                                {% endif %}
-                                            </span>
-                                        </div>
-                                        <div class="compliance-status">
-                                            {% for calificacion in solicitud.calificaciones_campos.all %}
-                                                {% if calificacion.campo == 'prima_inicial' %}
-                                                    <span class="status-badge status-{{ calificacion.estado }}" title="{{ calificacion.comentario|default:calificacion.get_estado_display }}">
-                                                        <i class="fas {{ calificacion.get_estado_icon }}"></i>
-                                                    </span>
-                                                {% endif %}
-                                            {% endfor %}
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1246,11 +1225,6 @@
                                     <span id="analisis-fecha"></span>
                                 </div>
                             </div>
-                            <div>
-                                <button type="button" class="btn btn-success btn-sm" id="btn-pdf-resultado-comite">
-                                    <i class="fas fa-file-pdf me-1"></i>PDF resultado comité
-                                </button>
-                            </div>
                         </div>
                     </div>
                     <div class="card-body">
@@ -1312,9 +1286,8 @@
                                     <i class="fas fa-arrow-up me-1"></i>
                                     Escalar a nivel superior
                                 </button>
-                                <button type="button" class="btn btn-success btn-sm" id="btnAvanzarEtapa" onclick="mostrarModalAvanzarEtapa()" disabled>
-                                    <i class="fas fa-forward me-1"></i>
-                                    Resultado de Comité
+                                <button type="button" class="btn btn-success btn-sm" id="btn-pdf-resultado-comite">
+                                    <i class="fas fa-file-pdf me-1"></i>PDF resultado comité
                                 </button>
                             </div>
                             {% endif %}
@@ -1409,6 +1382,24 @@
                             </div>
                         </div>
                         {% endif %}
+                        
+                        <!-- Decisión Final Section -->
+                        {% if participaciones and nivel_usuario %}
+                        <div class="card-footer bg-light">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Una vez que envíes la decisión final, se notificará al propietario de la solicitud
+                                    </small>
+                                </div>
+                                <button type="button" class="btn btn-success" onclick="mostrarModalDecisionFinal()" id="btnDecisionFinal">
+                                    <i class="fas fa-paper-plane me-1"></i>
+                                    Enviar Decisión Final
+                                </button>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -1498,6 +1489,32 @@
                                 <strong>Solicitud:</strong> {{ solicitud.codigo }} - {{ solicitud.cliente_nombre_completo|default:"Sin cliente" }}
                                 <br>
                                 <strong>Monto:</strong> {{ solicitud.monto_formateado }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Instrucciones importantes -->
+                    <div class="alert alert-warning mb-4">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+                            </div>
+                            <div>
+                                <h6 class="alert-heading mb-2">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Instrucciones Importantes
+                                </h6>
+                                <ul class="mb-2">
+                                    <li><strong>El Oficial de Negocios será notificado automáticamente</strong> con el resultado final del comité</li>
+                                    <li><strong>Se enviará un PDF completo</strong> con todos los detalles y decisiones del comité</li>
+                                    <li><strong>Su decisión es final</strong> y formará parte del resultado oficial</li>
+                                </ul>
+                                <div class="mt-3">
+                                    <button type="button" class="btn btn-outline-info btn-sm" onclick="descargarPdfResultadoComite()">
+                                        <i class="fas fa-file-pdf me-1"></i>
+                                        Previsualizar PDF que recibirá el Oficial
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1650,6 +1667,84 @@
     </div>
 </div>
 
+<!-- Modal para Decisión Final -->
+<div class="modal fade" id="modalDecisionFinal" tabindex="-1" aria-labelledby="modalDecisionFinalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalDecisionFinalLabel">
+                    <i class="fas fa-paper-plane me-2"></i>
+                    Enviar Decisión Final del Comité
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Importante:</strong> Al enviar la decisión final se notificará al propietario de la solicitud y se avanzará la solicitud a la etapa "Resultado Consulta".
+                </div>
+                
+                <h6>Resumen de Participaciones:</h6>
+                <div class="table-responsive mb-4">
+                    <table class="table table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nivel</th>
+                                <th>Usuario</th>
+                                <th>Resultado</th>
+                                <th>Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resumenParticipaciones">
+                            <!-- Se llenará dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="decisionFinal" class="form-label">
+                        <strong>Decisión Final del Comité:</strong>
+                    </label>
+                    <select id="decisionFinal" class="form-select" required>
+                        <option value="">Seleccionar resultado...</option>
+                        <option value="Aprobado">Aprobado</option>
+                        <option value="Rechazado">Rechazado</option>
+                        <option value="Solicitar Observaciones">Solicitar Observaciones</option>
+                    </select>
+                    <div class="form-text">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Se preseleccionará automáticamente basado en la participación más reciente.
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="comentarioFinal" class="form-label">Comentario adicional:</label>
+                    <textarea id="comentarioFinal" class="form-control" rows="3" 
+                              placeholder="Este campo se prellenará con el comentario de la participación más reciente..."></textarea>
+                    <div class="form-text">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Se prellenará automáticamente con el comentario de la participación más reciente. Puede modificarlo o agregarlo si es necesario.
+                    </div>
+                </div>
+                
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="confirmacionEnvio" required>
+                    <label class="form-check-label" for="confirmacionEnvio">
+                        Confirmo que he revisado todas las participaciones y deseo enviar la decisión final
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success btn-enviar-decision" onclick="enviarDecisionFinal()" disabled>
+                    <i class="fas fa-paper-plane me-1"></i>
+                    Enviar Decisión Final
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -1716,6 +1811,17 @@
         
         if (!comentario || comentario.trim() === '') {
             mostrarToast('Debe escribir un comentario', 'error');
+            return;
+        }
+        
+        // Mostrar confirmación antes de procesar
+        const resultadoTexto = {
+            'APROBADO': '✅ APROBADO',
+            'RECHAZADO': '❌ RECHAZADO', 
+            'OBSERVACIONES': '⚠️ ALTERNATIVA'
+        }[resultado] || resultado;
+        
+        if (!confirm(`¿Está seguro que desea registrar su participación con resultado: ${resultadoTexto}?\n\nEsta decisión será registrada oficialmente y el Oficial de Negocios será notificado automáticamente.`)) {
             return;
         }
         
@@ -2175,14 +2281,13 @@
             'valor_equipo': 'Valor del Equipo',
             'abono': 'Abono',
             'monto_financiado': 'Monto Financiado',
+            'total_letra': 'Monto en Letra',
             'plazo': 'Plazo',
-            'cuota_mensual': 'Cuota Mensual',
             'tipo_producto': 'Tipo de Producto',
             'rentabilidad': 'Rentabilidad',
             'marca': 'Marca',
             'modelo': 'Modelo',
-            'año': 'Año',
-            'prima_inicial': 'Prima Inicial'
+            'año': 'Año'
         };
         
         return fieldNames[field] || field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -2209,6 +2314,98 @@
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+    
+    // Función para descargar PDF Resultado Comité (para previsualización en modal)
+    function descargarPdfResultadoComite() {
+        const btnElement = event.target.closest('button');
+        const originalContent = btnElement.innerHTML;
+        
+        try {
+            // Show loading state
+            btnElement.disabled = true;
+            btnElement.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Generando PDF...';
+            
+            // Get solicitud ID from global variable
+            if (!solicitudId) {
+                throw new Error('No se pudo obtener el ID de la solicitud');
+            }
+            
+            console.log('Generating PDF resultado comité preview for solicitud:', solicitudId);
+            
+            // Get current form data to include in preview
+            const form = document.getElementById('form-participacion-comite-modal');
+            const formData = new FormData(form);
+            const resultado = formData.get('resultado');
+            const comentario = formData.get('comentario');
+            
+            // Prepare preview data
+            const previewData = {
+                preview_mode: true,
+                current_participation: {
+                    resultado: resultado || '',
+                    comentario: comentario || '',
+                    nivel_id: nivelUsuarioId,
+                    usuario_nombre: '{{ request.user.get_full_name|default:request.user.username|escapejs }}'
+                }
+            };
+            
+            console.log('Sending preview data:', previewData);
+            
+            // Make API call to generate PDF using the consulta template (like the email function)
+            fetch(`/workflow/api/solicitudes/${solicitudId}/pdf-resultado-consulta/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify(previewData),
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Check if response is PDF
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/pdf')) {
+                    throw new Error('La respuesta no es un archivo PDF válido');
+                }
+                
+                return response.blob();
+            })
+            .then(blob => {
+                // Create blob and download
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `Preview_Resultado_Comite_${solicitudId}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+                
+                // Show success message
+                mostrarToast('PDF generado correctamente', 'success');
+            })
+            .catch(error => {
+                console.error('Error generating PDF:', error);
+                mostrarToast(`Error al generar el PDF: ${error.message}`, 'error');
+            })
+            .finally(() => {
+                // Restore button state
+                btnElement.disabled = false;
+                btnElement.innerHTML = originalContent;
+            });
+            
+        } catch (error) {
+            console.error('Error:', error);
+            mostrarToast(`Error: ${error.message}`, 'error');
+            btnElement.disabled = false;
+            btnElement.innerHTML = originalContent;
+        }
     }
     
     // PDF Resultado Comité functionality
@@ -2574,6 +2771,174 @@
         } else {
             alert(mensaje);
         }
+    }
+
+    // Función para mostrar modal de decisión final
+    function mostrarModalDecisionFinal() {
+        const modal = new bootstrap.Modal(document.getElementById('modalDecisionFinal'));
+        
+        // Llenar el resumen de participaciones y preseleccionar valores
+        llenarResumenParticipaciones();
+        
+        // Habilitar/deshabilitar botón basado en checkbox
+        const confirmacion = document.getElementById('confirmacionEnvio');
+        const decisionSelect = document.getElementById('decisionFinal');
+        const btnEnviar = document.querySelector('.btn-enviar-decision');
+        
+        function actualizarBoton() {
+            btnEnviar.disabled = !confirmacion.checked || !decisionSelect.value;
+        }
+        
+        confirmacion.addEventListener('change', actualizarBoton);
+        decisionSelect.addEventListener('change', actualizarBoton);
+        
+        modal.show();
+    }
+    
+    // Función para llenar el resumen de participaciones en el modal
+    function llenarResumenParticipaciones() {
+        const tbody = document.getElementById('resumenParticipaciones');
+        const decisionSelect = document.getElementById('decisionFinal');
+        const comentarioTextarea = document.getElementById('comentarioFinal');
+        tbody.innerHTML = '';
+        
+        // Obtener participaciones actuales de la tabla
+        const participacionRows = document.querySelectorAll('.participacion-row');
+        let latestParticipation = null;
+        let latestDate = null;
+        
+        participacionRows.forEach(row => {
+            const celdas = row.querySelectorAll('td');
+            if (celdas.length >= 5) {
+                // Create summary row
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${celdas[0].textContent.trim()}</td>
+                    <td>${celdas[1].textContent.trim()}</td>
+                    <td>${celdas[2].innerHTML}</td>
+                    <td>${celdas[4].textContent.trim()}</td>
+                `;
+                tbody.appendChild(tr);
+                
+                // Track the latest participation for preselection
+                const fechaText = celdas[4].textContent.trim();
+                const resultadoBadge = celdas[2].querySelector('.badge');
+                const comentarioDiv = celdas[3].querySelector('.comentario-preview');
+                
+                if (fechaText && resultadoBadge && comentarioDiv) {
+                    // Parse the date (format: dd/mm/yyyy hh:mm)
+                    const [datePart, timePart] = fechaText.split(' ');
+                    const [day, month, year] = datePart.split('/');
+                    const [hour, minute] = timePart.split(':');
+                    const participationDate = new Date(year, month - 1, day, hour, minute);
+                    
+                    if (!latestDate || participationDate > latestDate) {
+                        latestDate = participationDate;
+                        
+                        // Get the result from the badge class
+                        const badgeClasses = resultadoBadge.className;
+                        let resultado = '';
+                        if (badgeClasses.includes('resultado-APROBADO')) {
+                            resultado = 'Aprobado';
+                        } else if (badgeClasses.includes('resultado-RECHAZADO')) {
+                            resultado = 'Rechazado';
+                        } else if (badgeClasses.includes('resultado-OBSERVACIONES')) {
+                            resultado = 'Solicitar Observaciones';
+                        }
+                        
+                        // Get the full comment (check if there's a "Ver más" button)
+                        let comentario = comentarioDiv.textContent.trim();
+                        const verMasBtn = celdas[3].querySelector('button[onclick*="mostrarComentarioCompleto"]');
+                        if (verMasBtn) {
+                            // Extract the full comment from the onclick attribute
+                            const onclickAttr = verMasBtn.getAttribute('onclick');
+                            const match = onclickAttr.match(/mostrarComentarioCompleto\('(.+?)'\)/);
+                            if (match && match[1]) {
+                                // Decode HTML entities and escape sequences
+                                comentario = match[1]
+                                    .replace(/\\'/g, "'")
+                                    .replace(/\\"/g, '"')
+                                    .replace(/&lt;/g, '<')
+                                    .replace(/&gt;/g, '>')
+                                    .replace(/&amp;/g, '&');
+                            }
+                        }
+                        
+                        latestParticipation = {
+                            resultado: resultado,
+                            comentario: comentario
+                        };
+                    }
+                }
+            }
+        });
+        
+        // Preselect the decision and prefill the comment based on latest participation
+        if (latestParticipation) {
+            if (latestParticipation.resultado) {
+                decisionSelect.value = latestParticipation.resultado;
+            }
+            if (latestParticipation.comentario) {
+                comentarioTextarea.value = latestParticipation.comentario;
+            }
+        }
+        
+        // Trigger change event to update button state
+        decisionSelect.dispatchEvent(new Event('change'));
+    }
+    
+    // Función para enviar la decisión final
+    function enviarDecisionFinal() {
+        const decisionFinal = document.getElementById('decisionFinal').value;
+        const comentarioFinal = document.getElementById('comentarioFinal').value;
+        
+        if (!decisionFinal) {
+            mostrarToast('Por favor seleccione una decisión final', 'error');
+            return;
+        }
+        
+        const btnEnviar = document.querySelector('.btn-enviar-decision');
+        btnEnviar.disabled = true;
+        btnEnviar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Enviando...';
+        
+        // Hacer la llamada al API para enviar la decisión final
+        fetch(`/workflow/api/comite/decision-final/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+            },
+            body: JSON.stringify({
+                solicitud_id: solicitudId,
+                decision_final: decisionFinal,
+                comentario_final: comentarioFinal
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarToast('Decisión final enviada exitosamente', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('modalDecisionFinal')).hide();
+                
+                // Ocultar el botón de decisión final
+                document.getElementById('btnDecisionFinal').style.display = 'none';
+                
+                // Recargar la página después de un breve delay
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                mostrarToast('Error: ' + (data.error || 'No se pudo enviar la decisión final'), 'error');
+                btnEnviar.disabled = false;
+                btnEnviar.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Enviar Decisión Final';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarToast('Error de conexión. Por favor intente de nuevo.', 'error');
+            btnEnviar.disabled = false;
+            btnEnviar.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Enviar Decisión Final';
+        });
     }
 </script>
 

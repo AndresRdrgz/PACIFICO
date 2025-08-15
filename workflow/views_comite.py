@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.db import models
+from .views_workflow import enviar_correo_pdf_resultado_consulta
 
 @login_required
 def bandeja_comite_view(request):
