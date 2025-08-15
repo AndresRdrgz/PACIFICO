@@ -130,13 +130,13 @@
             font-weight: bold;
             color: #009c3c;
             background: #f8fafc;
-            width: 20%;
+            width: 70%;
             font-size: 7px;
         }
         
         .eval-table .eval-status {
             text-align: center;
-            width: 8%;
+            width: 30%;
             font-weight: bold;
         }
         
@@ -144,7 +144,7 @@
             color: #4b5563;
             font-style: italic;
             font-size: 7px;
-            width: 22%;
+            width: 70%;
         }
         
         .eval-table .status-good {
@@ -543,49 +543,142 @@
         </div>
         {% endif %}
         
-        <!-- Tabla compacta de evaluaciones - Mostrar todos los campos excepto comentario_analista_credito -->
-        <table class="eval-table">
-            {% for cal in calificaciones %}
-                {% if 'comentario_analista_credito' not in cal.campo %}
-                    {% if forloop.counter0|divisibleby:4 %}
-                        <tr>
-                    {% endif %}
-                    <td class="eval-field">
-                        <strong>{{ cal.campo_legible|default:cal.campo|truncatewords:1 }}</strong>
-                        {% if cal.field_value %}
-                            <br><span style="font-weight: normal; color: #6b7280; font-size: 6px;">{{ cal.field_value|truncatewords:3 }}</span>
-                        {% endif %}
-                    </td>
-                    <td class="eval-status {% if cal.estado == 'bueno' %}status-good{% else %}status-bad{% endif %}">
-                        {% if cal.estado == 'bueno' %}✓{% else %}✗{% endif %}
-                    </td>
-                    {% if forloop.counter|divisibleby:4 or forloop.last %}
-                        </tr>
-                    {% endif %}
-                {% endif %}
-            {% endfor %}
+        <!-- Calificaciones organizadas en layout 2x2 -->
+        
+        <!-- Primera fila: Información del Cliente + Detalle de la Solicitud -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px;">
+            <tr>
+                <!-- Sección 1: Información del Cliente -->
+                <td style="width: 50%; vertical-align: top; padding-right: 8px;">
+                    <div style="font-weight: bold; color: #009c3c; font-size: 10px; margin-bottom: 4px; border-bottom: 1px solid #e5e7eb; padding-bottom: 2px;">
+                        Información del Cliente
+                    </div>
+                    <table class="eval-table">
+                        {% for cal in calificaciones %}
+                            {% if cal.campo in 'empresa_privada,cargo,tiempo_servicio,salario,score,politica,sector' and 'comentario_analista_credito' not in cal.campo %}
+                                <tr>
+                                    <td class="eval-field">{{ cal.campo_legible|default:cal.campo }}</td>
+                                    <td class="eval-status {% if cal.estado == 'bueno' %}status-good{% else %}status-bad{% endif %}">
+                                        {% if cal.estado == 'bueno' %}✓{% else %}✗{% endif %}
+                                    </td>
+                                    <td class="eval-comment">
+                                        {% if cal.comentario %}
+                                            {{ cal.comentario|truncatewords:8 }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </table>
+                </td>
+                
+                <!-- Sección 2: Detalle de la Solicitud -->
+                <td style="width: 50%; vertical-align: top; padding-left: 8px;">
+                    <div style="font-weight: bold; color: #009c3c; font-size: 10px; margin-bottom: 4px; border-bottom: 1px solid #e5e7eb; padding-bottom: 2px;">
+                        Detalle de la Solicitud
+                    </div>
+                    <table class="eval-table">
+                        {% for cal in calificaciones %}
+                            {% if cal.campo in 'valor_equipo,abono,monto_financiado,plazo,rentabilidad,total_letra' and 'comentario_analista_credito' not in cal.campo %}
+                                <tr>
+                                    <td class="eval-field">{{ cal.campo_legible|default:cal.campo }}</td>
+                                    <td class="eval-status {% if cal.estado == 'bueno' %}status-good{% else %}status-bad{% endif %}">
+                                        {% if cal.estado == 'bueno' %}✓{% else %}✗{% endif %}
+                                    </td>
+                                    <td class="eval-comment">
+                                        {% if cal.comentario %}
+                                            {{ cal.comentario|truncatewords:8 }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </table>
+                </td>
+            </tr>
         </table>
         
-        <!-- Comentarios de evaluaciones en tabla horizontal - Mostrar todos los campos con comentarios -->
-        <table class="eval-table">
-            <tr style="background: #f1f5f9;">
-                <td style="font-weight: bold; color: #009c3c; font-size: 8px; padding: 3px; width: 15%;">Campo</td>
-                <td style="font-weight: bold; color: #009c3c; font-size: 8px; padding: 3px;">Comentario Específico</td>
+        <!-- Segunda fila: Datos del Vehículo + Adjuntos -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px;">
+            <tr>
+                <!-- Sección 3: Datos del Vehículo -->
+                <td style="width: 50%; vertical-align: top; padding-right: 8px;">
+                    <div style="font-weight: bold; color: #009c3c; font-size: 10px; margin-bottom: 4px; border-bottom: 1px solid #e5e7eb; padding-bottom: 2px;">
+                        Datos del Vehículo
+                    </div>
+                    <table class="eval-table">
+                        {% for cal in calificaciones %}
+                            {% if cal.campo in 'marca,modelo,año,transmision,kilometraje' and 'comentario_analista_credito' not in cal.campo %}
+                                <tr>
+                                    <td class="eval-field">{{ cal.campo_legible|default:cal.campo }}</td>
+                                    <td class="eval-status {% if cal.estado == 'bueno' %}status-good{% else %}status-bad{% endif %}">
+                                        {% if cal.estado == 'bueno' %}✓{% else %}✗{% endif %}
+                                    </td>
+                                    <td class="eval-comment">
+                                        {% if cal.comentario %}
+                                            {{ cal.comentario|truncatewords:8 }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </table>
+                </td>
+                
+                <!-- Sección 4: Adjuntos -->
+                <td style="width: 50%; vertical-align: top; padding-left: 8px;">
+                    <div style="font-weight: bold; color: #009c3c; font-size: 10px; margin-bottom: 4px; border-bottom: 1px solid #e5e7eb; padding-bottom: 2px;">
+                        Adjuntos
+                    </div>
+                    <table class="eval-table">
+                        {% for cal in calificaciones %}
+                            {% if 'doc_' in cal.campo and 'comentario_analista_credito' not in cal.campo %}
+                                <tr>
+                                    <td class="eval-field">{{ cal.campo_legible|default:cal.campo }}</td>
+                                    <td class="eval-status {% if cal.estado == 'bueno' %}status-good{% else %}status-bad{% endif %}">
+                                        {% if cal.estado == 'bueno' %}✓{% else %}✗{% endif %}
+                                    </td>
+                                    <td class="eval-comment">
+                                        {% if cal.comentario %}
+                                            {{ cal.comentario|truncatewords:8 }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </table>
+                </td>
             </tr>
+        </table>
+        
+        <!-- Comentarios específicos (si los hay) -->
+        {% if calificaciones %}
             {% for cal in calificaciones %}
                 {% if cal.comentario and 'comentario_analista_credito' not in cal.campo %}
-                <tr>
-                    <td class="eval-field">
-                        <strong>{{ cal.campo_legible|default:cal.campo|truncatewords:1 }}</strong>
-                        {% if cal.field_value %}
-                            <br><span style="font-weight: normal; color: #6b7280; font-size: 6px;">{{ cal.field_value|truncatewords:3 }}</span>
-                        {% endif %}
-                    </td>
-                    <td class="eval-comment">{{ cal.comentario|truncatewords:15 }}</td>
-                </tr>
+                    {% if forloop.first %}
+                        <div style="margin-top: 8px;">
+                            <div style="font-weight: bold; color: #009c3c; font-size: 9px; margin-bottom: 4px;">Comentarios Específicos:</div>
+                            <table class="eval-table">
+                    {% endif %}
+                                <tr>
+                                    <td class="eval-field">{{ cal.campo_legible|default:cal.campo }}</td>
+                                    <td class="eval-comment">{{ cal.comentario|truncatewords:15 }}</td>
+                                </tr>
+                    {% if forloop.last %}
+                            </table>
+                        </div>
+                    {% endif %}
                 {% endif %}
             {% endfor %}
-        </table>
+        {% endif %}
         
         <!-- Comentarios recientes en tabla centrada -->
         {% if comentarios_analista %}
