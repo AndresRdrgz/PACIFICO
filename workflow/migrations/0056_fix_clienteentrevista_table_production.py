@@ -17,13 +17,12 @@ def fix_clienteentrevista_table(apps, schema_editor):
     with transaction.atomic():
         try:
             with connection.cursor() as cursor:
-                # Check if table exists by querying information_schema (PostgreSQL)
+                # Check if table exists (SQLite compatible)
                 cursor.execute("""
-                    SELECT COUNT(*) 
-                    FROM information_schema.tables 
-                    WHERE table_name = %s AND table_schema = 'public'
+                    SELECT name FROM sqlite_master 
+                    WHERE type='table' AND name=?
                 """, [table_name])
-                table_exists = cursor.fetchone()[0] > 0
+                table_exists = cursor.fetchone() is not None
         except Exception as e:
             print(f"Error checking table existence: {e}")
             table_exists = False

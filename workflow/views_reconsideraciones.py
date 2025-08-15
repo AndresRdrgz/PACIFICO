@@ -651,6 +651,7 @@ def api_historial_reconsideraciones(request, solicitud_id):
                 'comentario_analisis': recon.comentario_analisis,
                 'resultado_anterior': recon.resultado_consulta_anterior,
                 'comentario_anterior': recon.comentario_consulta_anterior,
+                'archivo_adjunto': recon.archivo_adjunto.url if recon.archivo_adjunto else None,
                 'creado_en': recon.creado_en.isoformat() if hasattr(recon, 'creado_en') and recon.creado_en else recon.fecha_solicitud.isoformat(),
                 'actualizado_en': recon.actualizado_en.isoformat() if hasattr(recon, 'actualizado_en') and recon.actualizado_en else None,
             })
@@ -687,14 +688,45 @@ def api_solicitar_reconsideracion(request, solicitud_id):
                 'message': reason
             })
         
-        data = json.loads(request.body)
-        motivo = data.get('motivo', '').strip()
-        cotizacion_id = data.get('cotizacion_id')
+        # Handle both JSON and FormData
+        if request.content_type == 'application/json':
+            data = json.loads(request.body)
+            motivo = data.get('motivo', '').strip()
+            cotizacion_id = data.get('cotizacion_id')
+            archivo_pdf = None
+        else:
+            # FormData (when uploading files)
+            motivo = request.POST.get('motivo', '').strip()
+            cotizacion_id = request.POST.get('cotizacion_id')
+            archivo_pdf = request.FILES.get('archivo_pdf')
         
         if not motivo:
             return JsonResponse({
                 'success': False,
                 'message': 'Debe proporcionar un motivo para la reconsideración.'
+            })
+        
+        # Validar archivo PDF si se proporcionó
+        if archivo_pdf:
+            # Validar que es un PDF
+            if not archivo_pdf.name.lower().endswith('.pdf'):
+                return JsonResponse({
+                    'success': False,
+                    'message': 'El archivo debe ser un PDF'
+                })
+            
+            # Validar tamaño del archivo (máx 10MB)
+            if archivo_pdf.size > 10 * 1024 * 1024:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'El archivo es demasiado grande (máx 10MB)'
+                })
+        
+        # Si se especifica una cotización nueva, el archivo PDF es obligatorio
+        if cotizacion_id and cotizacion_id != 'actual' and not archivo_pdf:
+            return JsonResponse({
+                'success': False,
+                'message': 'Es obligatorio adjuntar un archivo PDF cuando seleccionas usar una cotización diferente.'
             })
         
 
@@ -745,6 +777,7 @@ def api_solicitar_reconsideracion(request, solicitud_id):
                 usar_nueva_cotizacion=usar_nueva_cotizacion,
                 resultado_consulta_anterior=resultado_anterior,
                 comentario_consulta_anterior=comentario_anterior,
+                archivo_adjunto=archivo_pdf,  # Agregar archivo PDF
             )
             
             # Actualizar la cotización de la solicitud si se seleccionó una nueva

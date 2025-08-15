@@ -1,4 +1,4 @@
-<!-- Modal Overhauled para Detalles de Solicitud -->
+﻿<!-- Modal Overhauled para Detalles de Solicitud -->
 <div class="modal fade" id="modalSolicitud" tabindex="-1" aria-labelledby="modalSolicitudLabel" aria-hidden="true">
     <div class="modal-dialog modal-fullscreen-lg-down modal-xl">
         <div class="modal-content modern-modal">
@@ -1996,6 +1996,47 @@
         border-radius: 4px;
         color: #0056b3;
         font-weight: 500;
+    }
+    
+    /* Archivo Adjunto Styles */
+    .reconsideracion-detail-item.archivo-adjunto-item {
+        flex-direction: column;
+        align-items: flex-start;
+        background: #fff5f5;
+        padding: 8px 12px;
+        border-radius: 6px;
+        border-left: 3px solid #dc3545;
+        margin: 5px 0;
+        min-width: 200px;
+    }
+
+    .archivo-adjunto-info {
+        width: 100%;
+    }
+
+    .archivo-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 4px;
+    }
+
+    .archivo-link {
+        font-size: 0.85em;
+        background: rgba(220, 53, 69, 0.1);
+        padding: 4px 8px;
+        border-radius: 4px;
+        color: #dc3545;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        border: 1px solid rgba(220, 53, 69, 0.2);
+    }
+
+    .archivo-link:hover {
+        background: rgba(220, 53, 69, 0.2);
+        color: #b02a37;
+        text-decoration: none;
+        transform: translateY(-1px);
     }
     
     /* === Nueva Reconsideración Request Section === */
@@ -4560,6 +4601,129 @@
         cursor: not-allowed;
         transform: none;
         box-shadow: none;
+    }
+
+    /* === UPLOAD AREA STYLES === */
+    .upload-area-reconsideracion {
+        border: 2px dashed var(--neutral-300);
+        border-radius: var(--border-radius-lg);
+        padding: 2rem;
+        text-align: center;
+        transition: all var(--transition-medium);
+        background: var(--neutral-50);
+        position: relative;
+    }
+
+    .upload-area-reconsideracion:hover {
+        border-color: var(--primary-blue);
+        background: #f0f9ff;
+    }
+
+    .upload-area-reconsideracion.dragover {
+        border-color: var(--primary-blue);
+        background: #e0f2fe;
+        transform: scale(1.02);
+    }
+
+    .upload-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .upload-icon {
+        color: var(--primary-blue);
+        font-size: 3rem;
+        opacity: 0.7;
+    }
+
+    .upload-text {
+        color: var(--neutral-700);
+    }
+
+    .upload-text strong {
+        color: var(--neutral-800);
+        font-weight: 600;
+    }
+
+    .upload-helper {
+        color: var(--neutral-500);
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+        margin-bottom: 0;
+    }
+
+    .btn-upload-reconsideracion {
+        background: var(--primary-blue);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--border-radius-md);
+        font-weight: 500;
+        cursor: pointer;
+        transition: all var(--transition-medium);
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-upload-reconsideracion:hover {
+        background: var(--primary-blue-dark);
+        transform: translateY(-1px);
+    }
+
+    .archivo-preview {
+        background: white;
+        border: 1px solid var(--success-color);
+        border-radius: var(--border-radius-md);
+        padding: 1rem;
+        margin-top: 1rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .archivo-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .archivo-icon {
+        font-size: 2rem;
+        color: #dc3545;
+    }
+
+    .archivo-details {
+        flex: 1;
+    }
+
+    .archivo-name {
+        font-weight: 600;
+        color: var(--neutral-800);
+        margin-bottom: 0.25rem;
+    }
+
+    .archivo-size {
+        color: var(--neutral-500);
+        font-size: 0.875rem;
+    }
+
+    .btn-remove-archivo {
+        background: var(--danger-color);
+        color: white;
+        border: none;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all var(--transition-medium);
+    }
+
+    .btn-remove-archivo:hover {
+        background: #c82333;
+        transform: scale(1.1);
     }
 
     /* === RESPONSIVE DESIGN === */
@@ -10306,6 +10470,24 @@
                             <span>Resultado anterior: <strong>${recon.resultado_anterior}</strong></span>
                         </div>
                         ` : ''}
+                        
+                        <!-- Archivo Adjunto -->
+                        ${recon.archivo_adjunto ? `
+                        <div class="reconsideracion-detail-item archivo-adjunto-item">
+                            <i class="fas fa-file-pdf text-danger"></i>
+                            <div class="archivo-adjunto-info">
+                                <strong>Archivo adjunto:</strong>
+                                <div class="archivo-actions">
+                                    <a href="${recon.archivo_adjunto}" target="_blank" class="archivo-link">
+                                        <i class="fas fa-eye me-1"></i>Ver PDF
+                                    </a>
+                                    <a href="${recon.archivo_adjunto}" download class="archivo-link">
+                                        <i class="fas fa-download me-1"></i>Descargar
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
                     </div>
                     
                     ${recon.comentario_analisis ? `
@@ -11123,11 +11305,21 @@
             
             console.log('✅ Modal opened, populating data...');
             
+            // Initialize archivo section as hidden (only show when nueva cotización is selected)
+            const archivoSection = document.getElementById('archivoAdjuntoSection');
+            if (archivoSection) {
+                archivoSection.style.display = 'none';
+                console.log('📁 Archivo section initialized as hidden');
+            }
+            
             // Populate current cotización information
             populateCurrentCotizacionInfo();
             
             // Check if we should show the "nueva cotización" option
             verificarCotizacionesDisponibles(solicitudId);
+            
+            // Initialize file upload handlers
+            setupArchivoUploadHandlers();
             
             // Ensure validation is triggered after modal is shown
             setTimeout(() => {
@@ -11298,6 +11490,19 @@
                     if (nuevaCotizacionIdField) {
                         nuevaCotizacionIdField.value = '';
                     }
+                    
+                    // Hide archivo adjunto section and clear file
+                    const archivoSection = document.getElementById('archivoAdjuntoSection');
+                    if (archivoSection) {
+                        archivoSection.style.display = 'none';
+                        console.log('📁 Archivo section hidden - using current cotización');
+                    }
+                    
+                    // Clear any selected file
+                    if (typeof removeArchivoReconsideracion === 'function') {
+                        removeArchivoReconsideracion();
+                    }
+                    
                     // Trigger validation
                     if (typeof validarFormularioReconsideracion === 'function') {
                         validarFormularioReconsideracion();
@@ -11309,6 +11514,19 @@
                 console.log('📻 Cotización nueva changed, checked:', this.checked);
                 if (this.checked) {
                     cotizacionesDisponibles.style.display = 'block';
+                    
+                    // Show archivo adjunto section
+                    const archivoSection = document.getElementById('archivoAdjuntoSection');
+                    if (archivoSection) {
+                        archivoSection.style.display = 'block';
+                        console.log('📁 Archivo section shown - using different cotización');
+                    }
+                    
+                    // Update title to show archivo is required
+                    const archivoTitulo = document.getElementById('archivoTituloReconsideracion');
+                    if (archivoTitulo) {
+                        archivoTitulo.textContent = 'Archivo Adjunto (Requerido)';
+                    }
                     
                     // Automatically show and load cotizaciones
                     const modalElement = document.getElementById('modalReconsideracion');
@@ -11462,21 +11680,34 @@
             
             // Check cotización selection
             let cotizacionSelected = false;
+            let archivoRequired = false;
+            let archivoPresent = false;
             
             if (cotizacionActualRadio && cotizacionActualRadio.checked) {
                 // If "Usar cotización actual" is selected, that's valid
                 cotizacionSelected = true;
+                archivoRequired = false;
                 console.log('✅ Cotización actual seleccionada');
             } else if (cotizacionNuevaRadio && cotizacionNuevaRadio.checked) {
                 // If "Usar una cotización diferente" is selected, check if a cotización has been selected
                 const nuevaCotizacionIdField = document.getElementById('nuevaCotizacionId');
                 cotizacionSelected = nuevaCotizacionIdField && nuevaCotizacionIdField.value;
+                archivoRequired = true; // Archivo is required for nueva cotización
                 console.log('🔍 Cotización nueva seleccionada, nueva cotización ID:', nuevaCotizacionIdField?.value);
             } else {
                 console.log('❌ Ninguna opción de cotización seleccionada');
             }
             
-            const isValid = cotizacionSelected && motivoFilled;
+            // Check if archivo is present when required
+            if (archivoRequired) {
+                const archivoInput = document.getElementById('archivoReconsideracion');
+                archivoPresent = archivoInput && archivoInput.files && archivoInput.files.length > 0;
+                console.log('📁 Archivo check:', { required: archivoRequired, present: archivoPresent });
+            } else {
+                archivoPresent = true; // Not required, so consider it "present"
+            }
+            
+            const isValid = cotizacionSelected && motivoFilled && archivoPresent;
             submitBtn.disabled = !isValid;
             
             // Update button styling based on validation
@@ -11493,6 +11724,8 @@
             console.log('Validation check:', {
                 cotizacionSelected,
                 motivoFilled,
+                archivoRequired,
+                archivoPresent,
                 motivoLength: motivoTextarea.value.trim().length,
                 isValid,
                 submitBtnDisabled: submitBtn.disabled,
@@ -11517,6 +11750,12 @@
         
         // Add event listener for motivo textarea
         motivoTextarea.addEventListener('input', checkValidation);
+        
+        // Add event listener for archivo input
+        const archivoInput = document.getElementById('archivoReconsideracion');
+        if (archivoInput) {
+            archivoInput.addEventListener('change', checkValidation);
+        }
         
         // Initial check
         checkValidation();
@@ -11603,6 +11842,19 @@
             return;
         }
         
+        // Validate archivo is required when using nueva cotización
+        if (cotizacionNuevaSelected) {
+            const archivoInput = document.getElementById('archivoReconsideracion');
+            const hasFile = archivoInput && archivoInput.files && archivoInput.files.length > 0;
+            
+            if (!hasFile) {
+                showAlert('Es obligatorio adjuntar un archivo PDF cuando seleccionas usar una cotización diferente.', 'warning');
+                return;
+            }
+            
+            console.log('✅ Archivo PDF requerido validado correctamente');
+        }
+        
         console.log('🎯 Final cotizacionId to use:', cotizacionId);
         
         // Show confirmation dialog before proceeding
@@ -11621,23 +11873,45 @@
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enviando...';
         
-        // Prepare JSON data
-        const requestData = {
-            motivo: motivoTextarea.value.trim(),
-            cotizacion_id: cotizacionId !== 'actual' ? cotizacionId : null, // null means use current cotización
+        // Check if there's a file attached
+        const archivoInput = document.getElementById('archivoReconsideracion');
+        const hasFile = archivoInput && archivoInput.files && archivoInput.files.length > 0;
+        
+        console.log('🔍 File check:', { hasFile, files: archivoInput?.files });
+        
+        let requestBody;
+        let requestHeaders = {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
         };
         
-        console.log('📤 Sending reconsideración request:', requestData);
+        if (hasFile) {
+            // Use FormData when file is present
+            const formData = new FormData();
+            formData.append('motivo', motivoTextarea.value.trim());
+            formData.append('cotizacion_id', cotizacionId !== 'actual' ? cotizacionId : '');
+            formData.append('archivo_pdf', archivoInput.files[0]);
+            
+            requestBody = formData;
+            // Don't set Content-Type for FormData, let browser set it
+            console.log('📤 Sending reconsideración with file');
+        } else {
+            // Use JSON when no file
+            const requestData = {
+                motivo: motivoTextarea.value.trim(),
+                cotizacion_id: cotizacionId !== 'actual' ? cotizacionId : null,
+            };
+            
+            requestBody = JSON.stringify(requestData);
+            requestHeaders['Content-Type'] = 'application/json';
+            console.log('📤 Sending reconsideración without file:', requestData);
+        }
         
         try {
             const response = await fetch(`/workflow/api/solicitud/${solicitudId}/reconsideracion/solicitar/`, {
                 method: 'POST',
-                body: JSON.stringify(requestData),
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                }
+                body: requestBody,
+                headers: requestHeaders
             });
             
             const data = await response.json();
@@ -11720,6 +11994,15 @@
             motivoTextarea.value = '';
         }
         
+        // Clear archivo
+        removeArchivoReconsideracion();
+        
+        // Hide archivo adjunto section
+        const archivoSection = document.getElementById('archivoAdjuntoSection');
+        if (archivoSection) {
+            archivoSection.style.display = 'none';
+        }
+        
         // Disable submit button
         const submitBtn = document.getElementById('btnEnviarReconsideracion');
         if (submitBtn) {
@@ -11769,6 +12052,177 @@
         }
     }
 
+    // ===========================
+    // FUNCIONES DE MANEJO DE ARCHIVOS
+    // ===========================
+    
+    function setupArchivoUploadHandlers() {
+        const uploadArea = document.getElementById('uploadAreaReconsideracion');
+        const fileInput = document.getElementById('archivoReconsideracion');
+        
+        if (!uploadArea || !fileInput) return;
+        
+        // Remove existing event listeners to prevent duplicates
+        uploadArea.removeEventListener('dragover', handleDragOver);
+        uploadArea.removeEventListener('dragleave', handleDragLeave);
+        uploadArea.removeEventListener('drop', handleDrop);
+        uploadArea.removeEventListener('click', handleAreaClick);
+        fileInput.removeEventListener('change', handleFileInputChange);
+        
+        // Define event handlers
+        function handleDragOver(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        }
+        
+        function handleDragLeave(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        }
+        
+        function handleDrop(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelection(files[0]);
+            }
+        }
+        
+        function handleAreaClick() {
+            fileInput.click();
+        }
+        
+        function handleFileInputChange(e) {
+            if (e.target.files.length > 0) {
+                handleFileSelection(e.target.files[0]);
+            }
+        }
+        
+        // Add event listeners
+        uploadArea.addEventListener('dragover', handleDragOver);
+        uploadArea.addEventListener('dragleave', handleDragLeave);
+        uploadArea.addEventListener('drop', handleDrop);
+        uploadArea.addEventListener('click', handleAreaClick);
+        fileInput.addEventListener('change', handleFileInputChange);
+        
+        console.log('📁 Archivo upload handlers configured');
+    }
+    
+    function handleFileSelection(file) {
+        console.log('📁 File selected:', file);
+        
+        // Validate file type first
+        if (!file.name.toLowerCase().endsWith('.pdf')) {
+            showAlert('Solo se permiten archivos PDF', 'danger');
+            // Clear the input to allow re-selection
+            const fileInput = document.getElementById('archivoReconsideracion');
+            if (fileInput) {
+                fileInput.value = '';
+            }
+            return;
+        }
+        
+        // Validate file size (10MB max)
+        const maxSize = 10 * 1024 * 1024;
+        if (file.size > maxSize) {
+            showAlert('El archivo es demasiado grande. Máximo 10MB permitido.', 'danger');
+            // Clear the input to allow re-selection
+            const fileInput = document.getElementById('archivoReconsideracion');
+            if (fileInput) {
+                fileInput.value = '';
+            }
+            return;
+        }
+        
+        // File is valid, proceed with processing
+        const fileInput = document.getElementById('archivoReconsideracion');
+        if (fileInput) {
+            // Only update if the file is different from what's already there
+            const currentFile = fileInput.files[0];
+            if (!currentFile || currentFile.name !== file.name || currentFile.size !== file.size) {
+                try {
+                    // Create a new FileList with the selected file
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    fileInput.files = dt.files;
+                    console.log('✅ File input updated successfully');
+                } catch (error) {
+                    console.warn('⚠️ Could not update file input directly, file is still valid:', error);
+                }
+            }
+        }
+        
+        // Show file preview
+        showFilePreview(file);
+    }
+    
+    function showFilePreview(file) {
+        console.log('🔍 Showing file preview for:', file.name);
+        
+        const uploadArea = document.getElementById('uploadAreaReconsideracion');
+        const preview = document.getElementById('archivoPreviewReconsideracion');
+        const fileName = document.getElementById('archivoNombreReconsideracion');
+        const fileSize = document.getElementById('archivoTamanoReconsideracion');
+        
+        if (!preview || !fileName || !fileSize) {
+            console.error('❌ Preview elements not found');
+            return;
+        }
+        
+        // Update preview content first
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        
+        // Then handle visibility
+        if (uploadArea) {
+            uploadArea.style.display = 'none';
+        }
+        
+        // Show preview
+        preview.style.display = 'block';
+        
+        // Trigger validation after file is shown
+        if (typeof validarFormularioReconsideracion === 'function') {
+            setTimeout(() => validarFormularioReconsideracion(), 50);
+        }
+        
+        console.log('✅ File preview shown successfully:', file.name);
+    }
+    
+    function removeArchivoReconsideracion() {
+        const fileInput = document.getElementById('archivoReconsideracion');
+        const uploadArea = document.getElementById('uploadAreaReconsideracion');
+        const preview = document.getElementById('archivoPreviewReconsideracion');
+        
+        // Clear file input
+        if (fileInput) {
+            fileInput.value = '';
+        }
+        
+        // Hide preview and show upload area
+        if (preview) {
+            preview.style.display = 'none';
+        }
+        
+        if (uploadArea) {
+            uploadArea.style.display = 'block';
+        }
+        
+        console.log('🗑️ File removed from reconsideración');
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
     // Make functions available globally
     window.solicitarReconsideracion = solicitarReconsideracion;
     window.configurarTabReconsideracion = configurarTabReconsideracion;
@@ -11781,6 +12235,8 @@
     window.setupMotivoCharacterCounter = setupMotivoCharacterCounter;
     window.validarFormularioReconsideracion = validarFormularioReconsideracion;
     window.showAlert = showAlert;
+    window.setupArchivoUploadHandlers = setupArchivoUploadHandlers;
+    window.removeArchivoReconsideracion = removeArchivoReconsideracion;
 </script>
 
 <!-- Modal para Crear/Editar Nota o Recordatorio -->
@@ -11888,6 +12344,55 @@
                                 <span id="resultadoAnteriorTexto" class="ml-2 font-semibold"></span>
                             </div>
                         </div>
+                    </div>
+                </div>
+                
+                <!-- Sección de Archivo Adjunto -->
+                <div class="form-section" id="archivoAdjuntoSection" style="display: none;">
+                    <h6 class="section-title-modern">
+                        <i class="fas fa-file-pdf me-2"></i>
+                        <span id="archivoTituloReconsideracion">Archivo Adjunto (Requerido)</span>
+                    </h6>
+                    <div class="upload-area-reconsideracion" id="uploadAreaReconsideracion">
+                        <div class="upload-content">
+                            <div class="upload-icon">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                            </div>
+                            <div class="upload-text">
+                                <strong>Arrastra un archivo PDF aquí o haz clic para seleccionar</strong>
+                                <p class="upload-helper">Solo archivos PDF, máximo 10MB</p>
+                            </div>
+                            <input type="file" 
+                                   id="archivoReconsideracion" 
+                                   name="archivo_pdf" 
+                                   accept=".pdf" 
+                                   style="display: none;">
+                            <button type="button" class="btn-upload-reconsideracion">
+                                <i class="fas fa-folder-open me-2"></i>Seleccionar Archivo
+                            </button>
+                        </div>
+                        
+                        <!-- File preview -->
+                        <div id="archivoPreviewReconsideracion" class="archivo-preview" style="display: none;">
+                            <div class="archivo-info">
+                                <div class="archivo-icon">
+                                    <i class="fas fa-file-pdf text-danger"></i>
+                                </div>
+                                <div class="archivo-details">
+                                    <div class="archivo-name" id="archivoNombreReconsideracion"></div>
+                                    <div class="archivo-size" id="archivoTamanoReconsideracion"></div>
+                                </div>
+                                <button type="button" class="btn-remove-archivo" onclick="removeArchivoReconsideracion()" title="Quitar archivo">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-helper-text">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Puedes adjuntar documentos adicionales que justifiquen la reconsideración (ej: nueva información del cliente, documentos actualizados, etc.)
+                        </small>
                     </div>
                 </div>
                 

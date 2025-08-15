@@ -16,12 +16,38 @@ def bandeja_comite_view(request):
     Renderiza la bandeja de trabajo del Comité de Crédito.
     """
     
-    # Por ahora, solo superuser puede ver todo.
-    # La lógica de permisos por nivel se implementará en la API.
+    # Verificar permisos de acceso
     if not request.user.is_superuser:
-        # Aquí iría la lógica para usuarios que no son superusuarios
-        # Por ejemplo, verificar si pertenecen a algún nivel del comité.
-        pass
+        # Verificar si el usuario tiene PermisoBandeja para acceder al comité
+        tiene_acceso = False
+        
+        try:
+            from .modelsWorkflow import PermisoBandeja
+            etapa_comite = Etapa.objects.filter(nombre__iexact="Comité de Crédito").first()
+            
+            if etapa_comite:
+                # Verificar permisos directos por usuario
+                if PermisoBandeja.objects.filter(
+                    etapa=etapa_comite,
+                    usuario=request.user,
+                    puede_ver=True
+                ).exists():
+                    tiene_acceso = True
+                
+                # Verificar permisos por grupos
+                user_groups = request.user.groups.all()
+                if user_groups.exists() and PermisoBandeja.objects.filter(
+                    etapa=etapa_comite,
+                    grupo__in=user_groups,
+                    puede_ver=True
+                ).exists():
+                    tiene_acceso = True
+        except Exception as e:
+            messages.error(request, f'Error al verificar permisos: {str(e)}')
+            
+        if not tiene_acceso:
+            messages.error(request, 'No tienes permisos para acceder a la bandeja del Comité de Crédito.')
+            return redirect('dashboard')  # o la vista que corresponda
 
     # Obtener la etapa "Comité de Crédito" (usar filter().first() para evitar MultipleObjectsReturned)
     try:
