@@ -6,20 +6,17 @@ import django.db.models.deletion
 
 
 def create_table_if_not_exists_postgresql(apps, schema_editor):
-    """Create ClienteEntrevista table if it doesn't exist - PostgreSQL compatible"""
+    """Create ClienteEntrevista table if it doesn't exist - SQLite compatible"""
     from django.db import connection
     
     with connection.cursor() as cursor:
-        # Check if table exists (PostgreSQL compatible)
+        # Check if table exists (SQLite compatible)
         cursor.execute("""
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_schema = 'public' 
-                AND table_name = 'workflow_clienteentrevista'
-            );
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name='workflow_clienteentrevista';
         """)
         
-        table_exists = cursor.fetchone()[0]
+        table_exists = cursor.fetchone() is not None
         
         if not table_exists:
             # Create table using Django's schema editor

@@ -46,14 +46,18 @@ class CotizacionFilter(django_filters.FilterSet):
         try:
             oficiales = Cotizacion.objects.values_list('oficial', flat=True).distinct()
             self.filters['oficial'].extra['choices'] = [(oficial, oficial) for oficial in oficiales if oficial]
+            
+            marcas = Cotizacion.objects.values_list('marca', flat=True).distinct()
+            self.filters['marca'].extra['choices'] = [(marca, marca) for marca in marcas if marca]
         except Exception:
             # Si hay error de conexión, usar lista vacía
             self.filters['oficial'].extra['choices'] = []
+            self.filters['marca'].extra['choices'] = []
     marca = django_filters.ChoiceFilter(
         field_name='marca',
         lookup_expr='exact',
         label='Marca',
-        choices=[(marca, marca) for marca in Cotizacion.objects.values_list('marca', flat=True).distinct()],
+        choices=[],  # Se poblarán dinámicamente
         empty_label='TODAS',
         widget=forms.Select(
             attrs={

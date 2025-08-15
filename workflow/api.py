@@ -757,9 +757,9 @@ def api_notas_recordatorios_list(request, solicitud_id):
     try:
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         
-        # Verificar permisos
-        if not request.user.has_perm('workflow.view_solicitud', solicitud):
-            return JsonResponse({'error': 'No tiene permisos para ver esta solicitud'}, status=403)
+        # Verificar que el usuario esté autenticado
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Usuario no autenticado'}, status=401)
         
         notas = NotaRecordatorio.objects.filter(
             solicitud=solicitud,
@@ -797,6 +797,7 @@ def api_notas_recordatorios_list(request, solicitud_id):
         return JsonResponse({'error': 'Error interno del servidor'}, status=500)
 
 @login_required
+@login_required
 @require_http_methods(["GET"])
 def api_notas_recordatorios_detail(request, solicitud_id, nota_id):
     """Obtener detalles de una nota específica"""
@@ -804,9 +805,9 @@ def api_notas_recordatorios_detail(request, solicitud_id, nota_id):
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         nota = get_object_or_404(NotaRecordatorio, id=nota_id, solicitud=solicitud, es_activo=True)
         
-        # Verificar permisos
-        if not request.user.has_perm('workflow.view_solicitud', solicitud):
-            return JsonResponse({'error': 'No tiene permisos para ver esta solicitud'}, status=403)
+        # Verificar que el usuario esté autenticado
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Usuario no autenticado'}, status=401)
         
         nota_data = {
             'id': nota.id,
@@ -949,6 +950,7 @@ def api_notas_recordatorios_create(request, solicitud_id):
         return JsonResponse({'error': f'Error interno del servidor: {str(e)}'}, status=500)
 
 @login_required
+@login_required
 @require_http_methods(["PUT"])
 @csrf_exempt
 def api_notas_recordatorios_update(request, solicitud_id, nota_id):
@@ -957,9 +959,9 @@ def api_notas_recordatorios_update(request, solicitud_id, nota_id):
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         nota = get_object_or_404(NotaRecordatorio, id=nota_id, solicitud=solicitud, es_activo=True)
         
-        # Verificar permisos
-        if not request.user.has_perm('workflow.change_solicitud', solicitud):
-            return JsonResponse({'error': 'No tiene permisos para modificar esta solicitud'}, status=403)
+        # Verificar que el usuario esté autenticado
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Usuario no autenticado'}, status=401)
         
         data = json.loads(request.body)
         
@@ -1053,6 +1055,7 @@ def api_notas_recordatorios_update(request, solicitud_id, nota_id):
         return JsonResponse({'error': 'Error interno del servidor'}, status=500)
 
 @login_required
+@login_required
 @require_http_methods(["DELETE"])
 @csrf_exempt
 def api_notas_recordatorios_delete(request, solicitud_id, nota_id):
@@ -1061,9 +1064,9 @@ def api_notas_recordatorios_delete(request, solicitud_id, nota_id):
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         nota = get_object_or_404(NotaRecordatorio, id=nota_id, solicitud=solicitud, es_activo=True)
         
-        # Verificar permisos
-        if not request.user.has_perm('workflow.change_solicitud', solicitud):
-            return JsonResponse({'error': 'No tiene permisos para modificar esta solicitud'}, status=403)
+        # Verificar que el usuario esté autenticado
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Usuario no autenticado'}, status=401)
         
         # Marcar como inactiva en lugar de eliminar
         nota.es_activo = False
@@ -1095,9 +1098,9 @@ def api_notas_recordatorios_completar(request, solicitud_id, nota_id):
         solicitud = get_object_or_404(Solicitud, id=solicitud_id)
         nota = get_object_or_404(NotaRecordatorio, id=nota_id, solicitud=solicitud, es_activo=True)
         
-        # Verificar permisos
-        if not request.user.has_perm('workflow.change_solicitud', solicitud):
-            return JsonResponse({'error': 'No tiene permisos para modificar esta solicitud'}, status=403)
+        # Verificar que el usuario esté autenticado
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Usuario no autenticado'}, status=401)
         
         # Verificar que sea un recordatorio
         if nota.tipo != 'recordatorio':
