@@ -2001,11 +2001,14 @@ def formulario_web(request):
                         propietario_por_defecto = ConfiguracionCanalDigital.get_propietario_por_defecto()
                         if propietario_por_defecto:
                             solicitud.propietario = propietario_por_defecto
+                            # Usar el propietario por defecto como creador para mantener consistencia
+                            solicitud.creada_por = propietario_por_defecto
                             # También asignar al formulario para consistencia
                             formulario.propietario = propietario_por_defecto
                         else:
                             solicitud.propietario = None
-                        solicitud.creada_por = usuario_sistema
+                            # Si no hay propietario por defecto, usar usuario del sistema
+                            solicitud.creada_por = usuario_sistema
                         solicitud.cliente = cliente
                         solicitud.origen = 'Canal Digital'  # Etiqueta distintiva
                         solicitud.observaciones = f"Solicitud creada automáticamente desde Canal Digital - IP: {formulario.ip_address}"
@@ -4451,11 +4454,14 @@ def formulario_web(request):
                         propietario_por_defecto = ConfiguracionCanalDigital.get_propietario_por_defecto()
                         if propietario_por_defecto:
                             solicitud.propietario = propietario_por_defecto
+                            # Usar el propietario por defecto como creador para mantener consistencia
+                            solicitud.creada_por = propietario_por_defecto
                             # También asignar al formulario para consistencia
                             formulario.propietario = propietario_por_defecto
                         else:
                             solicitud.propietario = None
-                        solicitud.creada_por = usuario_sistema
+                            # Si no hay propietario por defecto, usar usuario del sistema
+                            solicitud.creada_por = usuario_sistema
                         solicitud.cliente = cliente
                         solicitud.origen = 'Canal Digital'  # Etiqueta distintiva
                         solicitud.observaciones = f"Solicitud creada automáticamente desde Canal Digital - IP: {formulario.ip_address}"
