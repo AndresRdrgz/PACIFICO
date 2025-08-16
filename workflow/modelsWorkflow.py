@@ -1210,6 +1210,15 @@ class ConfiguracionCanalDigital(models.Model):
     nombre = models.CharField(max_length=100, default="Configuración Canal Digital")
     pipeline_por_defecto = models.ForeignKey(Pipeline, on_delete=models.PROTECT, related_name='configuraciones_canal_digital')
     etapa_por_defecto = models.ForeignKey(Etapa, on_delete=models.PROTECT, related_name='configuraciones_canal_digital')
+    propietario_por_defecto = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='configuraciones_canal_digital_propietario',
+        verbose_name="Propietario por Defecto",
+        help_text="Usuario que será asignado automáticamente como propietario de nuevos formularios del canal digital"
+    )
     activo = models.BooleanField(default=True, help_text="Si esta configuración está activa")
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField(auto_now=True)
@@ -1224,10 +1233,21 @@ class ConfiguracionCanalDigital(models.Model):
     
     def clean(self):
         from django.core.exceptions import ValidationError
+        from django.contrib.auth.models import Group
+        
         # Verificar que la etapa pertenece al pipeline
         if self.etapa_por_defecto and self.pipeline_por_defecto:
             if self.etapa_por_defecto.pipeline != self.pipeline_por_defecto:
                 raise ValidationError('La etapa debe pertenecer al pipeline seleccionado')
+        
+        # Verificar que el propietario por defecto pertenece al grupo "Canal Digital"
+        if self.propietario_por_defecto:
+            try:
+                grupo_canal_digital = Group.objects.get(name="Canal Digital")
+                if not self.propietario_por_defecto.groups.filter(pk=grupo_canal_digital.pk).exists():
+                    raise ValidationError('El propietario por defecto debe pertenecer al grupo "Canal Digital"')
+            except Group.DoesNotExist:
+                raise ValidationError('El grupo "Canal Digital" no existe. Debe ser creado primero.')
     
     @classmethod
     def get_configuracion_activa(cls):
@@ -1253,6 +1273,16 @@ class ConfiguracionCanalDigital(models.Model):
         pipeline = cls.get_pipeline_por_defecto()
         if pipeline:
             return pipeline.etapas.first()
+        return None
+    
+    @classmethod
+    def get_propietario_por_defecto(cls):
+        """Obtiene el propietario por defecto"""
+        config = cls.get_configuracion_activa()
+        if config and config.propietario_por_defecto:
+            # Verificar que el usuario esté activo
+            if config.propietario_por_defecto.is_active:
+                return config.propietario_por_defecto
         return None
 
 

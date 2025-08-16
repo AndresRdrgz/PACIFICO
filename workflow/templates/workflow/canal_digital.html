@@ -778,6 +778,25 @@
                                 </small>
                             </div>
                             
+                            <div class="col-md-6">
+                                <label for="propietarioSelect" class="form-label">
+                                    <i class="fas fa-user-tie me-1"></i>
+                                    Propietario por Defecto
+                                </label>
+                                <select class="form-select" id="propietarioSelect" name="propietario_id">
+                                    <option value="">Sin propietario por defecto</option>
+                                    {% for usuario in usuarios_disponibles %}
+                                        <option value="{{ usuario.id }}" 
+                                                {% if propietario_por_defecto and usuario.id == propietario_por_defecto.id %}selected{% endif %}>
+                                            {{ usuario.get_full_name|default:usuario.username }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="form-text text-muted">
+                                    Usuario que será asignado automáticamente como propietario de nuevos leads
+                                </small>
+                            </div>
+                            
                             <div class="col-12">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
@@ -802,7 +821,7 @@
                         
                         <!-- Current Configuration Display -->
                         <div class="row mt-4">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="card border-0 bg-light">
                                     <div class="card-body">
                                         <h6 class="card-title">
@@ -818,7 +837,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="card border-0 bg-light">
                                     <div class="card-body">
                                         <h6 class="card-title">
@@ -835,6 +854,35 @@
                                                     | <span class="badge bg-info">Bandeja Grupal</span>
                                                 {% endif %}
                                             </small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card border-0 bg-light">
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            <i class="fas fa-user-tie text-warning me-2"></i>
+                                            Propietario Actual
+                                        </h6>
+                                        <p class="card-text h5 text-warning mb-0">
+                                            {% if propietario_por_defecto %}
+                                                {{ propietario_por_defecto.get_full_name|default:propietario_por_defecto.username }}
+                                            {% else %}
+                                                Sin propietario
+                                            {% endif %}
+                                        </p>
+                                        {% if propietario_por_defecto %}
+                                            <small class="text-muted">
+                                                @{{ propietario_por_defecto.username }}
+                                                {% if propietario_por_defecto.is_active %}
+                                                    | <span class="badge bg-success">Activo</span>
+                                                {% else %}
+                                                    | <span class="badge bg-danger">Inactivo</span>
+                                                {% endif %}
+                                            </small>
+                                        {% else %}
+                                            <small class="text-muted">Los leads se asignarán manualmente</small>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -1280,10 +1328,18 @@
                 // Actualizar selects
                 const pipelineSelect = document.getElementById('pipelineSelect');
                 const etapaSelect = document.getElementById('etapaSelect');
+                const propietarioSelect = document.getElementById('propietarioSelect');
                 
-                if (data.configuracion.pipeline_id) {
+                if (data.configuracion && data.configuracion.pipeline_id) {
                     pipelineSelect.value = data.configuracion.pipeline_id;
                     cargarEtapasPipeline(data.configuracion.pipeline_id, data.configuracion.etapa_id);
+                    
+                    // Actualizar propietario por defecto
+                    if (data.configuracion.propietario_id) {
+                        propietarioSelect.value = data.configuracion.propietario_id;
+                    } else {
+                        propietarioSelect.value = '';
+                    }
                 }
                 
                 mostrarToast('Configuración cargada correctamente', 'success');
@@ -1301,6 +1357,7 @@
     function guardarConfiguracion() {
         const pipelineId = document.getElementById('pipelineSelect').value;
         const etapaId = document.getElementById('etapaSelect').value;
+        const propietarioId = document.getElementById('propietarioSelect').value;
 
         if (!pipelineId || !etapaId) {
             mostrarToast('Debe seleccionar tanto el pipeline como la etapa', 'warning');
@@ -1312,7 +1369,8 @@
 
         const data = {
             pipeline_id: pipelineId,
-            etapa_id: etapaId
+            etapa_id: etapaId,
+            propietario_id: propietarioId || null  // Incluir propietario (puede ser null)
         };
 
         fetch('{% url "workflow:api_guardar_configuracion_canal_digital" %}', {
