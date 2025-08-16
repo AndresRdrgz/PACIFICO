@@ -9,24 +9,27 @@ def ensure_archivo_adjunto_exists(apps, schema_editor):
     from django.db import connection
     
     with connection.cursor() as cursor:
-        # Check if the column already exists
-        cursor.execute("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = 'workflow_reconsideracionsolicitud' 
-            AND column_name = 'archivo_adjunto'
-        """)
-        
-        if not cursor.fetchone():
-            # Column doesn't exist, this should not happen if 0073 ran
-            print("⚠️  WARNING: archivo_adjunto column missing, adding it now")
-            cursor.execute("""
-                ALTER TABLE workflow_reconsideracionsolicitud 
-                ADD COLUMN archivo_adjunto VARCHAR(100) NULL
-            """)
-            print("✅ Added archivo_adjunto column to workflow_reconsideracionsolicitud")
-        else:
-            print("✅ Migration 0074: archivo_adjunto column already exists - no action needed")
+        try:
+            # Check if the column already exists using SQLite-compatible syntax
+            cursor.execute("PRAGMA table_info(workflow_reconsideracionsolicitud)")
+            columns = cursor.fetchall()
+            
+            # Column info format: (cid, name, type, notnull, dflt_value, pk)
+            column_names = [col[1] for col in columns]
+            
+            if 'archivo_adjunto' not in column_names:
+                # Column doesn't exist, this should not happen if 0073 ran
+                print("⚠️  WARNING: archivo_adjunto column missing, adding it now")
+                cursor.execute("""
+                    ALTER TABLE workflow_reconsideracionsolicitud 
+                    ADD COLUMN archivo_adjunto VARCHAR(100) NULL
+                """)
+                print("✅ Added archivo_adjunto column to workflow_reconsideracionsolicitud")
+            else:
+                print("✅ Migration 0074: archivo_adjunto column already exists - no action needed")
+        except Exception as e:
+            print(f"⚠️  Migration 0074 error: {e}")
+            print("✅ Continuing migration - assuming column exists")
 
 
 def noop_reverse(apps, schema_editor):

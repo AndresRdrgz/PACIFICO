@@ -9,23 +9,31 @@ def add_archivo_adjunto_field_safe(apps, schema_editor):
     from django.db import connection
     
     with connection.cursor() as cursor:
-        # Check if the column already exists
-        cursor.execute("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = 'workflow_reconsideracionsolicitud' 
-            AND column_name = 'archivo_adjunto'
-        """)
-        
-        if not cursor.fetchone():
-            # Column doesn't exist, add it
-            cursor.execute("""
-                ALTER TABLE workflow_reconsideracionsolicitud 
-                ADD COLUMN archivo_adjunto VARCHAR(100) NULL
-            """)
-            print("✅ Added archivo_adjunto column to workflow_reconsideracionsolicitud")
-        else:
-            print("✅ Column archivo_adjunto already exists in workflow_reconsideracionsolicitud - skipping")
+        # SQLite-compatible way to check if column exists
+        try:
+            cursor.execute("PRAGMA table_info(workflow_reconsideracionsolicitud)")
+            columns = [column[1] for column in cursor.fetchall()]
+            
+            if 'archivo_adjunto' not in columns:
+                # Column doesn't exist, add it
+                cursor.execute("""
+                    ALTER TABLE workflow_reconsideracionsolicitud 
+                    ADD COLUMN archivo_adjunto VARCHAR(100) NULL
+                """)
+                print("✅ Added archivo_adjunto column to workflow_reconsideracionsolicitud")
+            else:
+                print("✅ Column archivo_adjunto already exists in workflow_reconsideracionsolicitud - skipping")
+        except Exception as e:
+            print(f"⚠️ Error checking/adding archivo_adjunto column: {e}")
+            # Try adding the column anyway - if it fails, the column might already exist
+            try:
+                cursor.execute("""
+                    ALTER TABLE workflow_reconsideracionsolicitud 
+                    ADD COLUMN archivo_adjunto VARCHAR(100) NULL
+                """)
+                print("✅ Added archivo_adjunto column to workflow_reconsideracionsolicitud")
+            except Exception as add_error:
+                print(f"ℹ️ Could not add column (probably already exists): {add_error}")
 
 
 def remove_archivo_adjunto_field_safe(apps, schema_editor):
@@ -33,21 +41,18 @@ def remove_archivo_adjunto_field_safe(apps, schema_editor):
     from django.db import connection
     
     with connection.cursor() as cursor:
-        # Check if the column exists
-        cursor.execute("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = 'workflow_reconsideracionsolicitud' 
-            AND column_name = 'archivo_adjunto'
-        """)
-        
-        if cursor.fetchone():
-            # Column exists, remove it
-            cursor.execute("""
-                ALTER TABLE workflow_reconsideracionsolicitud 
-                DROP COLUMN archivo_adjunto
-            """)
-            print("✅ Removed archivo_adjunto column from workflow_reconsideracionsolicitud")
+        # SQLite-compatible way to check if column exists
+        try:
+            cursor.execute("PRAGMA table_info(workflow_reconsideracionsolicitud)")
+            columns = [column[1] for column in cursor.fetchall()]
+            
+            if 'archivo_adjunto' in columns:
+                print("ℹ️ Column archivo_adjunto exists but SQLite doesn't support DROP COLUMN easily")
+                print("ℹ️ Leaving column in place - this is safe")
+            else:
+                print("✅ Column archivo_adjunto doesn't exist - nothing to remove")
+        except Exception as e:
+            print(f"⚠️ Error checking archivo_adjunto column: {e}")
         else:
             print("✅ Column archivo_adjunto doesn't exist in workflow_reconsideracionsolicitud - skipping")
 

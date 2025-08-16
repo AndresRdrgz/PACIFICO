@@ -1623,6 +1623,7 @@ def canal_digital(request):
     configuracion = ConfiguracionCanalDigital.get_configuracion_activa()
     pipeline_por_defecto = ConfiguracionCanalDigital.get_pipeline_por_defecto()
     etapa_por_defecto = ConfiguracionCanalDigital.get_etapa_por_defecto()
+    propietario_por_defecto = ConfiguracionCanalDigital.get_propietario_por_defecto()
     
     # Obtener todos los pipelines disponibles
     pipelines_disponibles = Pipeline.objects.all()
@@ -1688,6 +1689,7 @@ def canal_digital(request):
         'configuracion': configuracion,
         'pipeline_por_defecto': pipeline_por_defecto,
         'etapa_por_defecto': etapa_por_defecto,
+        'propietario_por_defecto': propietario_por_defecto,
         'pipelines_disponibles': pipelines_disponibles,
     }
     
@@ -1765,8 +1767,14 @@ def convertir_formulario_a_solicitud(request):
         solicitud.cliente_email = formulario.correo_electronico
         solicitud.producto_solicitado = formulario.producto_interesado
         solicitud.monto_solicitado = formulario.dinero_a_solicitar or 0
-        # NO asignar propietario - las solicitudes del Canal Digital llegan sin propietario
-        solicitud.propietario = None
+        # Asignar propietario por defecto si está configurado
+        propietario_por_defecto = ConfiguracionCanalDigital.get_propietario_por_defecto()
+        if propietario_por_defecto:
+            solicitud.propietario = propietario_por_defecto
+            # También asignar al formulario para consistencia
+            formulario.propietario = propietario_por_defecto
+        else:
+            solicitud.propietario = None
         solicitud.creada_por = request.user
         solicitud.cliente = cliente
         solicitud.origen = 'Canal Digital'  # Etiqueta distintiva
@@ -1989,8 +1997,14 @@ def formulario_web(request):
                             solicitud.producto_solicitado = producto_original
                             
                         solicitud.monto_solicitado = formulario.dinero_a_solicitar or 0
-                        # NO asignar propietario - las solicitudes del Canal Digital llegan sin propietario
-                        solicitud.propietario = None
+                        # Asignar propietario por defecto si está configurado
+                        propietario_por_defecto = ConfiguracionCanalDigital.get_propietario_por_defecto()
+                        if propietario_por_defecto:
+                            solicitud.propietario = propietario_por_defecto
+                            # También asignar al formulario para consistencia
+                            formulario.propietario = propietario_por_defecto
+                        else:
+                            solicitud.propietario = None
                         solicitud.creada_por = usuario_sistema
                         solicitud.cliente = cliente
                         solicitud.origen = 'Canal Digital'  # Etiqueta distintiva
@@ -4203,8 +4217,14 @@ def convertir_formulario_a_solicitud(request):
         solicitud.cliente_email = formulario.correo_electronico
         solicitud.producto_solicitado = formulario.producto_interesado
         solicitud.monto_solicitado = formulario.dinero_a_solicitar or 0
-        # NO asignar propietario - las solicitudes del Canal Digital llegan sin propietario
-        solicitud.propietario = None
+        # Asignar propietario por defecto si está configurado
+        propietario_por_defecto = ConfiguracionCanalDigital.get_propietario_por_defecto()
+        if propietario_por_defecto:
+            solicitud.propietario = propietario_por_defecto
+            # También asignar al formulario para consistencia
+            formulario.propietario = propietario_por_defecto
+        else:
+            solicitud.propietario = None
         solicitud.creada_por = request.user
         solicitud.cliente = cliente
         solicitud.origen = 'Canal Digital'  # Etiqueta distintiva
@@ -4427,8 +4447,14 @@ def formulario_web(request):
                             solicitud.producto_solicitado = producto_original
                             
                         solicitud.monto_solicitado = formulario.dinero_a_solicitar or 0
-                        # NO asignar propietario - las solicitudes del Canal Digital llegan sin propietario
-                        solicitud.propietario = None
+                        # Asignar propietario por defecto si está configurado
+                        propietario_por_defecto = ConfiguracionCanalDigital.get_propietario_por_defecto()
+                        if propietario_por_defecto:
+                            solicitud.propietario = propietario_por_defecto
+                            # También asignar al formulario para consistencia
+                            formulario.propietario = propietario_por_defecto
+                        else:
+                            solicitud.propietario = None
                         solicitud.creada_por = usuario_sistema
                         solicitud.cliente = cliente
                         solicitud.origen = 'Canal Digital'  # Etiqueta distintiva
@@ -14962,11 +14988,13 @@ def api_guardar_configuracion_canal_digital(request):
     
     try:
         from .modelsWorkflow import ConfiguracionCanalDigital, Pipeline, Etapa
+        from django.contrib.auth.models import User
         import json
         
         data = json.loads(request.body)
         pipeline_id = data.get('pipeline_id')
         etapa_id = data.get('etapa_id')
+        propietario_id = data.get('propietario_id')
         
         if not pipeline_id:
             return JsonResponse({'success': False, 'error': 'Pipeline requerido'})
@@ -14987,11 +15015,20 @@ def api_guardar_configuracion_canal_digital(request):
             # Usar primera etapa del pipeline
             configuracion.etapa_por_defecto = pipeline.etapas.first()
         
+        # Configurar propietario por defecto si se proporciona
+        if propietario_id:
+            propietario = get_object_or_404(User, id=propietario_id, is_active=True)
+            configuracion.propietario_por_defecto = propietario
+        
         configuracion.save()
+        
+        mensaje = f'Configuración guardada: {pipeline.nombre} - {configuracion.etapa_por_defecto.nombre}'
+        if configuracion.propietario_por_defecto:
+            mensaje += f' - Propietario: {configuracion.propietario_por_defecto.get_full_name() or configuracion.propietario_por_defecto.username}'
         
         return JsonResponse({
             'success': True,
-            'mensaje': f'Configuración guardada: {pipeline.nombre} - {configuracion.etapa_por_defecto.nombre}'
+            'mensaje': mensaje
         })
         
     except Exception as e:
@@ -15009,15 +15046,31 @@ def api_obtener_configuracion_canal_digital(request):
         configuracion = ConfiguracionCanalDigital.get_configuracion_activa()
         
         if configuracion:
+            config_data = {
+                'id': configuracion.id,
+                'pipeline_id': configuracion.pipeline_por_defecto.id,
+                'pipeline_nombre': configuracion.pipeline_por_defecto.nombre,
+                'etapa_id': configuracion.etapa_por_defecto.id,
+                'etapa_nombre': configuracion.etapa_por_defecto.nombre
+            }
+            
+            # Agregar información del propietario por defecto si existe
+            if configuracion.propietario_por_defecto:
+                config_data.update({
+                    'propietario_id': configuracion.propietario_por_defecto.id,
+                    'propietario_nombre': configuracion.propietario_por_defecto.get_full_name() or configuracion.propietario_por_defecto.username,
+                    'propietario_username': configuracion.propietario_por_defecto.username
+                })
+            else:
+                config_data.update({
+                    'propietario_id': None,
+                    'propietario_nombre': None,
+                    'propietario_username': None
+                })
+            
             return JsonResponse({
                 'success': True,
-                'configuracion': {
-                    'id': configuracion.id,
-                    'pipeline_id': configuracion.pipeline_por_defecto.id,
-                    'pipeline_nombre': configuracion.pipeline_por_defecto.nombre,
-                    'etapa_id': configuracion.etapa_por_defecto.id,
-                    'etapa_nombre': configuracion.etapa_por_defecto.nombre
-                }
+                'configuracion': config_data
             })
         else:
             return JsonResponse({
