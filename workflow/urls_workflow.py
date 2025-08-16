@@ -76,6 +76,10 @@ urlpatterns += [
     path('api/comite/solicitudes/<int:solicitud_id>/etapas-disponibles/', apicomite.api_etapas_disponibles_comite, name='api_etapas_disponibles_comite'),
     path('api/comite/solicitudes/<int:solicitud_id>/avanzar-etapa/', apicomite.api_avanzar_etapa_comite, name='api_avanzar_etapa_comite'),
     
+    # APIs para solicitudes procesadas por el comité
+    path('api/comite/solicitudes-procesadas/', views_comite.api_solicitudes_procesadas_comite, name='api_solicitudes_procesadas_comite'),
+    path('comite/solicitud/<int:solicitud_id>/pdf-resultado/', views_comite.download_pdf_resultado_consulta, name='download_pdf_resultado_consulta'),
+    
     # APIs para gestión de niveles de comité
     path('api/comite/niveles/', views_workflow.api_obtener_niveles_comite, name='api_obtener_niveles_comite'),
     path('api/comite/niveles/crear/', views_workflow.api_crear_nivel_comite, name='api_crear_nivel_comite'),

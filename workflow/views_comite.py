@@ -2,13 +2,23 @@ from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Count
 from .modelsWorkflow import Solicitud, Etapa, ParticipacionComite, NivelComite, UsuarioNivelComite
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.core.paginator import Paginator
 from django.utils import timezone
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.db import models
 from .views_workflow import enviar_correo_pdf_resultado_consulta
+from django.template.loader import render_to_string
+from django.views.decorators.csrf import csrf_exempt
+import json
+
+# PDF Generation imports
+try:
+    from xhtml2pdf import pisa
+    from io import BytesIO
+except ImportError:
+    pisa = None
 
 @login_required
 def bandeja_comite_view(request):
@@ -218,4 +228,368 @@ def detalle_solicitud_comite(request, solicitud_id):
         'timestamp': timezone.now().timestamp(),
     }
     
-    return render(request, 'workflow/detalle_solicitud_comite.html', context) 
+    return render(request, 'workflow/detalle_solicitud_comite.html', context)
+
+
+@login_required
+def api_solicitudes_procesadas_comite(request):
+    """
+    API para obtener solicitudes procesadas por el comité de crédito con paginación y búsqueda
+    """
+    
+    try:
+        # Verificar permisos similares a bandeja_comite_view
+        if not request.user.is_superuser:
+            tiene_acceso = False
+            try:
+                from .modelsWorkflow import PermisoBandeja
+                etapa_comite = Etapa.objects.filter(nombre__iexact="Comité de Crédito").first()
+                
+                if etapa_comite:
+                    if PermisoBandeja.objects.filter(
+                        etapa=etapa_comite,
+                        usuario=request.user,
+                        puede_ver=True
+                    ).exists():
+                        tiene_acceso = True
+                    
+                    user_groups = request.user.groups.all()
+                    if user_groups.exists() and PermisoBandeja.objects.filter(
+                        etapa=etapa_comite,
+                        grupo__in=user_groups,
+                        puede_ver=True
+                    ).exists():
+                        tiene_acceso = True
+            except Exception as perm_error:
+                print(f"Error verificando permisos: {perm_error}")
+                
+            if not tiene_acceso:
+                return JsonResponse({'error': 'Sin permisos'}, status=403)
+
+        # Parámetros de búsqueda y paginación
+        page = int(request.GET.get('page', 1))
+        per_page = int(request.GET.get('per_page', 10))
+        search = request.GET.get('search', '').strip()
+        
+        # Obtener solicitudes que han pasado por el comité de crédito
+        # Buscamos solicitudes que tienen participaciones del comité
+        solicitudes_query = Solicitud.objects.filter(
+            participaciones_comite__isnull=False
+        ).distinct().select_related('cliente', 'cotizacion', 'etapa_actual').prefetch_related(
+            'participaciones_comite__usuario',
+            'participaciones_comite__nivel'
+        )
+        
+        # Aplicar filtros de búsqueda
+        if search:
+            solicitudes_query = solicitudes_query.filter(
+                Q(codigo__icontains=search) |
+                Q(cliente__nombreCliente__icontains=search) |
+                Q(cliente__cedulaCliente__icontains=search) |
+                Q(cotizacion__nombreCliente__icontains=search) |
+                Q(cotizacion__cedulaCliente__icontains=search)
+            )
+        
+        # Ordenar por fecha de modificación descendente
+        solicitudes_query = solicitudes_query.order_by('-fecha_ultima_actualizacion')
+        
+        # Aplicar paginación
+        paginator = Paginator(solicitudes_query, per_page)
+        solicitudes_page = paginator.get_page(page)
+        
+        # Serializar datos
+        solicitudes_data = []
+        for solicitud in solicitudes_page:
+            # Obtener información del cliente
+            cliente_nombre = ""
+            cliente_cedula = ""
+            if solicitud.cliente:
+                cliente_nombre = getattr(solicitud.cliente, 'nombreCliente', '') or ""
+                cliente_cedula = getattr(solicitud.cliente, 'cedulaCliente', '') or ""
+            elif solicitud.cotizacion:
+                cliente_nombre = getattr(solicitud.cotizacion, 'nombreCliente', '') or ""
+                cliente_cedula = getattr(solicitud.cotizacion, 'cedulaCliente', '') or ""
+            
+            # Obtener monto y tipo de producto
+            monto = 0
+            tipo_producto = ""
+            if solicitud.cotizacion:
+                monto = getattr(solicitud.cotizacion, 'montoSolicitado', 0) or 0
+                tipo_producto = getattr(solicitud.cotizacion, 'tipoPrestamo', '')
+            
+            # Obtener última participación del comité
+            ultima_participacion = solicitud.participaciones_comite.order_by('-fecha_modificacion').first()
+            
+            # Obtener estado de decisión del comité
+            decision_comite = "Pendiente"
+            if ultima_participacion:
+                decision_comite = getattr(ultima_participacion, 'resultado', 'Pendiente') or "Pendiente"
+            
+            solicitudes_data.append({
+                'id': solicitud.id,
+                'codigo': getattr(solicitud, 'codigo', ''),
+                'cliente_nombre': cliente_nombre,
+                'cliente_cedula': cliente_cedula,
+                'monto': float(monto),
+                'tipo_producto': tipo_producto,
+                'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else "",
+                'fecha_creacion': solicitud.fecha_creacion.strftime('%d/%m/%Y'),
+                'fecha_modificacion': solicitud.fecha_ultima_actualizacion.strftime('%d/%m/%Y %H:%M'),
+                'decision_comite': decision_comite,
+                'tiene_participaciones': solicitud.participaciones_comite.exists()
+            })
+        
+        return JsonResponse({
+            'solicitudes': solicitudes_data,
+            'pagination': {
+                'current_page': solicitudes_page.number,
+                'total_pages': paginator.num_pages,
+                'total_items': paginator.count,
+                'has_previous': solicitudes_page.has_previous(),
+                'has_next': solicitudes_page.has_next(),
+                'per_page': per_page
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error en API solicitudes procesadas: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'error': f'Error interno: {str(e)}'}, status=500)
+    """
+    API para obtener solicitudes procesadas por el comité de crédito con paginación y búsqueda
+    """
+    
+    # Verificar permisos similares a bandeja_comite_view
+    if not request.user.is_superuser:
+        tiene_acceso = False
+        try:
+            from .modelsWorkflow import PermisoBandeja
+            etapa_comite = Etapa.objects.filter(nombre__iexact="Comité de Crédito").first()
+            
+            if etapa_comite:
+                if PermisoBandeja.objects.filter(
+                    etapa=etapa_comite,
+                    usuario=request.user,
+                    puede_ver=True
+                ).exists():
+                    tiene_acceso = True
+                
+                user_groups = request.user.groups.all()
+                if user_groups.exists() and PermisoBandeja.objects.filter(
+                    etapa=etapa_comite,
+                    grupo__in=user_groups,
+                    puede_ver=True
+                ).exists():
+                    tiene_acceso = True
+        except:
+            pass
+            
+        if not tiene_acceso:
+            return JsonResponse({'error': 'Sin permisos'}, status=403)
+
+    try:
+        # Parámetros de búsqueda y paginación
+        page = int(request.GET.get('page', 1))
+        per_page = int(request.GET.get('per_page', 10))
+        search = request.GET.get('search', '').strip()
+        
+        # Obtener solicitudes que han pasado por el comité de crédito
+        # Buscamos solicitudes que tienen participaciones del comité
+        solicitudes_query = Solicitud.objects.filter(
+            participaciones_comite__isnull=False
+        ).distinct().select_related('cliente', 'cotizacion', 'etapa_actual').prefetch_related(
+            'participaciones_comite__usuario',
+            'participaciones_comite__nivel'
+        )
+        
+        # Aplicar filtros de búsqueda
+        if search:
+            solicitudes_query = solicitudes_query.filter(
+                Q(codigo__icontains=search) |
+                Q(cliente__nombreCliente__icontains=search) |
+                Q(cliente__cedulaCliente__icontains=search) |
+                Q(cotizacion__nombreCliente__icontains=search) |
+                Q(cotizacion__cedulaCliente__icontains=search)
+            )
+        
+        # Ordenar por fecha de modificación descendente
+        solicitudes_query = solicitudes_query.order_by('-fecha_ultima_actualizacion')
+        
+        # Aplicar paginación
+        paginator = Paginator(solicitudes_query, per_page)
+        solicitudes_page = paginator.get_page(page)
+        
+        # Serializar datos
+        solicitudes_data = []
+        for solicitud in solicitudes_page:
+            # Obtener información del cliente
+            cliente_nombre = ""
+            cliente_cedula = ""
+            if solicitud.cliente:
+                cliente_nombre = solicitud.cliente.nombreCliente or ""
+                cliente_cedula = solicitud.cliente.cedulaCliente or ""
+            elif solicitud.cotizacion:
+                cliente_nombre = solicitud.cotizacion.nombreCliente or ""
+                cliente_cedula = solicitud.cotizacion.cedulaCliente or ""
+            
+            # Obtener monto y tipo de producto
+            monto = 0
+            tipo_producto = ""
+            if solicitud.cotizacion:
+                monto = getattr(solicitud.cotizacion, 'montoSolicitado', 0) or 0
+                tipo_producto = getattr(solicitud.cotizacion, 'tipoPrestamo', '')
+            
+            # Obtener última participación del comité
+            ultima_participacion = solicitud.participaciones_comite.order_by('-fecha_modificacion').first()
+            
+            # Obtener estado de decisión del comité
+            decision_comite = "Pendiente"
+            if ultima_participacion:
+                decision_comite = ultima_participacion.resultado or "Pendiente"
+                decision_comite = ultima_participacion.resultado or "Pendiente"
+            
+            solicitudes_data.append({
+                'id': solicitud.id,
+                'codigo': solicitud.codigo,
+                'cliente_nombre': cliente_nombre,
+                'cliente_cedula': cliente_cedula,
+                'monto': float(monto),
+                'tipo_producto': tipo_producto,
+                'etapa_actual': solicitud.etapa_actual.nombre if solicitud.etapa_actual else "",
+                'fecha_creacion': solicitud.fecha_creacion.strftime('%d/%m/%Y'),
+                'fecha_modificacion': solicitud.fecha_ultima_actualizacion.strftime('%d/%m/%Y %H:%M'),
+                'decision_comite': decision_comite,
+                'tiene_participaciones': solicitud.participaciones_comite.exists()
+            })
+        
+        return JsonResponse({
+            'solicitudes': solicitudes_data,
+            'pagination': {
+                'current_page': solicitudes_page.number,
+                'total_pages': paginator.num_pages,
+                'total_items': paginator.count,
+                'has_previous': solicitudes_page.has_previous(),
+                'has_next': solicitudes_page.has_next(),
+                'per_page': per_page
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def download_pdf_resultado_consulta(request, solicitud_id):
+    """
+    Descargar PDF de resultado de consulta para una solicitud específica
+    """
+    
+    # Verificar permisos similares a bandeja_comite_view
+    if not request.user.is_superuser:
+        tiene_acceso = False
+        try:
+            from .modelsWorkflow import PermisoBandeja
+            etapa_comite = Etapa.objects.filter(nombre__iexact="Comité de Crédito").first()
+            
+            if etapa_comite:
+                if PermisoBandeja.objects.filter(
+                    etapa=etapa_comite,
+                    usuario=request.user,
+                    puede_ver=True
+                ).exists():
+                    tiene_acceso = True
+                
+                user_groups = request.user.groups.all()
+                if user_groups.exists() and PermisoBandeja.objects.filter(
+                    etapa=etapa_comite,
+                    grupo__in=user_groups,
+                    puede_ver=True
+                ).exists():
+                    tiene_acceso = True
+        except:
+            pass
+            
+        if not tiene_acceso:
+            return JsonResponse({'error': 'Sin permisos'}, status=403)
+    
+    try:
+        solicitud = get_object_or_404(Solicitud, id=solicitud_id)
+        
+        # Verificar que la solicitud tiene participaciones del comité
+        if not solicitud.participaciones_comite.exists():
+            return JsonResponse({'error': 'Esta solicitud no ha sido procesada por el comité'}, status=400)
+        
+        # Importar y usar las funciones necesarias del workflow principal
+        from .models import CalificacionCampo
+        
+        # Preparar contexto similar al utilizado en views_workflow
+        calificaciones = CalificacionCampo.objects.filter(solicitud=solicitud).select_related('campo')
+        
+        # Obtener participaciones del comité
+        participaciones_comite = solicitud.participaciones_comite.all().select_related(
+            'usuario', 'nivel', 'usuario__userprofile'
+        ).order_by('nivel__orden', '-fecha_modificacion')
+        
+        # Obtener comentarios del analista
+        comentarios_analista = []
+        analyst_comment = ""
+        try:
+            from .modelsWorkflow import SolicitudComentario
+            comentarios = SolicitudComentario.objects.filter(
+                solicitud=solicitud,
+                tipo='analista'
+            ).order_by('-fecha_creacion')
+            
+            comentarios_analista = list(comentarios)
+            if comentarios_analista:
+                analyst_comment = comentarios_analista[0].comentario
+                analyst_comment = comentarios_analista[0].comentario
+        except:
+            pass
+        
+        # Obtener resultado de análisis si existe
+        resultado_analisis = getattr(solicitud, 'resultado_analisis', '') or ""
+        
+        context = {
+            'solicitud': solicitud,
+            'calificaciones': calificaciones,
+            'participaciones_comite': participaciones_comite,
+            'comentarios_analista': comentarios_analista,
+            'analyst_comment': analyst_comment,
+            'resultado_analisis': resultado_analisis,
+            'fecha_generacion': timezone.now(),
+            'is_preview_mode': False,
+        }
+        
+        # Renderizar el template HTML
+        html_content = render_to_string('workflow/pdf_resultado_consulta_simple.html', context)
+        
+        # Generar PDF usando xhtml2pdf si está disponible
+        if pisa:
+            try:
+                # Crear el PDF
+                response = HttpResponse(content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="resultado_consulta_{solicitud.codigo}.pdf"'
+                
+                # Convertir HTML a PDF
+                pdf_buffer = BytesIO()
+                pisa_status = pisa.pisaDocument(html_content, pdf_buffer)
+                
+                response.write(pdf_buffer.getvalue())
+                pdf_buffer.close()
+                
+                return response
+            except Exception as e:
+                # Si hay error, devolver HTML como fallback
+                response = HttpResponse(html_content, content_type='text/html')
+                response['Content-Disposition'] = f'inline; filename="resultado_consulta_{solicitud.codigo}.html"'
+                return response
+        else:
+            # Si xhtml2pdf no está disponible, devolver el HTML
+            response = HttpResponse(html_content, content_type='text/html')
+            response['Content-Disposition'] = f'inline; filename="resultado_consulta_{solicitud.codigo}.html"'
+            return response
+            
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500) 
