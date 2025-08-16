@@ -588,6 +588,89 @@
             transform: translateY(0);
         }
     }
+
+    /* Estilos específicos para sección de procesadas en Vista Mixta */
+    .decision-badge {
+        font-size: 0.7rem;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        display: inline-block;
+    }
+    
+    .decision-aprobado {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .decision-rechazado {
+        background: #fecaca;
+        color: #991b1b;
+    }
+    
+    .decision-observaciones {
+        background: #fed7aa;
+        color: #9a3412;
+    }
+    
+    .decision-pendiente {
+        background: #e5e7eb;
+        color: #374151;
+    }
+    
+    .btn-download-pdf {
+        background: #dc2626;
+        color: white;
+        border: none;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .btn-download-pdf:hover {
+        background: #b91c1c;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(220, 38, 38, 0.2);
+    }
+    
+    .btn-view-procesada {
+        background: #2563eb;
+        color: white;
+        border: none;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+    }
+    
+    .btn-view-procesada:hover {
+        background: #1d4ed8;
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(37, 99, 235, 0.2);
+        text-decoration: none;
+    }
+    
+    /* Loading spinner */
+    .loading-spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid #e5e7eb;
+        border-top: 3px solid #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
 </style>
 {% endblock %}
 
@@ -626,6 +709,12 @@
                     {% endif %}
                 </div>
                 <div class="d-flex gap-2 align-items-center">
+                    <!-- Botón de Historial de Solicitudes Procesadas -->
+                    <button id="btnHistorialProcesadasMixta" class="btn btn-outline-light btn-sm d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalSolicitudesProcesadasMixta">
+                        <i class="fas fa-history"></i>
+                        <span class="d-none d-md-inline">Historial</span>
+                    </button>
+                    
                     <!-- Selector de Etapas con Bandeja -->
                     <div class="dropdown modern-dropdown position-relative">
                         <button class="btn btn-light btn-sm dropdown-toggle" type="button" id="dropdownEtapas"
@@ -2049,6 +2138,113 @@
                     <i class="fas fa-times me-1"></i>
                     Cancelar
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Solicitudes Procesadas para Vista Mixta -->
+<div class="modal fade" id="modalSolicitudesProcesadasMixta" tabindex="-1" aria-labelledby="modalSolicitudesProcesadasMixtaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, var(--primary-color), var(--primary-light)); color: white;">
+                <h5 class="modal-title" id="modalSolicitudesProcesadasMixtaLabel">
+                    <i class="fas fa-history me-2"></i>
+                    Historial de Solicitudes Procesadas
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <!-- Sección de Búsqueda dentro del modal -->
+                <div class="p-3 border-bottom">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="position-relative">
+                                <i class="fas fa-search position-absolute text-muted" style="left: 12px; top: 50%; transform: translateY(-50%);"></i>
+                                <input type="text" 
+                                       id="searchInputProcesadasMixta" 
+                                       class="form-control ps-5" 
+                                       placeholder="Buscar por cliente, cédula o código..."
+                                       style="border-radius: 8px; padding: 0.75rem 1rem 0.75rem 2.5rem;">
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="text-muted">
+                                <small>Total: <span id="totalProcesadasMixta">0</span> solicitudes</small>
+                                <button id="btnRefrescarProcesadasMixta" class="btn btn-sm btn-outline-primary ms-2">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contenido principal del modal -->
+                <div style="max-height: 70vh; overflow-y: auto;">
+                    <!-- Vista de Escritorio: Tabla de Procesadas -->
+                    <div class="d-none d-lg-block" id="tableProcesadasDesktopMixta">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th style="width: 25%;">Cliente</th>
+                                        <th style="width: 12%;">Monto</th>
+                                        <th style="width: 10%;">Producto</th>
+                                        <th style="width: 15%;">Decisión</th>
+                                        <th style="width: 15%;">Etapa Actual</th>
+                                        <th style="width: 12%;">Fecha</th>
+                                        <th style="width: 11%;">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableProcesadasBodyMixta">
+                                    <!-- Las filas se cargarán dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Vista Móvil: Cards de Procesadas -->
+                    <div class="d-block d-lg-none p-3" id="cardsProcesadasMobileMixta">
+                        <div id="mobileCardsProcesadasContainerMixta" class="row g-3">
+                            <!-- Las cards se cargarán dinámicamente -->
+                        </div>
+                    </div>
+
+                    <!-- Estado de Carga para Procesadas -->
+                    <div id="loadingStateProcesadasMixta" class="p-5 text-center" style="display: none;">
+                        <div class="d-flex flex-column align-items-center">
+                            <div class="loading-spinner"></div>
+                            <p class="mt-3 text-muted mb-0">Cargando solicitudes procesadas...</p>
+                        </div>
+                    </div>
+
+                    <!-- Estado Vacío para Procesadas -->
+                    <div id="emptyStateProcesadasMixta" class="p-5 text-center" style="display: none;">
+                        <i class="fas fa-clock fa-4x text-muted mb-3"></i>
+                        <h5 class="text-secondary mb-2">No hay solicitudes procesadas</h5>
+                        <p class="text-muted mb-3">Aún no se han procesado solicitudes por el Comité de Crédito.</p>
+                        <button id="btnRefrescarEmptyProcesadasMixta" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-sync-alt me-1"></i>
+                            Refrescar
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Paginación en el footer del modal -->
+                <div class="border-top p-3" id="paginationContainerProcesadasMixta">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <p class="text-muted mb-0" id="rowCountProcesadasMixta">
+                                <!-- Se actualizará dinámicamente -->
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <nav class="pagination-modern d-flex justify-content-end" id="paginationProcesadasMixta">
+                                <!-- La paginación se generará dinámicamente -->
+                            </nav>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -3701,6 +3897,367 @@
 
 {% block extra_js %}
 <script>
+// =====================================================
+// FUNCIONALIDAD PARA SOLICITUDES PROCESADAS EN VISTA MIXTA
+// =====================================================
+
+// Variables para solicitudes procesadas en vista mixta
+let currentPageProcesadasMixta = 1;
+let searchTimeoutProcesadasMixta = null;
+let modalProcesadasMixtaLoaded = false;
+
+// Función para descargar PDF de resultado de consulta desde vista mixta
+function descargarPDFResultadoMixta(solicitudId, buttonElement = null) {
+    console.log('Descargando PDF para solicitud desde Vista Mixta:', solicitudId);
+    
+    // Mostrar estado de carga (opcional)
+    if (buttonElement) {
+        const originalHTML = buttonElement.innerHTML;
+        buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        buttonElement.disabled = true;
+        
+        // Restaurar botón después de 5 segundos como fallback
+        setTimeout(() => {
+            buttonElement.innerHTML = originalHTML;
+            buttonElement.disabled = false;
+        }, 5000);
+    }
+    
+    // Enviar request con fetch
+    fetch(`{% url 'workflow:api_pdf_resultado_consulta' 0 %}`.replace('0', solicitudId), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            // Datos vacíos - el API puede funcionar sin datos específicos
+            field_values: {},
+            preview_mode: false
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        // Convertir respuesta a blob para descargar
+        return response.blob();
+    })
+    .then(blob => {
+        // Crear URL temporal para el blob
+        const url = window.URL.createObjectURL(blob);
+        
+        // Crear link temporal para descarga
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Resultado_Consulta_${solicitudId}_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Limpiar
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        console.log('PDF descargado exitosamente desde Vista Mixta');
+    })
+    .catch(error => {
+        console.error('Error al descargar PDF desde Vista Mixta:', error);
+        alert('Error al descargar el PDF. Por favor, inténtalo de nuevo.');
+    })
+    .finally(() => {
+        // Restaurar botón
+        if (buttonElement) {
+            const originalHTML = buttonElement.getAttribute('data-original-html') || '<i class="fas fa-file-pdf"></i>';
+            buttonElement.innerHTML = originalHTML;
+            buttonElement.disabled = false;
+        }
+    });
+}
+
+// Función para cargar solicitudes procesadas en vista mixta
+function cargarSolicitudesProcesadasMixta(page = 1, search = '') {
+    currentPageProcesadasMixta = page;
+    
+    // Mostrar estado de carga
+    mostrarEstadoCargaProcesadasMixta();
+    
+    const params = new URLSearchParams({
+        page: page,
+        per_page: 10,
+        search: search
+    });
+    
+    fetch(`{% url 'workflow:api_solicitudes_procesadas_comite' %}?${params}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Solicitudes procesadas cargadas en Vista Mixta:', data);
+        
+        if (data.solicitudes && data.solicitudes.length > 0) {
+            // Renderizar solicitudes
+            renderizarSolicitudesProcesadasMixta(data.solicitudes);
+            renderizarPaginacionProcesadasMixta(data.pagination);
+            actualizarContadorProcesadasMixta(data.pagination.total_items);
+            mostrarEstadoSolicitudesProcesadasMixta(true, data.solicitudes);
+        } else {
+            mostrarEstadoSolicitudesProcesadasMixta(false, []);
+        }
+    })
+    .catch(error => {
+        console.error('Error al cargar solicitudes procesadas en Vista Mixta:', error);
+        mostrarEstadoSolicitudesProcesadasMixta(false, []);
+        
+        // Mostrar mensaje de error en el modal
+        const container = document.getElementById('tableProcesadasBodyMixta');
+        if (container) {
+            container.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center p-4">
+                        <div class="text-danger">
+                            <i class="fas fa-exclamation-triangle mb-2"></i>
+                            <p>Error al cargar las solicitudes procesadas</p>
+                            <small>${error.message}</small>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+    });
+}
+
+// Función para renderizar solicitudes procesadas en vista mixta
+function renderizarSolicitudesProcesadasMixta(solicitudes) {
+    const tbody = document.getElementById('tableProcesadasBodyMixta');
+    const mobileContainer = document.getElementById('mobileCardsProcesadasContainerMixta');
+    
+    if (!tbody || !mobileContainer) return;
+    
+    // Limpiar contenido previo
+    tbody.innerHTML = '';
+    mobileContainer.innerHTML = '';
+    
+    solicitudes.forEach(solicitud => {
+        // Determinar clase de decisión
+        let decisionClass = 'decision-pendiente';
+        let decisionText = solicitud.decision_comite || 'Pendiente';
+        
+        switch(solicitud.decision_comite) {
+            case 'APROBADO':
+                decisionClass = 'decision-aprobado';
+                break;
+            case 'RECHAZADO':
+                decisionClass = 'decision-rechazado';
+                break;
+            case 'OBSERVACIONES':
+                decisionClass = 'decision-observaciones';
+                break;
+            default:
+                decisionClass = 'decision-pendiente';
+                decisionText = 'Pendiente';
+        }
+        
+        // Crear fila para tabla de escritorio
+        const row = document.createElement('tr');
+        row.className = 'solicitud-row';
+        
+        row.innerHTML = `
+            <td>
+                <div class="d-flex flex-column">
+                    <span class="fw-bold text-primary">${solicitud.cliente_nombre || 'Sin nombre'}</span>
+                    <small class="text-muted">${solicitud.cliente_cedula || 'Sin cédula'}</small>
+                </div>
+            </td>
+            <td class="text-end">
+                <span class="fw-bold text-success">$${solicitud.monto.toLocaleString('es-CO', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</span>
+            </td>
+            <td class="text-center">
+                <span class="product-badge product-${solicitud.tipo_producto}">${solicitud.tipo_producto || 'N/A'}</span>
+            </td>
+            <td class="text-center">
+                <span class="decision-badge ${decisionClass}">${decisionText}</span>
+            </td>
+            <td class="text-center">
+                <small class="text-muted">${solicitud.etapa_actual || 'Sin etapa'}</small>
+            </td>
+            <td class="text-center">
+                <small class="text-muted">${solicitud.fecha_modificacion}</small>
+            </td>
+            <td class="text-center">
+                <div class="d-flex gap-1 justify-content-center">
+                    <a href="{% url 'workflow:detalle_solicitud' 0 %}".replace('0', solicitud.id) 
+                       class="btn-view-procesada" title="Ver detalles">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                    <button onclick="descargarPDFResultadoMixta(${solicitud.id}, this)" 
+                            class="btn-download-pdf" title="Descargar PDF"
+                            data-original-html="<i class='fas fa-file-pdf'></i>">
+                        <i class="fas fa-file-pdf"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+        
+        // Crear card para vista móvil
+        const cardCol = document.createElement('div');
+        cardCol.className = 'col-12';
+        
+        cardCol.innerHTML = `
+            <div class="solicitud-card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="cliente-info">
+                        <div class="cliente-name">${solicitud.cliente_nombre || 'Sin nombre'}</div>
+                        <div class="cliente-cedula">${solicitud.cliente_cedula || 'Sin cédula'}</div>
+                    </div>
+                    <span class="decision-badge ${decisionClass}">${decisionText}</span>
+                </div>
+                <div class="card-body d-flex flex-column gap-3">
+                    <div class="monto">$${solicitud.monto.toLocaleString('es-CO', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</div>
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="product-badge product-${solicitud.tipo_producto}">${solicitud.tipo_producto || 'N/A'}</span>
+                        <small class="text-muted">${solicitud.etapa_actual || 'Sin etapa'}</small>
+                    </div>
+                    
+                    <div class="meta-info">
+                        <div class="codigo">${solicitud.codigo}</div>
+                        <div class="fecha">${solicitud.fecha_modificacion}</div>
+                    </div>
+                </div>
+                <div class="card-footer d-flex gap-2">
+                    <a href="{% url 'workflow:detalle_solicitud' 0 %}".replace('0', solicitud.id) 
+                       class="btn-view-procesada flex-fill text-center">
+                        <i class="fas fa-eye me-1"></i>Ver
+                    </a>
+                    <button onclick="descargarPDFResultadoMixta(${solicitud.id}, this)" 
+                            class="btn-download-pdf" title="Descargar PDF"
+                            data-original-html="<i class='fas fa-file-pdf'></i>">
+                        <i class="fas fa-file-pdf"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        mobileContainer.appendChild(cardCol);
+    });
+}
+
+// Función para renderizar paginación en vista mixta
+function renderizarPaginacionProcesadasMixta(pagination) {
+    const paginationContainer = document.getElementById('paginationProcesadasMixta');
+    if (!paginationContainer) return;
+    
+    let paginationHTML = '<ul class="pagination pagination-sm justify-content-center mb-0">';
+    
+    // Botón anterior
+    if (pagination.has_previous) {
+        paginationHTML += `<li class="page-item">
+            <a class="page-link" href="#" onclick="cargarSolicitudesProcesadasMixta(${pagination.current_page - 1}, document.getElementById('searchInputProcesadasMixta').value)">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+        </li>`;
+    } else {
+        paginationHTML += '<li class="page-item disabled"><span class="page-link"><i class="fas fa-chevron-left"></i></span></li>';
+    }
+    
+    // Páginas
+    const startPage = Math.max(1, pagination.current_page - 2);
+    const endPage = Math.min(pagination.total_pages, pagination.current_page + 2);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        if (i === pagination.current_page) {
+            paginationHTML += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+        } else {
+            paginationHTML += `<li class="page-item">
+                <a class="page-link" href="#" onclick="cargarSolicitudesProcesadasMixta(${i}, document.getElementById('searchInputProcesadasMixta').value)">${i}</a>
+            </li>`;
+        }
+    }
+    
+    // Botón siguiente
+    if (pagination.has_next) {
+        paginationHTML += `<li class="page-item">
+            <a class="page-link" href="#" onclick="cargarSolicitudesProcesadasMixta(${pagination.current_page + 1}, document.getElementById('searchInputProcesadasMixta').value)">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+        </li>`;
+    } else {
+        paginationHTML += '<li class="page-item disabled"><span class="page-link"><i class="fas fa-chevron-right"></i></span></li>';
+    }
+    
+    paginationHTML += '</ul>';
+    paginationContainer.innerHTML = paginationHTML;
+    
+    // Actualizar contador de filas
+    const rowCount = document.getElementById('rowCountProcesadasMixta');
+    if (rowCount) {
+        const start = (pagination.current_page - 1) * pagination.per_page + 1;
+        const end = Math.min(pagination.current_page * pagination.per_page, pagination.total_items);
+        rowCount.textContent = `Mostrando ${start} a ${end} de ${pagination.total_items} solicitudes procesadas`;
+    }
+}
+
+// Función para actualizar contador
+function actualizarContadorProcesadasMixta(total) {
+    const totalElement = document.getElementById('totalProcesadasMixta');
+    if (totalElement) {
+        totalElement.textContent = total;
+    }
+}
+
+// Función para mostrar/ocultar contenedores
+function mostrarEstadoSolicitudesProcesadasMixta(tieneSolicitudes, solicitudes = []) {
+    const tableDesktop = document.getElementById('tableProcesadasDesktopMixta');
+    const cardsMobile = document.getElementById('cardsProcesadasMobileMixta');
+    const emptyState = document.getElementById('emptyStateProcesadasMixta');
+    const loadingState = document.getElementById('loadingStateProcesadasMixta');
+    const paginationContainer = document.getElementById('paginationContainerProcesadasMixta');
+    
+    // Ocultar loading
+    if (loadingState) loadingState.style.display = 'none';
+    
+    if (tieneSolicitudes && solicitudes.length > 0) {
+        // Hay solicitudes - mostrar tabla/cards
+        if (tableDesktop) tableDesktop.style.display = 'block';
+        if (cardsMobile) cardsMobile.style.display = 'block';
+        if (emptyState) emptyState.style.display = 'none';
+        if (paginationContainer) paginationContainer.style.display = 'block';
+    } else {
+        // No hay solicitudes - mostrar estado vacío
+        if (tableDesktop) tableDesktop.style.display = 'none';
+        if (cardsMobile) cardsMobile.style.display = 'none';
+        if (emptyState) emptyState.style.display = 'block';
+        if (paginationContainer) paginationContainer.style.display = 'none';
+    }
+}
+
+// Función para mostrar estado de carga
+function mostrarEstadoCargaProcesadasMixta() {
+    const tableDesktop = document.getElementById('tableProcesadasDesktopMixta');
+    const cardsMobile = document.getElementById('cardsProcesadasMobileMixta');
+    const emptyState = document.getElementById('emptyStateProcesadasMixta');
+    const loadingState = document.getElementById('loadingStateProcesadasMixta');
+    const paginationContainer = document.getElementById('paginationContainerProcesadasMixta');
+    
+    // Ocultar todo y mostrar carga
+    if (tableDesktop) tableDesktop.style.display = 'none';
+    if (cardsMobile) cardsMobile.style.display = 'none';
+    if (emptyState) emptyState.style.display = 'none';
+    if (paginationContainer) paginationContainer.style.display = 'none';
+    if (loadingState) loadingState.style.display = 'block';
+}
+
 // ==========================================
 // GESTIÓN DE DOCUMENTOS PENDIENTES BACK OFFICE
 // ==========================================
@@ -3719,7 +4276,64 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-
+    // ==========================================
+    // EVENT LISTENERS PARA MODAL DE SOLICITUDES PROCESADAS VISTA MIXTA
+    // ==========================================
+    
+    // Cargar datos cuando se abre el modal
+    const modalProcesadasMixta = document.getElementById('modalSolicitudesProcesadasMixta');
+    if (modalProcesadasMixta) {
+        modalProcesadasMixta.addEventListener('shown.bs.modal', function() {
+            if (!modalProcesadasMixtaLoaded) {
+                cargarSolicitudesProcesadasMixta();
+                modalProcesadasMixtaLoaded = true;
+            }
+        });
+        
+        // Reset modal state when closed
+        modalProcesadasMixta.addEventListener('hidden.bs.modal', function() {
+            // Optionally reset search
+            const searchInput = document.getElementById('searchInputProcesadasMixta');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+        });
+    }
+    
+    // Búsqueda de solicitudes procesadas
+    const searchInputProcesadasMixta = document.getElementById('searchInputProcesadasMixta');
+    if (searchInputProcesadasMixta) {
+        searchInputProcesadasMixta.addEventListener('input', function() {
+            const searchTerm = this.value;
+            
+            // Debounce - cancelar búsqueda anterior
+            if (searchTimeoutProcesadasMixta) {
+                clearTimeout(searchTimeoutProcesadasMixta);
+            }
+            
+            // Nueva búsqueda después de 500ms
+            searchTimeoutProcesadasMixta = setTimeout(() => {
+                cargarSolicitudesProcesadasMixta(1, searchTerm);
+            }, 500);
+        });
+    }
+    
+    // Botón refrescar procesadas
+    const btnRefrescarProcesadasMixta = document.getElementById('btnRefrescarProcesadasMixta');
+    if (btnRefrescarProcesadasMixta) {
+        btnRefrescarProcesadasMixta.addEventListener('click', function() {
+            const searchTerm = document.getElementById('searchInputProcesadasMixta')?.value || '';
+            cargarSolicitudesProcesadasMixta(currentPageProcesadasMixta, searchTerm);
+        });
+    }
+    
+    // Botón refrescar en estado vacío
+    const btnRefrescarEmptyProcesadasMixta = document.getElementById('btnRefrescarEmptyProcesadasMixta');
+    if (btnRefrescarEmptyProcesadasMixta) {
+        btnRefrescarEmptyProcesadasMixta.addEventListener('click', function() {
+            cargarSolicitudesProcesadasMixta();
+        });
+    }
 });
 
 /**
